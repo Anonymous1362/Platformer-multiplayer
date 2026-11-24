@@ -1,0 +1,13 @@
+import { defineConfig } from 'vite';
+
+export default defineConfig({
+  appType: 'spa',
+  build: {
+    target: 'es2022',
+    sourcemap: false,
+  },
+  server: {
+    host: '0.0.0.0',
+    allowedHosts: true,
+  },
+});
