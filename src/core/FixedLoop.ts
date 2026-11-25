@@ -1,12 +1,12 @@
-import { GameConfig } from './GameConfig';
+import { GameConfig } from './GameConfig.ts';
 
 export interface FixedStepFrame {
   readonly steps: number;
   readonly interpolationAlpha: number;
 }
 
-/** Accumulates wall-clock time into bounded, fixed-rate simulation steps. */
-export class FixedStepClock {
+/** Converts real frame deltas into bounded fixed-rate simulation work. */
+export class FixedLoop {
   private accumulatedMs = 0;
 
   advance(frameDeltaMs: number): FixedStepFrame {
@@ -29,6 +29,7 @@ export class FixedStepClock {
     };
   }
 
+  /** Discard elapsed-time backlog after pause, backgrounding, or context restoration. */
   reset(): void {
     this.accumulatedMs = 0;
   }

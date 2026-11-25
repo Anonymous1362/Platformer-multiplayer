@@ -1,79 +1,65 @@
 # Cosmic Drift — Session Handoff
 
-- **Current milestone:** Pass 1A — Boot & canvas (IN REVIEW; acceptance gates pass, awaiting user review and approval)
+- **Current milestone:** Pass 1B — Headless simulation (IN REVIEW; local gates pass; browser regression CI pending)
+- **Pass 1A:** APPROVED by the user's “continue” after all Pass 1A acceptance gates passed.
 - **Branch:** `arena/d6467a6e-platformer-multiplayer`
 - **Base commit:** `96725ae3da44fc78c21a278a036787d75bae6258`
 - **Pull request:** [#2](https://github.com/Anonymous1362/Platformer-multiplayer/pull/2)
 - **Milestone issue:** [#1](https://github.com/Anonymous1362/Platformer-multiplayer/issues/1)
 - **Date:** 2026-11-25
 
-## 1. Implemented
+## 1. Implemented — Pass 1B only
 
-Pass 1A only; no simulation, gameplay, saves, or later-pass systems were added.
+- Expanded `src/core/GameConfig.ts` with the typed `as const` configuration values from §4, 60 Hz timing, frame clamp/step cap, duration-to-tick conversion, and a canonical FNV-1a config hash (`774a29ef`).
+- Renamed the core clock to `FixedLoop` and retained the 100 ms delta clamp, four-step cap, fractional interpolation alpha, and reset API for pause/background/context interruptions.
+- Replaced the PRNG with serializable `xoshiro128**` state in `src/core/Random.ts`.
+- Added `src/core/DMath.ts` (4096-entry sine/cosine tables and polynomial `atan2`), `InputFrame.ts` (contract shape and finite/range sanitizer), `EntityIds.ts` (reusable IDs with generations and stale-reference rejection), `WorldSimulation.ts` (headless deterministic state/input-edge skeleton and finite-state assertion), `Hash.ts` and `StateHash.ts` (canonical config/state FNV-1a hashes), and `ReplayRecorder.ts` (seed/config hash/input RLE/replay validation).
+- Added `tools/replay-run.ts` and `npm run replay:run` to verify replay JSON against the current config hash and final state hash.
+- Added focused tests in `tests/unit/dMath.test.ts`, `entityIds.test.ts`, `replayRecorder.test.ts`, and `worldSimulation.test.ts`; expanded fixed-loop and PRNG tests.
+- Updated `docs/PROGRESS.md` and `docs/TESTING.md`.
+- No gameplay movement/collision, UI, saves, or later-pass systems were implemented. No dependencies were added.
 
-- `src/theme/ThemePalette.ts`: role-based palette tokens matching §9.2.
-- `src/assets/AssetRegistry.ts`, `src/assets/minimalManifest.ts`: runtime manifest validation, path/extension/hash-shape checks, duplicate-key rejection, per-asset and total-boot deadlines, procedural fallback, one-warning-per-key behavior, status reporting, and scene-boundary-only adoption of late assets. Boot art is procedural, so this milestone has no required external asset requests.
-- `src/app/Capabilities.ts`, `src/app/createGame.ts`: capability matrix and strict WebGL game creation; accessible WebGL-required screen when unsupported.
-- `src/scenes/BootScene.ts`, `src/render/BackgroundScene.ts`: procedural title background, loading/error path, accessible canvas, responsive title scene, resize cleanup, and dev-only debug badge wiring.
-- `src/render/FrameTelemetry.ts`, `src/debug/DebugBadge.ts`: bounded frame samples, EMA/p95 telemetry helpers, and development FPS/EMA badge.
-- `src/main.ts`, `index.html`, `src/style.css`: boot integration, viewport-fit metadata, touch/overscroll guards, safe-area padding, landscape notice, and supported-ratio layout rules. Capability detection runs before a dynamic Phaser import so unsupported browsers can render the WebGL-required screen.
-- `tests/unit/assetRegistry.test.ts`, `tests/unit/frameTelemetry.test.ts`, `tests/e2e/bootstrap.spec.ts`: focused registry/telemetry unit tests and browser coverage for successful boot, viewport layout, no-WebGL fallback, and failed responses.
-- `docs/TESTING.md`, `docs/PROGRESS.md`, and this handoff document updated.
+## 2. Plan followed
 
-## 2. Dependencies
-
-No dependencies added or removed. No dependency-install command was needed for this milestone.
+Audit the existing core, baseline gates, and §4.1 / §13.2–§13.4 / M1 / M7 / N4 / N9 / N11 / O2; then implement the headless deterministic contracts only. Verify same-seed input determinism, dt spike and reset behavior, sanitization, generation invalidation, state/config hashes, and replay CLI; run the full project gate; review the core dependency boundary; hand off and stop before Pass 1C.
 
 ## 3. Verification
 
-- Initial `npm run verify` found four TypeScript errors; they were fixed. A new focused unit-test run exposed a registry status mismatch, which was also fixed.
-- `npx --yes --package=node@24.22.3 --package=npm@11.21.3 -c 'node ./node_modules/prettier/bin/prettier.cjs --write src/main.ts src/app/createGame.ts && npm run verify && git diff --check'` — **PASS** after the no-WebGL fix. Format, lint, strict typecheck, dependency check (15 modules / 13 dependencies; no violations), stub scan, Vitest (**5 files / 19 tests passed**), golden-test no-tests gate, empty-level gate, production build, and whitespace check passed.
-- `npm run format:check` — **PASS** for the final documentation.
-- `node_modules/.bin/playwright install chromium webkit` — **FAILED locally**: download from `cdn.playwright.dev` returned `ECONNRESET`; no local browser binaries were installed.
-- GitHub Actions run `45537312282` on commit `1546c7a` — local gates and responsive boot tests passed, but the two no-WebGL tests failed. This exposed Phaser's eager static import before capability detection.
-- Fixed by performing capability detection in `main.ts` and dynamically importing the Phaser game module only when WebGL is available.
-- GitHub Actions run `45537710897` on commit `0be1ea9` — **PASS**, including `npm run verify`, browser installation, and Playwright E2E: **4 passed** across Chromium and WebKit. Coverage includes 4:3, 16:9, and 19.5:9, no-WebGL fallback, and response checks.
-- GitHub Actions run `45537975466` on the final branch commit `81ba4ff` — **PASS**; `gh pr checks 2` reports `verify pass`.
-- Vite HTTP smoke on port 4173 returned the app HTML and transformed app modules. The development server remains available for preview; this smoke is not a substitute for browser tests.
-- Final production output has a 4.21 kB raw / 1.90 kB gzip entry chunk and a 1,378.23 kB raw / 361.16 kB gzip Phaser/game chunk. Vite emits its default >500 kB raw advisory; compressed output remains within the spec's 900 kB gzip budget.
+- Baseline command `npx --yes --package=node@24.22.3 --package=npm@11.21.3 -c 'node --version && npm --version && npm ci && npm run verify'` — **PASS before Pass 1B changes**: Node `v24.22.3`, npm `11.21.3`, install audit zero vulnerabilities, 19 existing unit tests, and production build passed.
+- Final source gate `npx --yes --package=node@24.22.3 --package=npm@11.21.3 -c 'node ./node_modules/prettier/bin/prettier.cjs --write src/core tests/unit tools/replay-run.ts package.json docs/PROGRESS.md docs/TESTING.md && npm run verify && git diff --check'` — **PASS**: all format/lint/type/dependency/stub/build gates passed; **9 unit-test files / 37 tests passed**; golden and authored-level gates honestly report no tests/content yet.
+- `deps:check` — **PASS**, 22 modules / 22 dependencies, no violations. `src/core/**` imports only other core files; no Phaser, DOM, Capacitor, PeerJS, or Web Audio imports were found.
+- Replay CLI is exercised from the unit suite with a temporary JSON replay, and config-mismatch rejection is tested. No replay artifact was left in the repository.
+- `npm run test:e2e` has not yet been rerun against the Pass 1B changes in this sandbox; local Playwright browser downloads previously failed with `ECONNRESET`. Push the branch and confirm the existing PR's browser CI before completing handoff.
+- Production build emits a 4.21 kB raw / 1.90 kB gzip app entry chunk and a 1,379.02 kB raw / 361.46 kB gzip Phaser/game chunk; Vite's default raw-size advisory remains below the spec gzip budget.
 
 ## 4. Acceptance status
 
-| Pass 1A criterion                       | Status | Evidence                                                                                                          |
-| --------------------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------- |
-| Boots at phone and desktop ratios       | ✅     | GitHub Actions E2E passed on Chromium and WebKit at 4:3, 16:9, and 19.5:9.                                        |
-| Zero required-asset 404s                | ✅     | Boot manifest is procedural-only; E2E response checks found no failed responses.                                  |
-| Stalled asset falls back within timeout | ✅     | Unit tests cover per-asset timeout, total boot deadline, fallback, warning-once, and scene-boundary late arrival. |
-| No-WebGL screen works                   | ✅     | Accessible fallback screen test passes on Chromium and WebKit.                                                    |
-| Registry and browser tests              | ✅     | 7 registry tests passed; 4 Playwright cases passed across Chromium and WebKit.                                    |
+| Pass 1B criterion                                | Status     | Evidence                                                                                                                  |
+| ------------------------------------------------ | ---------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Same seed + inputs produce same final state hash | ✅         | Deterministic world simulation test runs 180 ticks twice and compares hashes; prior input history affects the final hash. |
+| Fixed-loop dt spike clamp and pause reset        | ✅         | Tests cover 100 ms clamp, four-step cap, fractional remainder, invalid deltas, and reset.                                 |
+| PRNG and deterministic math                      | ✅         | xoshiro state snapshot/restore tests and DMath trig/atan2 approximation tests pass.                                       |
+| InputFrame contract and finite-number guard      | ✅         | Sanitizer clamps movement, buttons, aim and substitutes invalid values; world-state assertion rejects NaN.                |
+| Generation-counted entity IDs                    | ✅         | Tests verify release invalidates a ref and ID reuse increments generation.                                                |
+| Replay recorder and `tools/replay-run`           | ✅         | RLE, schema/length checks, config match, final state hash and CLI are tested.                                             |
+| `deps:check` core boundary                       | ✅         | No cross-layer or circular dependency violations.                                                                         |
+| Existing Pass 1A browser regression              | ⚠️ Pending | Needs CI on the current Pass 1B branch revision; no local Playwright binaries available.                                  |
 
-## 5. Manual tests
+## 5. Review & polish
 
-No physical phone, tablet, or browser was manually tested during Pass 1A. Browser acceptance ran in GitHub Actions on Chromium and WebKit. No device-specific safe-area, orientation, or performance result is claimed.
+- Core imports remain within `src/core/**`; no engine, browser, platform, network, or audio dependency entered the simulation layer.
+- The replay parser caps total replay duration at 1,000,000 ticks, validates the schema/config hash, and sanitizes input at the file boundary.
+- State hashing serializes numeric fields as little-endian Float64 values in fixed field order. Config hashing uses sorted-key canonical JSON.
+- P0/P1 findings: none in local gates. P2: Vite raw chunk advisory; compressed bundle remains below budget.
 
-## 6. Audit, review & polish
+## 6. Traceability and limitations
 
-- Re-read §9.2, §9.6, §12.3, §13.6, §21.5 and Pass 1A in §23, plus M3, M7, N14, and O3. Scope stayed limited to boot/canvas systems.
-- Revisited the official Phaser 4 migration guide and `game-setup-and-config`, `scale-and-responsive`, `scenes`, and `graphics-and-shapes` skills. The implementation uses ordinary Phaser 4 WebGL/game-object APIs, `EXPAND` scaling, `GameObjectCreator` for generated fallback textures, and no custom pipeline, direct GL calls, or Phaser 3-only effects.
-- The initial browser run found the eager Phaser import defect; it was fixed and covered by the passing rerun.
-- `src/core/**` was not changed; dependency-cruiser reports no layer violations.
-- **P0/P1:** none identified in local gates or passing CI/E2E.
-- **P2:** Vite raw chunk-size advisory; gzip remains within budget.
+M1 (recording portion), M7 (fixed dt clamp), N4 (generation-aware IDs), N9 (GameConfig), N11 (simulation finite assertion), and O2 tests are in `docs/PROGRESS.md`. M1/N4/N11/O2 continue into later tagged milestones. No physical-device checks are relevant to this headless milestone. Browser regression CI remains pending.
 
-## 7. Traceability
+## 7. Next step
 
-Pass 1A work is recorded for M3, M7, N14 (web scope), and O3 in `docs/PROGRESS.md`. Those rows remain **IN REVIEW** pending user acceptance. Native orientation locking remains Pass 7 scope.
+Push this branch, confirm the PR's `verify` job including E2E passes, update this handoff with that result, and stop for user review. Do not begin Pass 1C without explicit approval.
 
-## 8. Known limitations / deferred
+## 8. STOP
 
-- Local Playwright browser downloads remain blocked by `ECONNRESET`; the E2E acceptance run succeeded in GitHub Actions.
-- The minimal boot manifest contains only procedural art. Custom/AI policy selection and the generated manifest/import pipeline are later scope.
-- Full simulation/network telemetry, dt-spike guarding, and physical-device coverage remain in their scheduled later milestones.
-
-## 9. Next step
-
-User review of Pass 1A. Do not begin Pass 1B until the user explicitly approves it.
-
-## 10. STOP
-
-Pass 1A acceptance gates pass, including Chromium and WebKit browser tests in GitHub Actions. The milestone remains **IN REVIEW** pending user review and approval. No later milestone is authorized.
+Pass 1B implementation and local gates are complete. The browser regression run is pending; no later milestone is authorized.
