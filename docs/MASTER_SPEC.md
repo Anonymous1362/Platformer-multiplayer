@@ -1,4 +1,4 @@
-# COSMIC DRIFT — Master Game & Build Specification v3.1
+# COSMIC DRIFT — Master Game & Build Specification v3.2
 
 > ## ⛔ MANDATORY RULE — SEQUENTIAL BUILD PROTOCOL (read first, obey always)
 >
@@ -109,12 +109,13 @@ Cosmic Drift is a premium 2.5D sci-fi action-platformer for phones, tablets, and
 | --- | --- |
 | Story | Prologue, four acts, finale, and a true-ending epilogue; 19 cutscenes (§7.3); 10 speaking characters (§2.3). |
 | Campaign | 5 planets × (3 levels + 1 boss arena) = 20 missions; 15 Echoes (lore collectibles); 15 Star Vaults (secret rooms). Estimated 3.5–5 hours for a first completion (validate in playtests). |
+| Side content | Five Crew Requests (sidequest chains, one per crew member) ending in five short Side Ops, plus daily Contracts (§3.8, §4.10). |
 | Enemies | 6 archetypes, 3 elite modifiers. |
 | Bosses | 5 (Hive Warden, Solar Leviathan, Cryos Overlord, Aether Archon, The Hollow Crown). |
 | Player kit | 5 weapons, 4 gadgets, 3 suit classes, 5 power-ups, 6 upgrade tracks, 4 mutators, 24 cosmetic items. |
 | Hub | The *Lantern* ship with 6 stations (§8.5). |
 | Multiplayer | 4 modes (Orbital Co-op, Shard Rush, King of the Beacon, Boss Rush Gauntlet); 5 arenas plus co-op campaign levels. |
-| Difficulty | Story, Standard, Drift+ (post-game), plus independent Assist options. |
+| Difficulty | Easy, Normal, Hard, and Drift+ (post-game), set per mode (§3.4, §6.6), plus independent Assist options. |
 | Achievements | 30 (local; platform services optional later). |
 
 ### 1.5 Non-goals for 1.0
@@ -235,7 +236,7 @@ One canonical ending plus the true-ending epilogue. No branching choices in 1.0:
 
 ### 3.2 Mission list
 
-Length targets are for a first attempt on Standard. Every level has 3–6 checkpoints, one Echo, one Star Vault, and a par time.
+Length targets are for a first attempt on Normal. Every level has 3–6 checkpoints, one Echo, one Star Vault, and a par time.
 
 | ID | Name | Beats | Length |
 | --- | --- | --- | --- |
@@ -271,13 +272,19 @@ Length targets are for a first attempt on Standard. Every level has 3–6 checkp
 
 ### 3.4 Difficulty and Assist
 
-| Setting | Effect |
-| --- | --- |
-| Story | Damage taken −50%, enemy fire rate −25%, boss HP −20%, boss phase checkpoints always on. |
-| Standard | Baseline values in §4. |
-| Drift+ (post-game) | Elite modifiers on 30% of enemies, damage taken +30%, telegraphs 20% shorter (never below 300 ms), checkpoints at half density. |
+| Difficulty | ID | Available | Effect (values live in `GameConfig.difficulty`) |
+| --- | --- | --- | --- |
+| Easy | `easy` | Always | Damage taken −50%, enemy fire rate −25%, enemy and boss HP −20%, boss phase checkpoints always on, Starfall parry window 600 ms. |
+| Normal | `normal` | Always (default) | Baseline values in §4. |
+| Hard | `hard` | Always | Damage taken +20%, enemy fire rate +10%, enemy and boss HP +15%, elite modifiers on 10% of enemies from `cryos_01` onward, telegraphs 10% shorter (never below 300 ms). Checkpoints as Normal. |
+| Drift+ | `drift_plus` | After the campaign | Elite modifiers on 30% of enemies, damage taken +30%, enemy and boss HP +15%, telegraphs 20% shorter (never below 300 ms), checkpoints at half density. |
 
-**Assist options** (independent of difficulty, change any time, never block progression; only Drift+ achievements require them off): invulnerability; infinite jetpack fuel; game speed 70/80/90%; auto-fire; boss phase checkpoints; hazard respawn without damage. Assist changes the simulation speed by scaling the *simulation step count per real second*, never `FIXED_DT`, so physics stay deterministic (§13.2).
+- Multipliers are integer percentages applied inside the simulation at spawn and damage time. Replays and multiplayer matches carry the difficulty in their header, so they never desync. Elite selection is seeded per spawn (§13.4).
+- Rewards (shards, cores, unlocks) are identical on every difficulty, so nobody is pushed up or down. Each mission record keeps the highest difficulty cleared, shown on the Star Map as a pip (E, N, H, D+). Two achievements reward Hard and Drift+ (§4.10).
+- In the campaign, difficulty can change from Pause or Settings at any time except during a boss fight; it takes effect at the next checkpoint respawn. A clear counts at the lowest difficulty active during that attempt.
+- Each mode decides who sets difficulty (§6.6).
+
+**Assist options** (independent of difficulty, change any time, never block progression; only the Hard and Drift+ achievements require them off): invulnerability; infinite jetpack fuel; game speed 70/80/90%; auto-fire; boss phase checkpoints; hazard respawn without damage. Assist changes the simulation speed by scaling the *simulation step count per real second*, never `FIXED_DT`, so physics stay deterministic (§13.2). Online rules are in §6.6.
 
 ### 3.5 Collectibles and completion
 
@@ -286,18 +293,67 @@ Length targets are for a first attempt on Standard. Every level has 3–6 checkp
 | Star Shards | Pickups and enemy drops. A full clear of a standard level yields about 300 shards (baseline). Collected shards bank at checkpoints; on death, shards collected since the last checkpoint are lost and respawn in the level. Replays respawn everything. |
 | Echoes | One per level (15). ID pattern `echo_<planet>_<n>`. Persist on pickup immediately (autosave). |
 | Star Vaults | One secret room per level (15). Worth 100 shards. Entrances are always signposted for attentive players (glinting cracks, wind-ruffled vines, off-pattern tiles). Some require the Grapple Hook and are marked in the Star Map as "return later". |
-| Nebula Cores | 5 per boss on first clear; 2 per planet when all three of its Echoes are found; 5 for the true ending; 1–3 per Contract; 1 per multiplayer win. |
+| Nebula Cores | 5 per boss on first clear; 2 per planet when all three of its Echoes are found; 5 for the true ending; 3 per Crew Request; 1–3 per Contract; 1 per multiplayer win. |
 | Par times | Shown per level; beating all three par times on a planet unlocks that planet's trail cosmetic. |
 
 Per-level record: shards collected %, Echo found, Vault found, best time, par beaten. Death counts appear only in the Stats screen, never on results screens.
 
 ### 3.6 Post-game
 
-Drift+ difficulty, Boss Rush with all five bosses (solo or online), all missions replayable, Contracts continue, the Echo Gallery, a cutscene theater, and credits replay.
+Drift+ difficulty, Boss Rush with all five bosses (solo or online), all missions and Side Ops replayable, unfinished Crew Requests, Contracts continue, the Echo Gallery, a cutscene theater, and credits replay.
 
 ### 3.7 Playtime estimate (validate in playtests)
 
-15 levels × 7–10 min + 5 bosses × 3–8 min + cutscenes (about 20 min) ≈ 3.5–5 hours for a first completion; 7–9 hours for 100%.
+| Route | Estimate |
+| --- | --- |
+| Main story (20 missions and cutscenes) | 15 levels × 7–10 min + 5 bosses × 3–8 min + about 20 min of cutscenes ≈ 3.5–5 hours |
+| Plus all Crew Requests (§3.8) | +35–55 min (5 Side Ops × 4–6 min, request steps, crew scenes) |
+| 100% (every Echo, Vault, par time, request, and Drift+) | 8–10 hours |
+
+Multiplayer, Contracts, and Boss Rush add open-ended play on top.
+
+### 3.8 Crew Requests (sidequests)
+
+Each crew member has one optional request chain: three steps, a short Side Op level at the end, and a payoff scene that finishes their arc from §2.3. Requests never block the main story, never require multiplayer, and never change the 15 Echo and 15 Vault counts.
+
+**Step types** (data-driven, `content/requests/*.json`, validated by Zod):
+
+| Type | How it works |
+| --- | --- |
+| `collect` | Pick up or destroy request items placed in named levels. Items exist only while that step is active, so levels stay clean otherwise. Each item persists the moment it is taken. |
+| `counter` | Reach a count of an existing stat after the step starts (for example, parried turret shots). |
+| `challenge` | Finish a named level with one condition: a target time, a hit limit, no kills, or at Hard or above. |
+| `defend` | Hold a marked zone (`request_zone`) in a named level for N seconds while waves arrive. |
+| `side_op` | Complete the request's Side Op. |
+
+**The five requests:**
+
+| ID | Giver and title | Unlocks | Steps | Side Op | Payoff and rewards |
+| --- | --- | --- | --- | --- | --- |
+| `rq_bram` | Bram — "She's Not Scrap" | After `kepler_boss` | 1. Collect 3 engine parts (`kepler_03`, `vulcanis_01`, `vulcanis_03`). 2. Collect a coolant cell in Station Halcyon (`cryos_02`). 3. Side Op. | `side_kepler` "Cold Start": restart the *Lantern*'s buried engine in the Kepler wreck, then outrun the power surge up the shaft (`rising_hazard`). | Bram admits he talks to the ship because it is easier than talking to people. `skin_lantern_crew`; perk Field Patch. |
+| `rq_tavi` | Tavi — "Off the Radio" | After `kepler_boss` | 1. Collect 3 nav buoys (`kepler_02`, `vulcanis_01`, `vulcanis_02`). 2. Challenge: finish `vulcanis_03` within Tavi's target (par + 25%). 3. Side Op. | `side_vulcanis` "Ashline": cross a blind ash storm (fog layers) by Tavi's radio callouts and waypoint pings; she flies the shuttle for the pickup. | Tavi takes the pilot's chair for the next jump. `visor_tavi`; perk Nav Uplink. |
+| `rq_pike` | Pike — "Paid in Full" | After `vulcanis_boss` | 1. Destroy 3 Meridian weapon caches he designed (`vulcanis_02`, `cryos_01`, `cryos_03`). 2. Counter: parry 20 turret shots. 3. Side Op. | `side_cryos` "Cold Storage": sabotage a Meridian weapons line riding rail platforms; Pike destroys his own prototype. | Pike engraves Kes's name on the Pulse Blaster. `visor_pike`; perk Ricochet. |
+| `rq_halloran` | Halloran — "Field Notes" | After `cryos_boss` | 1. Collect 3 Custodian samples (`cryos_01`, `aether_01`, `aether_02`). 2. Defend her sensor array in `aether_03` for 45 s. 3. Side Op. | `side_aether` "The Nursery": reach the heart of a Custodian nursery without killing anything (shooting disabled; dash, parry, and Holo-Decoy still work). | Halloran publishes proof that the Custodians are guardians. `trail_custodian`; perk Field Lens. |
+| `rq_orrin` | ORRIN — "What I Am" | After `aether_boss` | 1. Collect 3 resonance points (`aether_03`, `obsidian_01`, `obsidian_02`). 2. Challenge: finish `obsidian_01` taking at most 3 hits. 3. Side Op. | `side_obsidian` "Inner Light": ORRIN steers the suit through the Heartstar's outer shell along dash-ring chains. | ORRIN decides what it is. If finished before `obsidian_boss`, `cs_16_finale` adds one ORRIN line. `trail_resonance`; perk Echo Sense. |
+
+**Rules:**
+
+- A crew member with an available request shows a "!" badge in the hub; talking to them starts it. Steps unlock in order; a step's levels are marked on the Star Map.
+- One request can be tracked at a time. Its current step shows under the HUD fuel bar, and request items show off-screen indicators while tracked (§8.7).
+- Side Ops sit on their planet in the Star Map with the giver's portrait, a par time, and about 150 shards each; no Echo or Vault. Each is 4–6 min with at most 3 checkpoints, built from that planet's tiles, enemies, and mechanics plus the twist listed above.
+- Completing a request grants its cosmetic, its perk, 3 Nebula Cores, and a 30–60 s payoff dialogue scene on the *Lantern* (`dlg_rq_<crew>_done`, one motion-panel image), each exactly once through the reward ledger.
+- Co-op: Side Ops are playable in Orbital Co-op using the host's request state; a guest gets step credit only when the same step is active on their own save.
+- LevelLint checks every request object with the abilities the player has when its step unlocks (§5.6).
+
+**Crew perks** (optional, switched on or off in the Workshop; each player's own in co-op; never in Shard Rush or King of the Beacon):
+
+| Perk | ID | Effect |
+| --- | --- | --- |
+| Field Patch | `perk_field_patch` | Once per level, a hit that would down you leaves 1 HP instead. Off on Drift+. |
+| Nav Uplink | `perk_nav_uplink` | The Star Map shows which levels still hold an uncollected Echo or Vault; on replays a faint HUD pip points toward the uncollected Echo. |
+| Ricochet | `perk_ricochet` | Pulse Blaster shots bounce once off solid tiles (swept, §13.5) at 60% damage. |
+| Field Lens | `perk_field_lens` | Shows enemy HP bars and highlights weak points. |
+| Echo Sense | `perk_echo_sense` | A soft hum and light haptic within 600 u of an uncollected Echo. |
 
 ## 4. Gameplay Systems
 
@@ -411,7 +467,7 @@ Elites show a shape cue (a hexagonal halo for `shielded`, a pulsing crack patter
 
 ### 4.5 Bosses
 
-Every boss has a 2–3 second intro (or a cutscene), a top-center health bar with phase notches, phase checkpoints on Story difficulty or with the Assist option, and telegraphs that are never shorter than 300 ms. **Co-op scaling:** HP × (1 + 0.6 × (players − 1)); add waves +1 enemy per extra player; telegraphs unchanged. **Rewards:** 150 shards and 5 Nebula Cores on first clear; 60 shards on replays.
+Every boss has a 2–3 second intro (or a cutscene), a top-center health bar with phase notches, phase checkpoints on Easy or with the Assist option, and telegraphs that are never shorter than 300 ms. **Co-op scaling:** HP × (1 + 0.6 × (players − 1)); add waves +1 enemy per extra player; telegraphs unchanged. **Rewards:** 150 shards and 5 Nebula Cores on first clear; 60 shards on replays.
 
 | Boss | Arena | Phases (HP thresholds) | Signature attacks and counters |
 | --- | --- | --- | --- |
@@ -419,7 +475,7 @@ Every boss has a 2–3 second intro (or a cutscene), a top-center health bar wit
 | **Solar Leviathan** (`vulcanis_boss`, 1,400 HP) | Lava lake with five basalt platforms (two sink) | P1 100–70%: surfaces at an edge and sweeps a lava wave. P2 70–35%: magma pillars and lobbed fireballs. P3 35–0%: lava rises; the fight continues on rising basalt platforms while it coils around the central pillar. | Surfacing: bubbles and glow for 1.0 s; the wave is 1.5 tiles tall (jump or jetpack). Gills glow when surfaced (2× damage). Pillars: glowing cracks for 0.8 s. Fireballs are parryable. Holds Keystone #1. |
 | **Cryos Overlord** (`cryos_boss`, 1,500 HP, piloted by Rusk) | Reactor floor on ice (friction 0.25×), two ledges, icicle ceiling | P1 100–65%: ice spikes, cryo-bolt volleys, stomp shockwave. P2 65–30%: core shield; parry 3 cryo-bolts back into it (3 pips on the boss bar) to expose the core for 4 s. P3 30–0%: aerial slams with ring shockwaves; faster spikes. | Ice spikes: shadow on the floor for 0.7 s. Volleys of 3 parryable bolts. Rusk has mid-fight barks. Holds Keystone #2. |
 | **Aether Archon** (`aether_boss`, 1,600 HP) | Three floating rings over a void (falling = hazard respawn); shifting wind | P1 100–66%: wind vortex pulls toward the center; summons 2 Seekers. P2 66–33%: rapid crossfire in lanes with visible safe gaps. P3 33–0%: wind direction rotates every 6 s; the Archon splits into three light-forms. | Vortex: dash out of the pull. Crossfire lanes show for 0.6 s first. In P3 only the form whose chest glyph matches the glyph on the HUD is real: a shape cue, not a color cue. Grants Keystone #3. |
-| **The Hollow Crown** (`obsidian_boss`, 1,800 HP) | Crown chamber with polarity bands and a zero-G core | P1 100–60%: remixed Keystone powers one at a time (lava wave, ice spikes, wind pull) with the original telegraphs. P2 60–25%: the arena flips polarity every 8 s (2 s warning hum and arrows); homing shard volleys (parryable). P3 25–0%: zero-G; destroy three Keystone housings (150 HP each, counted in the total). | **Finale beat — Starfall:** the Crown charges a giant bolt that must be parried (300 ms window; 600 ms on Story). A miss restarts this beat instantly with no damage. Success plays `cs_16_finale`. |
+| **The Hollow Crown** (`obsidian_boss`, 1,800 HP) | Crown chamber with polarity bands and a zero-G core | P1 100–60%: remixed Keystone powers one at a time (lava wave, ice spikes, wind pull) with the original telegraphs. P2 60–25%: the arena flips polarity every 8 s (2 s warning hum and arrows); homing shard volleys (parryable). P3 25–0%: zero-G; destroy three Keystone housings (150 HP each, counted in the total). | **Finale beat — Starfall:** the Crown charges a giant bolt that must be parried (300 ms window; 600 ms on Easy). A miss restarts this beat instantly with no damage. Success plays `cs_16_finale`. |
 
 ### 4.6 Power-ups
 
@@ -467,7 +523,7 @@ Maxing every upgrade costs **4,039 shards**.
 | | Star Shards | Nebula Cores |
 | --- | --- | --- |
 | Total sinks | 5,689 (upgrades 4,039 + weapons 600 + gadgets 650 + Vanguard 400) | 79 + cosmetics (weapons 37, Phase Blink 8, Phantom 10, mutators 24) |
-| Sources at 100% | 6,750 (15 levels × ~300 + 15 vaults × 100 + 5 bosses × 150) | 40 (bosses 25, Echo sets 10, true ending 5) plus Contracts and multiplayer wins |
+| Sources at 100% | 7,500 (15 levels × ~300 + 15 vaults × 100 + 5 bosses × 150 + 5 Side Ops × 150) | 55 (bosses 25, Echo sets 10, true ending 5, Crew Requests 15) plus Contracts and multiplayer wins |
 
 A typical first run collects about 75–85% of level shards, so players can afford most of the kit by the finale but not all of it without replays, Contracts, or multiplayer. Tune with playtest telemetry (§19.3).
 
@@ -480,13 +536,13 @@ A typical first run collects about 75–85% of level shards, so players can affo
 | Suit classes | **Striker** (default): +15% move and dash speed. **Vanguard**: +30% max shield and +30% parry reflect radius. **Phantom**: +25% jetpack efficiency (fuel drain ×0.8) and stealth for 1.0 s after a dash (enemies lose their target). |
 | Gadgets | **Grapple Hook** (traversal, story unlock, always available at anchors, §4.1). Slot gadgets, one equipped: **Holo-Decoy** (deploys a 40 HP decoy that enemies target for 4 s; 12 s cooldown), **Gravity Mine** (thrown; pulls enemies within 160 u for 1.5 s at 15 damage/s; 10 s cooldown), **Phase Blink** (teleports 192 u in the aim or move direction, stopping at the first solid tile so walls can never be skipped; 100 ms i-frames; 6 s cooldown). |
 | Mutators (one equipped) | **Vampiric Rounds**: heal 1 HP per 30 damage dealt, −10% max HP. **Low-Gravity Anchor**: personal gravity ×0.85, dash cooldown +15%. **Glass Cannon**: +25% damage dealt, +50% damage taken. **Shard Siphon**: +25% shards from enemies, −25% max shield. |
-| Cosmetics (24) | 8 suit skins, 8 jetpack trails, 8 visors. Sources: Wardrobe purchases, par-time sets (one trail per planet), achievements, the true ending (ORRIN visor). Cosmetics never change hitboxes or stats. |
+| Cosmetics (27) | 9 suit skins, 10 jetpack trails, 8 visors. Sources: Wardrobe purchases, par-time sets (one trail per planet), achievements, Crew Requests (§3.8), the true ending (ORRIN visor). Cosmetics never change hitboxes or stats. |
 
 ### 4.10 Contracts and achievements
 
 **Contracts:** three active at a time, refreshed at local midnight from templates seeded by date and save ID (e.g., "Defeat 25 Crawlers", "Collect 600 shards", "Parry 15 bolts", "Finish a level without taking damage", "Win 2 Shard Rush matches"). Rewards 1–3 cores. One free reroll per day. Changing the device clock can reroll Contracts; that only affects the player's own single-player progress and is accepted.
 
-**Achievements:** 30, listed in Appendix B. Local first; Google Play Games and Game Center integration is optional post-launch.
+**Achievements:** 32, listed in Appendix B (`hard_campaign`: finish the campaign on Hard or Drift+; `crew_first`: complete all five Crew Requests). Local first; Google Play Games and Game Center integration is optional post-launch.
 
 ---
 
@@ -538,7 +594,7 @@ Levels are JSON files at `content/levels/<planet>/<level_id>.json`. Static geome
 
 **Tile legend:** `.` empty · `#` solid · `=` one-way platform · `^` spikes · `~` lava · `%` ice (solid, Cryos-9) · `x` crumbling block (falls 0.5 s after contact, returns after 3 s) · `c` cracked wall (destructible secret wall).
 
-**Object types:** `player_spawn`, `checkpoint`, `exit`, `shard`, `shard_line` (count, spacing), `shard_arc`, `echo`, `vault_entrance`, `enemy` (archetype, patrol, elite, facing), `turret` (surface normal), `power_up`, `moving_platform` (path, speed, wait, oneWay), `geyser` (period, offset, height), `collapse_bridge`, `grapple_anchor`, `dash_ring`, `wind_zone` (direction, strength), `polarity_zone`, `zerog_zone`, `door` + `switch` (linked by `switchId`), `light_beacon`, `crate` (drops), `npc` (rescue target), `rising_hazard` (speed, start delay), `cutscene_trigger`, `boss_spawn`, `music_trigger`, `camera_lock`.
+**Object types:** `player_spawn`, `checkpoint`, `exit`, `shard`, `shard_line` (count, spacing), `shard_arc`, `echo`, `vault_entrance`, `enemy` (archetype, patrol, elite, facing), `turret` (surface normal), `power_up`, `moving_platform` (path, speed, wait, oneWay), `geyser` (period, offset, height), `collapse_bridge`, `grapple_anchor`, `dash_ring`, `wind_zone` (direction, strength), `polarity_zone`, `zerog_zone`, `door` + `switch` (linked by `switchId`), `light_beacon`, `crate` (drops), `npc` (rescue target), `rising_hazard` (speed, start delay), `cutscene_trigger`, `boss_spawn`, `music_trigger`, `camera_lock`, `request_item` (requestId, step, index; pickup or destructible), `request_zone` (requestId, step, holdS). Request objects spawn only while their step is active (§3.8).
 
 **Zone types:** `camera_bounds`, `section` (enemy reset scope), `kill_plane`, `no_safe_ground` (excluded from hazard-respawn points).
 
@@ -576,7 +632,7 @@ Humans may author in Tiled; `tools/tiled-import` converts `.tmj` files into this
 1. Schema valid; all rows have length `w`; only legend characters.
 2. Exactly one `player_spawn`; at least one `exit`; checkpoint spacing within §5.1.
 3. No object overlaps solid tiles; enemies have patrol space; turrets sit on surfaces.
-4. **Reachability:** builds a graph of standable cells with edges for walk, fall, jump, wall-jump, jetpack, dash, and grapple using the planet's §5.1 metrics and only the abilities the player has at that point in the campaign. The exit and every required pickup MUST be reachable; Echoes and vaults declare `requires` when they need later abilities.
+4. **Reachability:** builds a graph of standable cells with edges for walk, fall, jump, wall-jump, jetpack, dash, and grapple using the planet's §5.1 metrics and only the abilities the player has at that point in the campaign. The exit and every required pickup MUST be reachable; Echoes and vaults declare `requires` when they need later abilities. Request items and zones are checked with the abilities the player has when their step unlocks (§3.8).
 5. Width ≤ 400 tiles and height ≤ 200 tiles (the network encodes positions as `Uint16` half-units, max 32,767 u = 511 tiles, §16.4).
 6. A kill plane under every open bottom edge; camera bounds cover all playable space.
 7. Output: a JSON report plus an ASCII map that marks unreachable cells.
@@ -667,6 +723,22 @@ Each slot adds a jitter seeded by the slot number (±14 u x, ±6 u y), a facing 
 - In competitive modes, the visible world width is capped at a 19.5:9 aspect ratio; wider screens get decorative side bars so nobody sees more of the arena.
 - The host is trusted in 1.0 (friends-only rooms). Rewards come from the host's `match:end` event. Public matchmaking or leaderboards require a server (§21.7).
 - If the host's device benchmarks as Low tier (§18.2), the Host card warns: "Your device may struggle to host. Let a friend host for the smoothest match."
+
+
+### 6.6 Difficulty and Assists by mode
+
+| Mode | Who picks | Choices | Notes |
+| --- | --- | --- | --- |
+| Campaign (solo) | Player | Easy, Normal, Hard; Drift+ after the campaign | Picked at New Game; changeable per §3.4 |
+| Mission and Side Op replay | Player, at launch | Same | Defaults to the save's difficulty |
+| Orbital Co-op | Host, in the lobby | Any difficulty the host has unlocked | Shown on the room card, lobby, and loading screen; locked once the match starts; co-op scaling (§4.5) applies on top. Each player's records count at that difficulty. |
+| Boss Rush Gauntlet | Player (solo) or host | Same | Best times kept per difficulty |
+| Shard Rush, King of the Beacon | Nobody | None | Competitive modes are equal for everyone. Arena enemies and hazards use Normal values; the host sets match rules (rule toggles, Appendix B) instead. |
+
+- Game speed is global, so it is unavailable in every online mode (shown greyed with "Not available online").
+- Orbital Co-op and Boss Rush: the host's "Allow Assists" room setting (default on) lets each player keep their own invulnerability, infinite fuel, auto-fire, and safe-hazard options; they affect only that player. Boss phase checkpoints follow the host.
+- Competitive modes allow only input aids (auto-fire, hold-or-toggle shooting, control layouts); gameplay assists and crew perks are off.
+- The handshake carries the room's difficulty and assist policy (§16.3), so every client simulates the same rules.
 
 ---
 
@@ -837,13 +909,14 @@ Performance rules: animate only `transform` and `opacity`; no layout-triggering 
 | **Star Map** | A 2.5D orbital view: five planets around the Heartstar; drag to rotate; tap a planet to warp in; mission cards show Echo, Vault, par medal, and shard %. Locked planets are silhouettes; vaults that need later gear show "Return later". |
 | **Mission Briefing** | Name, objective, best time, collectibles, quick loadout change, Start. |
 | **Loading** | Planet art, a gameplay tip or lore line, a progress ring with real progress. Shown at least 400 ms (no flash); after 10 s, add "Still loading…" with details. |
-| **Pause** | Resume, Restart from checkpoint, Settings, Controls, Quit to Hub (confirms and warns about unbanked shards). In multiplayer the match continues; the menu says so. |
+| **Pause** | Resume, Restart from checkpoint, Difficulty (campaign only; not during boss fights), Settings, Controls, Quit to Hub (confirms and warns about unbanked shards). In multiplayer the match continues; the menu says so. |
 | **Results** | Time, shards (rolling counter), collectibles, par medal, unlocks revealed as card flips, Continue and Replay. |
 | **Workshop** | Six upgrade cards: icon, level pips, current → next value, cost button (disabled with a reason when unaffordable). Purchase: pips fill, spark, counter rolls. Respec with a confirmation that shows the exact refund. |
 | **Armory** | Tabs: Weapons, Gadgets, Suits, Mutators. Rotating pedestal preview; stat comparison bars; Buy, then Equip. |
 | **Wardrobe** | Suit skins, trails, visors on a live turntable of Kes's rig; locked items show how to earn them. |
 | **Codex** | Bestiary (updates after the reveal), Lore (the Echo Gallery), Characters, Theater (watched cutscenes, after the finale). |
 | **Contracts** | Three cards with progress bars; Reroll; Claim with a core-burst animation. |
+| **Crew Requests** | On the Bridge, or by talking to a crew member with a "!" badge. One card per request: portrait, story blurb, the three steps with progress and the levels they happen in, reward preview, and **Track**. |
 | **Credits** | Scrolling credits with vignettes; "Open-source licenses" link. |
 | **Error / Recovery** | Plain-language message, error code, Retry, Restart, Safe Mode, Copy diagnostics (§19.2). |
 
@@ -875,7 +948,7 @@ Every setting applies live with a preview, persists immediately (§15.3), and ea
 | | Shoot | Hold / Toggle | Hold |
 | | Haptics | Off / Light / Full | Light |
 | | Keyboard and gamepad bindings | Rebind any action; conflicts are flagged | §8.9 |
-| **Gameplay** | Difficulty | Story / Standard / Drift+ (when unlocked) | Standard |
+| **Gameplay** | Difficulty | Easy / Normal / Hard / Drift+ (when unlocked) | Normal |
 | | Assist options | §3.4 list | All off |
 | | Camera shake, hit-stop | 0–100, On/Off | 100, On |
 | | Screen flashes | Full / Reduced / Off | Reduced |
@@ -938,7 +1011,7 @@ Sizes in CSS px (density-independent). Positions are offsets of the button cente
 | Ping wheel / quick-chat | Tab / 1–4 | Tab / 1–4 | LB |
 | Pause | Esc | P | Start |
 
-Both keyboard columns work at the same time with no conflicts. Everything is rebindable. Gamepads arrive in Pass 6 (§23).
+Both keyboard columns work at the same time with no conflicts. Everything is rebindable. Controllers arrive in Pass 1D (play), 2B (rebinding UI), and 6C (polish and device matrix); see §8.13.
 
 ### 8.10 Onboarding
 
@@ -963,6 +1036,31 @@ Both keyboard columns work at the same time with no conflicts. Everything is reb
 - Remappable inputs, a touch layout editor, hold-or-toggle shooting, auto-fire, Assist options, subtitles, sound captions, mono audio.
 - Known limitation for 1.0: no one-handed touch layout.
 
+
+### 8.13 Platform and input support
+
+| Platform | How players get it | Touch | Keyboard and mouse | Controller |
+| --- | --- | --- | --- | --- |
+| Android phone or tablet | Sideloaded `.apk` (§21.6) | Yes | Bluetooth or USB keyboard and mouse | Bluetooth or USB controllers through the WebView Gamepad API. Known risk: some app WebViews return empty `navigator.getGamepads()` slots while Chrome on the same phone works. Verify on a real phone in Pass 1D; if it fails, make sure controller key and motion events reach the WebView (`MainActivity` must not consume them), or add a small native Capacitor bridge plugin (ADR). |
+| iPhone or iPad | PWA: Safari → Share → Add to Home Screen (§21.6) | Yes | iPad keyboards and trackpads | MFi, Xbox, and PlayStation controllers through Safari's Gamepad API; no rumble |
+| Windows, macOS, ChromeOS, Linux | PWA: Chrome or Edge "Install app"; Safari on macOS "Add to Dock". Also plays in a normal browser tab. | Touchscreen laptops | Yes | Xbox, PlayStation, Switch Pro, and generic controllers over USB or Bluetooth; rumble where the browser supports `vibrationActuator` |
+
+**Feels like an app, not a web page:**
+
+- Web app manifest: name, icons (including maskable), `display: "standalone"` with `display_override: ["fullscreen", "standalone"]`, `orientation: "landscape"`, theme and background colors, `start_url` and `scope` at the app root.
+- Opens in its own window with no browser bars; F11 or Settings → Display → Fullscreen uses the Fullscreen API.
+- Works offline after the first load (§21.4); updates follow §21.8.
+- No text selection, context menu, pinch zoom, pull-to-refresh, or scroll bounce (N14). During gameplay the mouse cursor hides after 2 s without movement and returns on movement or in menus.
+- Live window resizing; below 640 × 360 CSS px the game pauses behind a "Make the window bigger" panel.
+- Losing focus pauses single-player (§13.10). The game never binds browser-reserved shortcuts (Ctrl/Cmd + W, R, T, L, Q).
+
+**Controls and rebinding:**
+
+- Every action can be rebound for keyboard (a primary and an alternate key per action) and for controllers (per family: Xbox, PlayStation, Nintendo, generic). Conflicts are flagged; "Reset to defaults" per device.
+- Menus are fully usable with keyboard (arrows or Tab, Enter, Esc) and controller (D-pad or left stick, A/Cross confirm, B/Circle back, bumpers switch tabs), with visible focus rings.
+- On-screen glyphs follow the last-used device and the detected controller family (`Gamepad.id`); an unknown controller gets a short "press each button" calibration screen.
+- Stick deadzone, outer saturation, and response curve are adjustable per controller (§14.3).
+- Bindings are stored per device in Settings (§15.3), never in the save, so a save moved to another device keeps that device's controls.
 ## 9. Art Direction & Asset Pipeline
 
 ### 9.1 Neo-Celestial art bible
@@ -1499,7 +1597,7 @@ export interface StickState {
 
 - Keyboard mappings per §8.9; OS key repeat is ignored (only physical down/up changes state); every binding can be remapped and conflicts are flagged in Settings.
 - Mouse: left button shoots toward the cursor (aim angle from player to cursor in world space); right button parries.
-- Gamepad (Pass 6): standard mapping via the Gamepad API; right stick aims; dead zones per §14.3; hot-plug supported; the last-used device decides on-screen glyphs.
+- Gamepad (play in Pass 1D, rebinding UI in Pass 2B, polish in 6C; platform notes in §8.13): standard mapping via the Gamepad API; right stick aims; dead zones per §14.3; hot-plug supported; the last-used device decides on-screen glyphs.
 
 ### 14.5 Required input tests
 
@@ -1590,8 +1688,8 @@ Host-authoritative star: the host runs the authoritative simulation; clients sen
 
 1. Client → host (reliable): `hello { protocolVersion, buildId, contentHash, configHash, callsign, platform, cosmetics }`.
 2. Host checks versions and hashes. On mismatch it replies `reject { reason: "version" }` and the client shows "Your game version doesn't match the host's. Update and try again."
-3. Host replies `welcome { slot, mode, arenaId, rules, peers[] }` and broadcasts the roster.
-4. Match start: `match:start { seed, startTick, arenaId, mode, rules, players[] }`.
+3. Host replies `welcome { slot, mode, arenaId, rules, difficulty, assistPolicy, peers[] }` and broadcasts the roster.
+4. Match start: `match:start { seed, startTick, arenaId, mode, rules, difficulty, assistPolicy, players[] }`.
 
 The host binds each connection to its assigned slot and **ignores the slot byte in client packets**: a client can only ever control its own player.
 
@@ -1981,7 +2079,7 @@ Each row lists the scope (only this), the sections to read, and the acceptance c
 | **1A — Boot & canvas** | `BootScene`, `ThemePalette`, hand-written minimal manifest + `AssetRegistry` (timeout, procedural fallback, statuses), capability matrix, viewport CSS guards, WebGL-required screen, debug badge (FPS, EMA frame time) | §9.2, §9.6, §12.3, §13.6, §21.5 (viewport), M3, M7, N14, O3 | Boots at phone and desktop ratios; zero required-asset 404s; a stalled asset falls back within the timeout; the no-WebGL screen works |
 | **1B — Headless simulation** | `GameConfig`, `FixedLoop`, `Random`, `DMath`, `InputFrame`, `WorldSimulation` skeleton, `StateHash`, replay recorder, `tools/replay-run`, dt clamp, entity generations, NaN/Infinity assertion | §4.1, §13.2–§13.4, M1, M7, N4, N9, N11, O2 | Same seed + inputs ⇒ same hash; dt-spike and pause tests pass; `deps:check` proves `core` has no Phaser or DOM imports |
 | **1C — Movement & collision** | Player state machine; axis-separated resolution; solid, one-way, drop-through; coyote, buffer, jump cut with minimum hold; wall slide and jump; jetpack; dash; corner correction; ledge forgiveness; hazard respawn; one moving platform; minimal ASCII level parser and a test arena | §4.1, §4.3, §5.1–§5.2, §13.5, M5, N1–N3 | Scripted headless tests cover every rule; the derived-reach table in §4.1 is reproduced within ±2 u; property tests show no tunneling at maximum speeds |
-| **1D — Keyboard & multi-touch** | `TouchControls`, keyboard/mouse adapter, `InputRouter` with latching, `TouchControlView`, floating stick, Classic layout, cleanup triggers | §8.8–§8.9, §14, M6 | Every §14.5 test passes; 2–3 simultaneous touches verified on a real phone; no stuck input after blur, cancel, or scene change |
+| **1D — Keyboard, controller & multi-touch** | `TouchControls`, keyboard/mouse adapter, `InputRouter` with latching, `TouchControlView`, floating stick, Classic layout, cleanup triggers, standard-mapping `GamepadControls` | §8.8–§8.9, §14, M6, §8.13 | Every §14.5 test passes; 2–3 simultaneous touches verified on a real phone; no stuck input after blur, cancel, or scene change; a standard controller plays the test arena in desktop Chrome, and controller results on the Android app and iPhone PWA are recorded (§8.13) |
 | **1E — Gameplay loop, art, audio, feel** | Crawler enemy; Pulse Blaster with swept projectiles and heat; shards, checkpoint, exit; HUD (HP, shield, shards, fuel); pause and restart; procedural Neo-Celestial art (slabs, parallax, contact shadows); `SoundEngine` with buses, limiter, polyphony caps, synth SFX; event-driven juice; render-only hit-stop; reduced-motion basics. Parry and slam only if the loop is stable; otherwise listed as deferred to 3A | §4.2–§4.4, §8.7, §9.3, §10.4, §13.7–§13.8, M4, N12, N13, O7 | The arena plays start to finish and restarts cleanly; audio never clips; reduced motion is respected |
 | **1F — Hardening & acceptance** | Replay export/import (dev), 50-restart leak test, error handlers and Safe Mode, memory counters, basic adaptive quality, state-hash tooling, device record | M1, M8, O1, O4–O6, §19 | Every Pass 1 checklist item below passes |
 
@@ -2007,8 +2105,8 @@ Each row lists the scope (only this), the sections to read, and the acceptance c
 | Milestone | Scope | Read | Done when |
 | --- | --- | --- | --- |
 | **2A — UI foundation** | Preact DOM layer, `tokens.css`, components, motion system, UI router synced with scenes, Title and Pause screens, fade and iris transitions, photosensitivity notice, dev-only UI gallery page | §8.1–§8.5, §8.12 | axe passes on every screen; transitions show no long tasks on a Mid device; every animation has a reduced-motion variant |
-| **2B — Settings & accessibility** | Full Settings (§8.6) with live apply and persistence; layout editor and presets; text size; colorblind palettes with the CVD test; captions; i18n with `en` and the pseudo-locale | §8.6, §8.8, §8.10–§8.12, §9.2, §15.3 | Every setting persists and applies; pseudo-locale screenshots show no overflow; edited layouts survive restarts |
-| **2C — Saves & autosave** | `SaveStore`, AES-GCM envelope, A/B atomic writes, migrations framework, autosave triggers, resume point, backup export/import, reward ledger and economy actions, Save Slots screen | §4.8 (rules), §15, §17.2, N11, O8 | Tamper, truncation, and migration tests pass; closing the tab mid-write loses nothing; Continue resumes at the checkpoint |
+| **2B — Settings & accessibility** | Full Settings (§8.6) with live apply and persistence; layout editor and presets; text size; colorblind palettes with the CVD test; captions; i18n with `en` and the pseudo-locale; keyboard and controller rebinding UI and menu navigation (§8.13) | §8.6, §8.8, §8.10–§8.12, §9.2, §15.3, §8.13 | Every setting persists and applies; pseudo-locale screenshots show no overflow; edited layouts survive restarts |
+| **2C — Saves & autosave** | `SaveStore`, AES-GCM envelope, A/B atomic writes, migrations framework, autosave triggers, resume point, backup export/import, reward ledger and economy actions, Save Slots screen; New Game difficulty picker (§3.4) | §4.8 (rules), §15, §17.2, N11, O8 | Tamper, truncation, and migration tests pass; closing the tab mid-write loses nothing; Continue resumes at the checkpoint |
 | **2D — Hub & scene flow** | `HubScene` (*Lantern* diorama), station sheets with the "Find them first" state, Star Map (Kepler playable), Mission Briefing, Loading with scopes, Results | §3.3, §8.1, §8.5 | Title → Hub → Star Map → Level → Results → Hub works with saves at every step |
 | **2E — Cinematics & dialogue** | `CutscenePlayer`, timeline schema, `DialogueController` and box, portraits (fallback art allowed), voice blips, barks, captions, backlog; `cs_01` and `cs_02` | §2.6, §7, §13.9 | Skip-equivalence test passes; backgrounding pauses timelines; every line is a localization key |
 | **2F — Level pipeline & tutorial** | Full level schema, parser, autotiling, slab extrusion, decor layers, objects for Kepler, LevelLint with reachability, ghost-run recorder, `assets:build` and `audio:build`, `kepler_01` complete with tutorial prompts | §3.2, §5, §8.10, §9.5–§9.7, §10.5 | LevelLint and the ghost run pass; pipelines are deterministic; `kepler_01` is playable end to end at the quality bar |
@@ -2020,7 +2118,7 @@ Each row lists the scope (only this), the sections to read, and the acceptance c
 | **3A** | Crawler and Hover Seeker full AI with telegraphs and drops; parry (with perfect window) and slam complete; combat feedback | Headless AI tests; every telegraph ≥ 300 ms; grayscale readability review passes |
 | **3B** | `kepler_02`, `kepler_03` (moving platforms, collapsing plates, Bram rescue scene), Echo and Star Vault mechanics | LevelLint and ghost runs pass; three playtesters finish both levels |
 | **3C** | Boss framework (phases, boss bar, phase checkpoints, co-op scaling hooks); Hive Warden; `cs_03`, `cs_04` | Scripted fight reaches every phase; no softlocks; first-clear rewards are granted exactly once |
-| **3D** | Workshop (6 upgrades, respec), Wardrobe (Kepler cosmetics), Contracts, achievements framework | Economy tests match §4.8; purchase and respec animations meet §8.4 |
+| **3D** | Workshop (6 upgrades, respec), Wardrobe (Kepler cosmetics), Contracts, achievements framework; Crew Request framework (§3.8): step types, request objects, tracking, HUD line, crew perks, rewards, and save fields, tested with a dev-only request | Economy tests match §4.8; purchase and respec animations meet §8.4; request state survives save, load, and migration; request rewards are granted exactly once |
 | **3E** | Chapter 1 polish: integrate available custom or AI art, Kepler music and SFX, haptics, device-matrix performance, accessibility pass, playtest with at least 3 people, fix every P0/P1 | **Shareable Chapter 1 build:** a deployed private web build and a signed debug APK the user can send to a friend |
 
 ### Pass 4 — Multiplayer
@@ -2031,7 +2129,7 @@ Each row lists the scope (only this), the sections to read, and the acceptance c
 | **4B** | Relay screen, hangar lobby with the loose formation, lobby UI, ready/countdown/launch, invite links, share | The lobby looks and behaves as §6.2 specifies with 4 clients |
 | **4C** | `input:frames`, snapshots, clock sync, prediction and reconciliation, interpolation, M2 smoothing on `arena_kepler` | Movement looks correct for all players at 100 ms RTT and 2% loss (simulated) |
 | **4D** | Reliable events (projectiles, hits, pickups), interest management, Shard Rush and King of the Beacon rules in `core/modes`, podium scene | Full matches complete on two devices; packet fuzz tests pass |
-| **4E** | Orbital Co-op on Kepler missions and the Hive Warden (scaling, rescue pods, guest progression rules), Boss Rush with available bosses, spectator cam, quick-chat and pings | A 2-player co-op run of `kepler_01`–`kepler_boss` completes |
+| **4E** | Orbital Co-op on Kepler missions and the Hive Warden (scaling, rescue pods, guest progression rules), Boss Rush with available bosses, spectator cam, quick-chat and pings; host difficulty and assist policy (§6.6) | A 2-player co-op run of `kepler_01`–`kepler_boss` completes |
 | **4F** | Network hardening: latency/loss/duplication simulation, reconnect grace, host loss, TURN relay on cellular, Android ↔ iOS ↔ web cross-play | Join in under 30 s (P4); a 10-minute 4-player match with no desync, crash, or visible rubber-banding at 100 ms RTT and 2% loss |
 
 ### Pass 5 — Chapters 2–5 and post-game
@@ -2040,11 +2138,11 @@ Each chapter splits into four milestones: **(1)** new enemies and mechanics, **(
 
 | Milestone | Chapter content |
 | --- | --- |
-| **5A** Vulcanis | Armored Trooper, Turret, geysers, collapsing bridges, grapple; `vulcanis_01`–`03` (Pike rescue, Grapple Hook, lava chase); Solar Leviathan; `cs_05`–`cs_07`; Armory (weapons T2–T3, Holo-Decoy, Gravity Mine, Vanguard) |
-| **5B** Cryos-9 | Cryo Bomber, ice physics, doors and switches, fog; `cryos_01`–`03` (Halloran rescue); Cryos Overlord; `cs_08`–`cs_10`; Codex; mutators; Phantom; weapon T4 |
-| **5C** Aether-V | Phase Blinker, wind zones, dash rings, light beacons; `aether_01`–`03`; Aether Archon; `cs_11`–`cs_13`; Echo Gallery; weapon T5; Phase Blink |
-| **5D** Obsidian Core | Elite modifiers, polarity zones, zero-G chambers; `obsidian_01`–`03` (Reyes rescue, Rusk's turn); the Hollow Crown and Starfall; `cs_14`–`cs_18`; Drift+; full Boss Rush; Theater |
-| **5E** Post-game & completeness | Drift+ tuning, full Contract pool, 30 achievements, par times, co-op for every chapter, all five multiplayer arenas |
+| **5A** Vulcanis | Armored Trooper, Turret, geysers, collapsing bridges, grapple; `vulcanis_01`–`03` (Pike rescue, Grapple Hook, lava chase); Solar Leviathan; `cs_05`–`cs_07`; Armory (weapons T2–T3, Holo-Decoy, Gravity Mine, Vanguard); `rq_bram` and `rq_tavi` steps in Kepler and Vulcanis levels; Side Op `side_vulcanis` (§3.8) |
+| **5B** Cryos-9 | Cryo Bomber, ice physics, doors and switches, fog; `cryos_01`–`03` (Halloran rescue); Cryos Overlord; `cs_08`–`cs_10`; Codex; mutators; Phantom; weapon T4; `rq_pike` steps and `rq_bram` step 2; Side Ops `side_kepler` and `side_cryos` |
+| **5C** Aether-V | Phase Blinker, wind zones, dash rings, light beacons; `aether_01`–`03`; Aether Archon; `cs_11`–`cs_13`; Echo Gallery; weapon T5; Phase Blink; `rq_halloran` steps; Side Op `side_aether` |
+| **5D** Obsidian Core | Elite modifiers, polarity zones, zero-G chambers; `obsidian_01`–`03` (Reyes rescue, Rusk's turn); the Hollow Crown and Starfall; `cs_14`–`cs_18`; Drift+; full Boss Rush; Theater; `rq_orrin` steps; Side Op `side_obsidian`; the `cs_16_finale` ORRIN line variant |
+| **5E** Post-game & completeness | Hard and Drift+ tuning, full Contract pool, 32 achievements, all five Crew Requests verified end to end from a fresh save, par times, co-op for every chapter, all five multiplayer arenas |
 
 ### Pass 6 — Polish, accessibility, localization
 
@@ -2052,7 +2150,7 @@ Each chapter splits into four milestones: **(1)** new enemies and mechanics, **(
 | --- | --- |
 | **6A — Art & audio lock** | Replace remaining fallbacks per asset policy; provenance ledger complete; music and mix pass to loudness targets; VFX standards audit |
 | **6B — Feel & UX polish** | Playtest-driven tuning of movement, combat, camera, difficulty, Assist, and economy (from local metrics); UI motion and onboarding polish |
-| **6C — Accessibility & input** | Gamepad support (§14.4); full rebinding UI; complete §8.12 audit; caption coverage; photosensitivity review |
+| **6C — Accessibility & input** | Controller polish (§8.13): per-family glyphs, calibration for unknown controllers, rumble where supported, Android app controller fix if needed; complete §8.12 audit; caption coverage; photosensitivity review |
 | **6D — Performance** | Device-matrix profiling; adaptive-quality tuning (O6); memory, load-time, and battery budgets; pseudo-locale clean |
 
 ### Pass 7 — Platform, security, release
@@ -2190,7 +2288,8 @@ New game through `kepler_01`; continue from a checkpoint; backup export/import; 
 - [ ] Passes 0–7 approved; `npm run verify` and e2e (Chromium and WebKit) green on the release commit.
 - [ ] The device matrix in §26.1 passes the regression checklist; no open P0/P1; all P2 triaged.
 - [ ] Performance budgets (§18) met on Mid tier, and on Low tier with the Battery preset.
-- [ ] The campaign has been completed start to finish by human playtesters on Story, Standard, and Drift+.
+- [ ] The campaign has been completed start to finish by human playtesters on Easy, Normal, Hard, and Drift+.
+- [ ] Every Crew Request completes end to end from a fresh save, and every request object is reachable when its step unlocks.
 - [ ] Every level ghost run and every scripted boss test passes; all 19 cutscenes play and skip equivalently.
 - [ ] Saves survive kill-during-write tests on web, Android, and iOS; migrations from every shipped schema pass.
 - [ ] Cross-play: 2–4 players across Android, iOS, and web for a 30-minute session with no desync or crash, including a relay (TURN) path.
@@ -2211,7 +2310,7 @@ export interface PlayerProfile {
   saveId: string;                     // random UUID
   callsign: string;
   createdAtMs: number; updatedAtMs: number; playTimeMs: number;
-  difficulty: "story" | "standard" | "drift_plus";
+  difficulty: "easy" | "normal" | "hard" | "drift_plus";
   assists: { invulnerable: boolean; infiniteFuel: boolean; gameSpeed: 70 | 80 | 90 | 100;
              autoFire: boolean; bossPhaseCheckpoints: boolean; safeHazards: boolean };
   wallet: { starShards: number; nebulaCores: number };
@@ -2224,7 +2323,8 @@ export interface PlayerProfile {
   unlockedCosmetics: CosmeticId[];
   equippedSkin: { suit: CosmeticId; trail: CosmeticId; visor: CosmeticId };
   unlockedPlanets: PlanetId[];
-  missions: Partial<Record<MissionId, { completed: boolean; bestTimeMs: number | null;
+  missions: Partial<Record<MissionId | SideOpId, { completed: boolean; bestTimeMs: number | null;
+             highestDifficulty: "easy" | "normal" | "hard" | "drift_plus" | null;
              shardsPct: number; echo: boolean; vault: boolean; parBeaten: boolean }>>;
   echoes: EchoId[];
   storyFlags: string[];
@@ -2232,6 +2332,10 @@ export interface PlayerProfile {
   achievements: AchievementId[];
   activeBounties: { id: string; templateId: string; progress: number; target: number;
                     rewardCores: number; issuedForDate: string }[];
+  crewRequests: Partial<Record<RequestId, { state: "available" | "active" | "done";
+                 step: 1 | 2 | 3; progress: number; itemsTaken: string[] }>>;
+  trackedRequest: RequestId | null;
+  crewPerks: Partial<Record<PerkId, boolean>>;   // unlocked perks; value = switched on
   rewardLedger: string[];             // granted rewardIds; never granted twice
   mpDaily: { date: string; coresEarned: number };
   resume: { missionId: MissionId; checkpointId: string; bankedShards: number;
@@ -2306,8 +2410,12 @@ ID string-literal unions (`MissionId`, `EnemyId`, and so on) are generated from 
 | --- | --- |
 | Planets | `kepler`, `vulcanis`, `cryos`, `aether`, `obsidian` |
 | Missions (20) | `kepler_01`, `kepler_02`, `kepler_03`, `kepler_boss`, `vulcanis_01`, `vulcanis_02`, `vulcanis_03`, `vulcanis_boss`, `cryos_01`, `cryos_02`, `cryos_03`, `cryos_boss`, `aether_01`, `aether_02`, `aether_03`, `aether_boss`, `obsidian_01`, `obsidian_02`, `obsidian_03`, `obsidian_boss` |
+| Side Ops (5) | `side_kepler`, `side_vulcanis`, `side_cryos`, `side_aether`, `side_obsidian` |
+| Crew Requests (5) | `rq_bram`, `rq_tavi`, `rq_pike`, `rq_halloran`, `rq_orrin` |
+| Crew perks (5) | `perk_field_patch`, `perk_nav_uplink`, `perk_ricochet`, `perk_field_lens`, `perk_echo_sense` |
 | Arenas | `arena_kepler`, `arena_vulcanis`, `arena_cryos`, `arena_aether`, `arena_obsidian` |
 | Modes | `orbital_coop`, `shard_rush`, `king_of_the_beacon`, `boss_rush` |
+| Difficulties | `easy`, `normal`, `hard`, `drift_plus` |
 | Enemies | `crawler`, `hover_seeker`, `armored_trooper`, `turret`, `phase_blinker`, `cryo_bomber` |
 | Elites | `shielded`, `volatile`, `swift` |
 | Bosses | `hive_warden`, `solar_leviathan`, `cryos_overlord`, `aether_archon`, `hollow_crown` |
@@ -2321,10 +2429,10 @@ ID string-literal unions (`MissionId`, `EnemyId`, and so on) are generated from 
 | Cutscenes (19) | `cs_00_title_attract`, `cs_01_shardfall`, `cs_02_orrin_wakes`, `cs_03_warden_intro`, `cs_04_kepler_outro`, `cs_05_vulcanis_arrival`, `cs_06_leviathan_intro`, `cs_07_vulcanis_outro`, `cs_08_cryos_arrival`, `cs_09_overlord_intro`, `cs_10_cryos_outro`, `cs_11_aether_arrival`, `cs_12_archon_intro`, `cs_13_the_truth`, `cs_14_obsidian_arrival`, `cs_15_crown_intro`, `cs_16_finale`, `cs_17_credits`, `cs_18_true_ending` |
 | Speakers | `kes`, `orrin`, `tavi`, `bram`, `pike`, `halloran`, `reyes`, `voss`, `rusk`, `archon` |
 | Echoes (15) | `echo_<planet>_<1..3>` |
-| Cosmetics — suits | `skin_courier` (default), `skin_garden`, `skin_forge`, `skin_archive`, `skin_choir`, `skin_heart`, `skin_meridian_defector`, `skin_drift_plus` |
-| Cosmetics — trails | `trail_cyan` (default), `trail_kepler`, `trail_vulcanis`, `trail_cryos`, `trail_aether`, `trail_obsidian` (par sets), `trail_starfall`, `trail_relay` |
-| Cosmetics — visors | `visor_standard` (default), `visor_amber`, `visor_frost`, `visor_prism`, `visor_void`, `visor_tavi`, `visor_pike`, `visor_orrin` (true ending) |
-| Achievements (30) | `first_light`, `garden_saved`, `forge_cooled`, `archive_thawed`, `choir_heard`, `heart_restored`, `all_echoes`, `all_vaults`, `parry_100`, `perfect_parry_25`, `starfall_first_try`, `untouchable`, `par_master`, `drift_plus_clear`, `boss_rush_clear`, `boss_rush_flawless`, `shard_hoarder`, `fully_upgraded`, `armory_complete`, `gadgeteer`, `dressed_to_drift`, `relay_first_match`, `field_medic`, `shard_rush_win`, `beacon_keeper`, `coop_boss_down`, `slam_dunk`, `grapple_100`, `contractor_20`, `dash_1000` |
+| Cosmetics — suits | `skin_courier` (default), `skin_garden`, `skin_forge`, `skin_archive`, `skin_choir`, `skin_heart`, `skin_meridian_defector`, `skin_drift_plus`, `skin_lantern_crew` (`rq_bram`) |
+| Cosmetics — trails | `trail_cyan` (default), `trail_kepler`, `trail_vulcanis`, `trail_cryos`, `trail_aether`, `trail_obsidian` (par sets), `trail_starfall`, `trail_relay`, `trail_custodian` (`rq_halloran`), `trail_resonance` (`rq_orrin`) |
+| Cosmetics — visors | `visor_standard` (default), `visor_amber`, `visor_frost`, `visor_prism`, `visor_void`, `visor_tavi` (`rq_tavi`), `visor_pike` (`rq_pike`), `visor_orrin` (true ending) |
+| Achievements (32) | `first_light`, `garden_saved`, `forge_cooled`, `archive_thawed`, `choir_heard`, `heart_restored`, `all_echoes`, `all_vaults`, `parry_100`, `perfect_parry_25`, `starfall_first_try`, `untouchable`, `par_master`, `drift_plus_clear`, `boss_rush_clear`, `boss_rush_flawless`, `shard_hoarder`, `fully_upgraded`, `armory_complete`, `gadgeteer`, `dressed_to_drift`, `relay_first_match`, `field_medic`, `shard_rush_win`, `beacon_keeper`, `coop_boss_down`, `slam_dunk`, `grapple_100`, `contractor_20`, `dash_1000`, `hard_campaign`, `crew_first` |
 | Music (20) | `mus_title`, `mus_hub`, `mus_lobby`, `mus_<planet>_explore`, `mus_<planet>_combat`, `mus_<planet>_boss` (×5), `mus_finale`, `mus_credits` |
 | Rule toggles | `friendlyBump`, `hazardSpeed`, `suddenDeath`, `lowGravityChaos`, `instagib`, `doubleShards` |
 
@@ -2385,6 +2493,17 @@ npm run dev | npm run verify | npm run test:e2e | npm run levels:lint | npm run 
 | Native iOS (TestFlight) assumed for iPhone friends | Free route by default: Android sideload `.apk` plus iPhone/iPad PWA; native iOS is optional and paid |
 | Android release built locally | `.apk` built in GitHub Actions (or on the owner's PC); the Android SDK is not required in the agent's sandbox |
 | Vitest 4.1+ | Vitest 5.x; TypeScript stays on 6.x (6.0.3 verified), TS 7 only by ADR |
+
+### Changes in v3.2
+
+| v3.1 | v3.2 |
+| --- | --- |
+| Story / Standard / Drift+ | Easy / Normal / Hard / Drift+ with per-mode rules (§3.4, §6.6) and online assist rules |
+| No sidequests | Five Crew Requests with step types, five Side Ops, crew perks, rewards, and save fields (§3.8) |
+| Gamepads only in Pass 6 | Controller play in 1D, rebinding UI in 2B, polish in 6C; platform and input matrix, desktop PWA "feels like an app" rules (§8.13) |
+| No update system | Live updates with changelog, size, progress bar, rollback, signed bundles (§21.8, Pass 7E) |
+| APK pipeline in Pass 7B | Signed APK release pipeline built early (before Pass 1A) and recorded in `docs/DECISIONS.md` |
+| 30 achievements, 24 cosmetics | 32 achievements, 27 cosmetics |
 
 ---
 
