@@ -23,11 +23,11 @@ Last updated: 2026-11-24
 | ---- | -------------------- | ----------- |
 | M1   | 1B, 1F               | NOT STARTED |
 | M2   | 4C                   | NOT STARTED |
-| M3   | 1A                   | NOT STARTED |
+| M3   | 1A                   | IN REVIEW   |
 | M4   | 1E                   | NOT STARTED |
 | M5   | 1C, 1E               | NOT STARTED |
 | M6   | 1D                   | NOT STARTED |
-| M7   | 1A, 1B               | NOT STARTED |
+| M7   | 1A, 1B               | IN REVIEW   |
 | M8   | 1F, then every scene | NOT STARTED |
 | M9   | 4A                   | NOT STARTED |
 | M10  | 0                    | IN REVIEW   |
@@ -44,7 +44,7 @@ Last updated: 2026-11-24
 | N11  | 1B, 2C, 4A           | NOT STARTED |
 | N12  | 1E                   | NOT STARTED |
 | N13  | 1E, 1F               | NOT STARTED |
-| N14  | 1A, 7B/7C            | NOT STARTED |
+| N14  | 1A, 7B/7C            | IN REVIEW   |
 | N15  | Every handoff        | IN REVIEW   |
 | O1   | 1F                   | NOT STARTED |
 | O2   | 1B onward            | NOT STARTED |
