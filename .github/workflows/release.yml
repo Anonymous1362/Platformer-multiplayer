@@ -24,7 +24,7 @@ jobs:
       # SHA-256 of the release certificate. Builds signed with any other key are refused.
       EXPECTED_CERT_SHA256: 941fc2e7a86b8fcd5f68ac595ff806410e4dbfd144449814bc6bee1488617384
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Require signing secrets
         if: env.HAS_SIGNING != 'true'
@@ -56,11 +56,11 @@ jobs:
           echo "name=$PKG" >> "$GITHUB_OUTPUT"
           echo "code=$((MA * 10000 + MI * 100 + PA))" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc
           cache: npm
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '21'
