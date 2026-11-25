@@ -6,8 +6,21 @@
 | APK pipeline test (slice of 7B, approved early) | Debug APK builds in CI on every push. Signing secrets added by the owner. Releases start from Actions → Release → Run workflow (the agent cannot push tags). `0.0.1` published 2026-11-25 (release run 45609929624, signed APK 3.66 MB). |
 | 1A | DONE, approved. |
 | 1B | DONE, approved (CI run 45607110857). |
-| 1C | IN PROGRESS (auto mode: 1C → 1F run back to back). |
-| 1D onward | Not started |
+| 1C | DONE locally (see evidence); CI result recorded below once green. |
+| 1D | NEXT (auto mode). |
+| 1E onward | Not started |
+
+## Pass 1C evidence (2026-11-25)
+
+- `npm run verify`: passes (206 unit, property, and simulation tests; 5 golden replay tests; `levels:lint` 1 level, 0 failed; build).
+- `npm run test:e2e` (Chrome, local): 15 of 15 pass (no app-side changes in 1C).
+- Derived reach (spec 4.1) reproduced on all five planets, every column: full-jump apex within 0.7 u, flat distance exact, base jetpack apex within 0.2 u, jetpack distance exact (Kepler 201.5 / 392 / 343.0 / 910 u). Tap jump 77 u at 1.0x gravity and above 64 u on every planet. Dash 183.3 u.
+- Every 4.1 rule has a scripted headless test: coyote (7 ticks yes, 8 no, no double jump), jump buffer (7 ticks before landing yes, 8 no, no auto-repeat), jump cut (0.45, once, after 3 ticks), wall slide (260 u/s, refreshes air dash, recharges fuel), wall jump (520 / -980 x sqrt(g), 7-tick stick lock, same height on Kepler and Vulcanis within 4 u), jetpack (engages at the apex, exactly 60 ticks of thrust, approaches -140 u/s, 0.55/s ground recharge), dash (10 ticks, no gravity, one air dash, 57-tick cooldown, 8 i-frames, walls end it), corner correction (8 u slips, 12 u bonks, never into a wall), ledge forgiveness (10 u pops, 15 u blocks, also while dashing), one-way (jump through, catch at terminal speed, drop-through with grace, then the lower platform catches), ice (0.25x deceleration).
+- Moving platforms: ping-pong with end waits, riders carried, jump inherits velocity capped at 300 u/s, elevators lift, crushing against the floor or a wall gives a hazard respawn and never leaves the player inside geometry.
+- Hazards (spec 4.3): spikes, lava, pits, kill planes; 25 damage shield-first; 0.5 s fade with the move at the midpoint; respawn on safe ground at least 1 s old, 2 tiles from hazards, never inside `no_safe_ground`; invulnerability blocks damage but not the respawn; death at 0 HP restores at the spawn after 1.2 s; shield recharges 20/s after 3 s; dash i-frames block hazard damage.
+- No tunneling (property tests, fixed seeds): 400 random maps x moves of up to 400 u per axis never cross a solid tile or a one-way top; 100 random maps with random inputs and injected velocities up to 3000 u/s, plus 15 random four-player runs of the test arena, never end a tick with a player inside solid geometry.
+- Robustness: NaN, Infinity, and 1e300 velocities neither hang a tick nor slip past the N11 assertion; the level parser never throws on 500 random JSON values and rejects 19 classes of bad level files with readable errors.
+- `perf:bench` (4 players, test arena, moving platform): 0.005 ms mean per tick (budget 2 ms).
 
 ## Pass 1B evidence (2026-11-25)
 

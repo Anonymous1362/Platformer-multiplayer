@@ -1,17 +1,19 @@
 import { CONFIG_HASH, GameConfig } from './GameConfig';
-import { isDifficultyId, isPlanetId } from './Ids';
+import { isDifficultyId } from './Ids';
 import { quantizeAxis, sanitizeAim, sanitizeHeld } from './InputSanitize';
 import type { InputFrame } from './InputTypes';
+import type { Level } from './level/LevelTypes';
 import type { WorldSetup } from './SimulationTypes';
 import { hashWorld } from './StateHash';
 import { createWorld, WorldSimulation } from './WorldSimulation';
 
 /**
- * Deterministic replays (M1): the setup (seed included), the config hash, and every player's inputs
- * run-length encoded as quantized integers. Replaying reproduces the final state hash.
+ * Deterministic replays (M1): the setup (seed, level ID, and level hash included), the config hash, and
+ * every player's inputs run-length encoded as quantized integers. Replaying on the same level
+ * reproduces the final state hash. Version 2 replaced the Pass 1B flat floor with levels.
  */
 export const REPLAY_FORMAT = 'cosmic-drift-replay';
-export const REPLAY_VERSION = 1;
+export const REPLAY_VERSION = 2;
 
 /** `[count, moveX (-127..127), moveY (-127..127), held (0..63), aimMrad]` repeated `count` ticks. */
 export type InputRun = [number, number, number, number, number];
@@ -29,6 +31,7 @@ export interface Replay {
 
 const { axisSteps, heldMask, aimLimitMrad } = GameConfig.input;
 const HASH_RE = /^[0-9a-f]{8}$/;
+const LEVEL_ID_RE = /^[a-z][a-z0-9_]{0,63}$/;
 
 export class ReplayRecorder {
   private readonly setup: WorldSetup;
@@ -88,10 +91,6 @@ function isInt(value: unknown, min: number, max: number): value is number {
   return typeof value === 'number' && Number.isInteger(value) && value >= min && value <= max;
 }
 
-function isFiniteNumber(value: unknown): value is number {
-  return typeof value === 'number' && Number.isFinite(value);
-}
-
 /** Boundary check for replays from files or the network (N11). Never throws. */
 export function validateReplay(raw: unknown): ReplayValidation {
   const fail = (error: string): ReplayValidation => ({ ok: false, error });
@@ -108,12 +107,12 @@ export function validateReplay(raw: unknown): ReplayValidation {
   const setup = s as Record<string, unknown>;
   if (
     !isInt(setup['seed'], -2147483648, 4294967295) ||
-    !isPlanetId(setup['planet']) ||
     !isDifficultyId(setup['difficulty']) ||
     !isInt(setup['playerCount'], 1, GameConfig.sim.maxPlayers) ||
-    !isFiniteNumber(setup['floorY']) ||
-    !isFiniteNumber(setup['worldWidth']) ||
-    !isFiniteNumber(setup['spawnX'])
+    typeof setup['levelId'] !== 'string' ||
+    !LEVEL_ID_RE.test(setup['levelId']) ||
+    typeof setup['levelHash'] !== 'string' ||
+    !HASH_RE.test(setup['levelHash'])
   ) {
     return fail('bad setup');
   }
@@ -147,12 +146,10 @@ export function validateReplay(raw: unknown): ReplayValidation {
     configHash: r['configHash'],
     setup: {
       seed: setup['seed'],
-      planet: setup['planet'],
       difficulty: setup['difficulty'],
       playerCount: setup['playerCount'],
-      floorY: setup['floorY'],
-      worldWidth: setup['worldWidth'],
-      spawnX: setup['spawnX'],
+      levelId: setup['levelId'],
+      levelHash: setup['levelHash'],
     },
     ticks: r['ticks'],
     inputs: (inputs as InputRun[][]).map((list) => list.map((run): InputRun => [...run])),
@@ -169,10 +166,17 @@ export interface ReplayResult {
   readonly hashMatches: boolean;
 }
 
-/** Re-simulates a replay headlessly and compares the final hash. */
-export function runReplay(replay: Replay, options: { readonly assertFinite?: boolean } = {}): ReplayResult {
-  const world = createWorld(replay.setup);
-  const sim = new WorldSimulation({ assertFinite: options.assertFinite ?? true });
+/**
+ * Re-simulates a replay headlessly on `level` and compares the final hash. Throws if the level is not
+ * the one the replay was recorded on (ID or content hash differ).
+ */
+export function runReplay(
+  replay: Replay,
+  level: Level,
+  options: { readonly assertFinite?: boolean } = {},
+): ReplayResult {
+  const world = createWorld(replay.setup, level);
+  const sim = new WorldSimulation(level, { assertFinite: options.assertFinite ?? true });
   const streams = replay.inputs.map((runs) => framesFromRuns(runs));
   for (let tick = 0; tick < replay.ticks; tick += 1) {
     const frames = streams.map((stream) => {

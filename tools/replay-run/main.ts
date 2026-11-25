@@ -3,6 +3,7 @@
 import { readFileSync } from 'node:fs';
 import { CONFIG_HASH } from '../../src/core/GameConfig';
 import { runReplay, validateReplay } from '../../src/core/Replay';
+import { loadLevelById } from '../shared/levels';
 
 const file = process.argv[2];
 if (!file) {
@@ -25,12 +26,20 @@ if (!parsed.ok) {
 }
 
 const { replay } = parsed;
-const result = runReplay(replay);
+const level = loadLevelById(replay.setup.levelId);
+if (level.hash !== replay.setup.levelHash) {
+  console.error(
+    `level ${level.id} changed since this replay was recorded (replay ${replay.setup.levelHash}, file ${level.hash})`,
+  );
+  process.exit(1);
+}
+const result = runReplay(replay, level);
 console.log(
   JSON.stringify(
     {
       file,
       seed: replay.setup.seed,
+      level: `${level.id} (${level.hash})`,
       ticks: result.ticks,
       finalHash: result.finalHash,
       expectedHash: replay.finalHash,

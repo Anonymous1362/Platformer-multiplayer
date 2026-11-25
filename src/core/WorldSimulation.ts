@@ -1,9 +1,14 @@
+import { findSupport, type CollisionWorld } from './Collision';
 import { allocateEntity, createAllocator } from './EntityIds';
 import { assertFiniteState } from './FiniteGuard';
-import { DT, GameConfig } from './GameConfig';
-import { isDifficultyId, isPlanetId } from './Ids';
+import { GameConfig } from './GameConfig';
+import { isDifficultyId } from './Ids';
 import { sanitizeInputFrame } from './InputSanitize';
-import { Button, type InputFrame } from './InputTypes';
+import type { InputFrame } from './InputTypes';
+import type { Level } from './level/LevelTypes';
+import { createPlatformStates, stepPlatforms } from './MovingPlatforms';
+import { hazardAt, hitHazard, isSafeGround, recordSafeGround, tickHealth } from './player/Hazards';
+import { applyIntents, createPlayer, movePlayer, type PlayerContext } from './player/PlayerController';
 import { Random } from './Random';
 import type {
   PlayerState,
@@ -13,9 +18,7 @@ import type {
   WorldState,
 } from './SimulationTypes';
 
-const P = GameConfig.player;
-/** Horizontal spacing between player spawns. */
-const SPAWN_SPACING_U = 96;
+export { approach } from './player/PlayerController';
 
 export interface Simulation {
   step(state: WorldState, inputs: readonly InputFrame[], tick: number): SimulationStepResult;
@@ -26,47 +29,43 @@ export interface SimulationOptions {
   readonly assertFinite?: boolean;
 }
 
-function validateSetup(setup: WorldSetup): void {
+const HASH_RE = /^[0-9a-f]{8}$/;
+
+function validateSetup(setup: WorldSetup, level: Level): void {
   const ok =
     Number.isInteger(setup.seed) &&
-    isPlanetId(setup.planet) &&
     isDifficultyId(setup.difficulty) &&
     Number.isInteger(setup.playerCount) &&
     setup.playerCount >= 1 &&
     setup.playerCount <= GameConfig.sim.maxPlayers &&
-    Number.isFinite(setup.floorY) &&
-    setup.floorY > 0 &&
-    Number.isFinite(setup.worldWidth) &&
-    setup.worldWidth > 0 &&
-    Number.isFinite(setup.spawnX) &&
-    setup.spawnX >= 0 &&
-    setup.spawnX + SPAWN_SPACING_U * (setup.playerCount - 1) <= setup.worldWidth;
+    typeof setup.levelHash === 'string' &&
+    HASH_RE.test(setup.levelHash);
   if (!ok) throw new RangeError(`invalid world setup: ${JSON.stringify(setup)}`);
+  if (setup.levelId !== level.id || setup.levelHash !== level.hash) {
+    throw new RangeError(
+      `setup is for level ${setup.levelId} (${setup.levelHash}) but the loaded level is ${level.id} (${level.hash})`,
+    );
+  }
 }
 
-/** Builds the starting state for a setup. Same setup, same state, always. */
-export function createWorld(setup: WorldSetup): WorldState {
-  validateSetup(setup);
+/** The setup that runs `level` (convenience for callers that start a fresh run). */
+export function setupFor(level: Level, options: Omit<WorldSetup, 'levelId' | 'levelHash'>): WorldSetup {
+  return { ...options, levelId: level.id, levelHash: level.hash };
+}
+
+/** Builds the starting state for a setup on a level. Same setup and level, same state, always. */
+export function createWorld(setup: WorldSetup, level: Level): WorldState {
+  validateSetup(setup, level);
   const entities = createAllocator(GameConfig.sim.entityCapacity);
+  const platforms = createPlatformStates(level);
+  const world: CollisionWorld = { level, platforms };
   const players: PlayerState[] = [];
   for (let slot = 0; slot < setup.playerCount; slot += 1) {
     const id = allocateEntity(entities);
     if (id === null) throw new Error('entity capacity exhausted while spawning players');
-    players.push({
-      id,
-      slot,
-      x: setup.spawnX + SPAWN_SPACING_U * slot,
-      y: setup.floorY,
-      vx: 0,
-      vy: 0,
-      facing: 1,
-      grounded: true,
-      held: 0,
-      prevHeld: 0,
-      airTicks: 0,
-    });
+    players.push(createPlayer(id, slot, world));
   }
-  return { tick: 0, setup: { ...setup }, rng: new Random(setup.seed).state(), entities, players };
+  return { tick: 0, setup: { ...setup }, rng: new Random(setup.seed).state(), entities, players, platforms };
 }
 
 /** Deep copy for snapshots and rollback; the copy evolves independently. */
@@ -74,23 +73,20 @@ export function cloneWorld(state: WorldState): WorldState {
   return structuredClone(state);
 }
 
-/** Moves `value` toward `target` by at most `maxDelta`. NaN passes through so the N11 assertion sees it. */
-export function approach(value: number, target: number, maxDelta: number): number {
-  if (value < target) return Math.min(value + maxDelta, target);
-  if (value > target) return Math.max(value - maxDelta, target);
-  return value;
-}
-
 /**
- * Pass 1B skeleton of the per-tick order in spec section 13.4. Implemented phases: inputs and edges,
- * player horizontal control (X), gravity and jumping (Y) against a flat floor. Kinematics, enemies,
- * projectiles, hazards, and modes plug into the same order in later passes.
+ * The per-tick order of spec section 13.4. Implemented phases: (1) input edges, timers, buffers;
+ * (2) moving platforms and their riders; (3) players, X then Y; (6) hazards and safe ground.
+ * Enemies, projectiles, pickups, and modes plug into the same order in later passes.
  */
 export class WorldSimulation implements Simulation {
+  readonly level: Level;
   private readonly assertFinite: boolean;
+  private readonly planet: { readonly gravity: number; readonly airDecelFactor: number };
 
-  constructor(options: SimulationOptions = {}) {
+  constructor(level: Level, options: SimulationOptions = {}) {
+    this.level = level;
     this.assertFinite = options.assertFinite ?? false;
+    this.planet = GameConfig.planets[level.planet];
   }
 
   step(state: WorldState, inputs: readonly InputFrame[], tick: number): SimulationStepResult {
@@ -101,63 +97,40 @@ export class WorldSimulation implements Simulation {
         `expected ${String(state.players.length)} input frames, got ${String(inputs.length)}`,
       );
     }
+    if (state.setup.levelHash !== this.level.hash)
+      throw new Error(`world is for level ${state.setup.levelId}, not ${this.level.id}`);
     const events: SimulationEvent[] = [];
-    const planet = GameConfig.planets[state.setup.planet];
-    const gravityScale = planet.gravity;
-    const jumpVelocity = P.jumpVelocityUps * Math.sqrt(gravityScale);
+    const world: CollisionWorld = { level: this.level, platforms: state.platforms };
+    const ctx: PlayerContext = { world, planet: this.planet, events, tick };
 
-    // 1. Inputs: sanitize at the boundary, then derive edges from held bits (local and remote identical).
+    // 1. Inputs: sanitize at the boundary, derive edges, tick timers.
     const frames = state.players.map((_, i) => sanitizeInputFrame(inputs[i]));
-
-    // 3. Players, in slot order: integrate and resolve X, then Y.
     state.players.forEach((player, i) => {
-      const frame = frames[i] ?? sanitizeInputFrame(undefined);
-      player.prevHeld = player.held;
-      player.held = frame.held;
-      const jumpPressed = (player.held & Button.Jump) !== 0 && (player.prevHeld & Button.Jump) === 0;
-      const jumpHeld = (player.held & Button.Jump) !== 0;
-
-      // X: accelerate toward the stick target; brake with the decel rate when slowing or turning.
-      const target = frame.moveX * P.maxRunSpeedUps;
-      const speedingUp =
-        frame.moveX !== 0 &&
-        (target > 0 ? player.vx >= 0 && target > player.vx : player.vx <= 0 && target < player.vx);
-      const rate = player.grounded
-        ? speedingUp
-          ? P.groundAccelUps2
-          : P.groundDecelUps2
-        : speedingUp
-          ? P.airAccelUps2
-          : P.airDecelUps2 * planet.airDecelFactor;
-      player.vx = approach(player.vx, target, rate * DT);
-      player.x += player.vx * DT;
-      if (player.x < 0 || player.x > state.setup.worldWidth) {
-        player.x = Math.min(state.setup.worldWidth, Math.max(0, player.x));
-        player.vx = 0;
-      }
-      if (frame.moveX > 0) player.facing = 1;
-      else if (frame.moveX < 0) player.facing = -1;
-
-      // Y: semi-implicit Euler (velocity, then position), which the spec's derived-reach table assumes.
-      if (jumpPressed && player.grounded) {
-        player.vy = -jumpVelocity;
-        player.grounded = false;
-        events.push({ type: 'jumped', playerId: player.id, tick });
-      }
-      if (!player.grounded) {
-        const gravity = (player.vy < 0 && jumpHeld ? P.gravityRiseUps2 : P.gravityFallUps2) * gravityScale;
-        player.vy = Math.min(player.vy + gravity * DT, P.terminalFallUps);
-        player.y += player.vy * DT;
-        player.airTicks += 1;
-        if (player.y >= state.setup.floorY) {
-          player.y = state.setup.floorY;
-          player.vy = 0;
-          player.grounded = true;
-          player.airTicks = 0;
-          events.push({ type: 'landed', playerId: player.id, tick });
-        }
-      }
+      applyIntents(player, frames[i] ?? sanitizeInputFrame(undefined));
+      tickHealth(player);
     });
+
+    // 2. Kinematics carry their riders before anyone integrates.
+    stepPlatforms(world, state.platforms, state.players, events, tick);
+
+    // 3. Players in slot order: state machine, X, then Y.
+    state.players.forEach((player, i) => {
+      movePlayer(player, frames[i] ?? sanitizeInputFrame(undefined), ctx);
+    });
+
+    // 6. Hazards, then safe-ground sampling for whoever is still standing.
+    for (const player of state.players) {
+      if (player.mode === 'hazardRespawn' || player.mode === 'dead') continue;
+      const cause = hazardAt(this.level, player);
+      if (cause) {
+        hitHazard(player, cause, events, tick);
+        continue;
+      }
+      if (player.grounded) {
+        const support = findSupport(world, player.x, player.y, false);
+        if (isSafeGround(this.level, player, support)) recordSafeGround(player, tick);
+      }
+    }
 
     state.tick += 1;
     if (this.assertFinite) assertFiniteState(state, tick);

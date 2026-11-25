@@ -1,24 +1,18 @@
 // Simulation benchmark (spec sections 18 and 20.6). Fails if the mean step time exceeds the budget.
 // Usage: npm run perf:bench
 import { CONFIG_HASH } from '../../src/core/GameConfig';
-import { createWorld, WorldSimulation } from '../../src/core/WorldSimulation';
+import { createWorld, setupFor, WorldSimulation } from '../../src/core/WorldSimulation';
 import { scriptedInput } from '../../tests/fixtures/scenarios';
+import { loadLevelById } from '../shared/levels';
 
 /** Spec budget for a full simulation step (4 players plus enemies, projectiles, and pickups). */
 const BUDGET_MS = 2.0;
 const WARMUP_TICKS = 2000;
 const MEASURED_TICKS = 20000;
 
-const world = createWorld({
-  seed: 42,
-  planet: 'obsidian',
-  difficulty: 'normal',
-  playerCount: 4,
-  floorY: 2000,
-  worldWidth: 60000,
-  spawnX: 30000,
-});
-const sim = new WorldSimulation();
+const level = loadLevelById('test_arena');
+const world = createWorld(setupFor(level, { seed: 42, difficulty: 'normal', playerCount: 4 }), level);
+const sim = new WorldSimulation(level);
 const samples: number[] = [];
 
 for (let tick = 0; tick < WARMUP_TICKS + MEASURED_TICKS; tick += 1) {
@@ -35,12 +29,14 @@ console.log(
   JSON.stringify(
     {
       configHash: CONFIG_HASH,
+      level: level.id,
       players: world.players.length,
+      platforms: world.platforms.length,
       ticks: MEASURED_TICKS,
       meanMs: Number(mean.toFixed(5)),
       p95Ms: Number(p95.toFixed(5)),
       budgetMs: BUDGET_MS,
-      note: 'Pass 1B skeleton: players only. Enemies, projectiles, and pickups arrive in later passes.',
+      note: 'Pass 1C: players, tile collision, and moving platforms. Enemies, projectiles, and pickups arrive later.',
     },
     null,
     2,

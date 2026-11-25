@@ -368,8 +368,8 @@ All values live in `src/core/GameConfig.ts` (§13.3). Durations convert to ticks
 | Max run speed | 420 u/s | Striker suit +15% |
 | Ground accel / decel | 3600 / 4200 u/s² | Ice: accel ×0.5, decel ×0.25 (Cryos-9 ground friction 0.25×) |
 | Air accel / decel | 2400 / 1800 u/s² | Kepler-186f air drag 0.85× → air decel ×0.85 |
-| Gravity (rising, jump held) | 2600 u/s² × planet gravity | |
-| Gravity (falling or jump released) | 4160 u/s² × planet gravity | Fall multiplier 1.6 |
+| Gravity (rising) | 2600 u/s² × planet gravity | While vy is against gravity. Releasing Jump early is handled by the jump cut, never by extra gravity (Pass 1C clarification: this is what the tap-jump figure below assumes) |
+| Gravity (falling) | 4160 u/s² × planet gravity | Fall multiplier 1.6 |
 | Terminal fall speed | 1500 u/s | |
 | Jump velocity | 1040 u/s × √(planet gravity) | Keeps jump **height** equal on every planet; low gravity changes hang time and reach instead. |
 | Variable jump cut | vy × 0.45 on release while rising | Only after a minimum hold of 50 ms (3 ticks), so taps still clear one tile. |
@@ -378,8 +378,8 @@ All values live in `src/core/GameConfig.ts` (§13.3). Durations convert to ticks
 | Corner correction | Nudge up to 10 u sideways when the head clips a ceiling corner while rising | Prevents "bonked" jumps |
 | Ledge forgiveness | Pop onto a ledge whose top is within 14 u above the feet when moving into it | Applies to walking, jumping, dashing |
 | Wall slide | Max fall speed 260 u/s while pressing into a wall | Refreshes air dash; recharges jetpack |
-| Wall jump | vx 520 away, vy −980; horizontal input ignored for 120 ms | 7 ticks |
-| Jetpack | Hold Jump while airborne (after coyote time) with fuel > 0: vy moves toward −140 u/s at 2400 u/s² | Fuel 1.00 s at Lv0; drains 1.0/s (Phantom ×0.8); recharges only when grounded or wall-sliding |
+| Wall jump | vx 520 away, vy −980 × √(planet gravity); horizontal input ignored for 120 ms | 7 ticks; vy scales like the jump so wall-jump height matches on every planet; contact counts within 6 u of a wall |
+| Jetpack | Hold Jump while airborne (after coyote time) with fuel > 0: once the player is no longer rising (vy ≥ 0) it engages, replaces gravity, and moves vy toward −140 u/s at 2400 u/s²; it stays on while Jump stays held and fuel remains | Fuel 1.00 s at Lv0; drains 1.0/s (Phantom ×0.8); recharges at 0.55 fuel/s (§4.8) only when grounded or wall-sliding. Holding Jump through a full jump therefore hovers at the apex; releasing at the apex does not |
 | Dash | 1100 u/s for 160 ms, gravity 0, vy 0; exits at max run speed | 10 ticks; one air dash per airtime; cooldown 950 ms after the dash ends (57 ticks); i-frames 140 ms (8 ticks) |
 | Slam | Airborne + Down + Jump press: vy = +1600, vx = 0 | Landing: 120 u shockwave, 20 damage, 0.4 s stun; 120 ms landing recovery |
 | Drop-through | Down + Jump while standing on a one-way platform | 150 ms re-land grace (N2) |
@@ -395,7 +395,7 @@ All values live in `src/core/GameConfig.ts` (§13.3). Durations convert to ticks
 | Aether-V | 0.75× | 201 u (3.1) | 343 u (5.4) | 341 u (5.3) | 847 u (13.2) |
 | Obsidian Core | 1.0× | 199 u (3.1) | 301 u (4.7) | 339 u (5.3) | 784 u (12.2) |
 
-A tap jump (released immediately) peaks at 77 u (1.2 tiles). The dash covers 176 u (2.75 tiles). Jetpack height gain from the apex grows with fuel upgrades: +137 u (Lv0), +165, +198, +230, +268, +305, +347 u (Lv6).
+A tap jump (released immediately) peaks at 77 u (1.2 tiles) at 1.0× gravity and clears one tile on every planet. The dash covers 183 u (10 ticks × 18.3 u, 2.9 tiles). Jetpack height gain from the apex grows with fuel upgrades: +137 u (Lv0), +165, +198, +230, +268, +305, +347 u (Lv6).
 
 **Environment modifiers**
 
@@ -562,7 +562,7 @@ A typical first run collects about 75–85% of level shards, so players can affo
 
 ### 5.2 Level file format (contract)
 
-Levels are JSON files at `content/levels/<planet>/<level_id>.json`. Static geometry is an **ASCII grid** that AI agents and humans can read and diff; everything dynamic is an object. Coordinates are in tiles from the top-left (fractions allowed for objects).
+Levels are JSON files at `content/levels/<planet>/<level_id>.json` (development test levels live in `content/levels/dev/`). Static geometry is an **ASCII grid** that AI agents and humans can read and diff; everything dynamic is an object. Coordinates are in tiles from the top-left (fractions allowed for objects). Bottom-anchored objects (spawn, checkpoint, exit, enemies) stand on the bottom edge of their cell, centered: world x = (x + 0.5) × 64, feet y = (y + 1) × 64. A moving platform's `x`, `y`, and `path` points are its top-left corner; its optional `w`/`h` default to 3 × 0.5 tiles; it ping-pongs along the path and waits `waitMs` at each end.
 
 ```json
 {
@@ -2361,7 +2361,7 @@ export type LevelObject = { id: string; x: number; y: number; requires?: Ability
   | { type: "enemy"; archetype: EnemyId; patrol?: [number, number]; elite?: EliteId; facing?: -1 | 1 }
   | { type: "turret"; normal: "up" | "down" | "left" | "right" }
   | { type: "power_up"; powerUp: PowerUpId }
-  | { type: "moving_platform"; path: [number, number][]; speedUps: number; waitMs: number; oneWay: boolean }
+  | { type: "moving_platform"; path: [number, number][]; speedUps: number; waitMs: number; oneWay: boolean; w?: number; h?: number }
   | { type: "geyser"; periodMs: number; offsetMs: number; heightTiles: number }
   | { type: "grapple_anchor" } | { type: "dash_ring" }
   | { type: "wind_zone"; w: number; h: number; dirDeg: number; strength: number }

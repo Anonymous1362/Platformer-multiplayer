@@ -36,7 +36,7 @@ describe('FNV-1a and canonical JSON', () => {
 });
 
 describe('GameConfig (N9)', () => {
-  it('derives tick counts that match spec section 4.1', () => {
+  it('derives tick counts that match spec sections 4.1 and 4.3', () => {
     expect(DT).toBe(1 / 60);
     expect(Ticks).toEqual({
       coyote: 7,
@@ -47,6 +47,11 @@ describe('GameConfig (N9)', () => {
       dashCooldown: 57,
       dashIframes: 8,
       dropThroughGrace: 9,
+      hurtInvuln: 48,
+      shieldDelay: 180,
+      deathSequence: 72,
+      hazardRespawn: 30,
+      safeGroundMinAge: 60,
       slamStun: 24,
       slamRecovery: 7,
     });

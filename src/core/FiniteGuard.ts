@@ -1,23 +1,38 @@
 /**
  * N11 dev assertion: finds the first NaN or Infinity anywhere in plain simulation data and reports its
- * path (for example `players[1].vx`). Run every tick in dev builds and tests.
+ * path (for example `state.players[1].vx`). Runs every tick in dev builds and tests, so the walk builds
+ * the path only after a hit.
  */
-export function findNonFinite(value: unknown, path = 'state', seen = new Set<object>()): string | null {
-  if (typeof value === 'number') return Number.isFinite(value) ? null : path;
-  if (typeof value !== 'object' || value === null || seen.has(value)) return null;
+function search(value: unknown, seen: Set<object>, trail: (string | number)[]): boolean {
+  if (typeof value === 'number') return !Number.isFinite(value);
+  if (typeof value !== 'object' || value === null || seen.has(value)) return false;
   seen.add(value);
   if (Array.isArray(value)) {
     for (let i = 0; i < value.length; i += 1) {
-      const hit = findNonFinite(value[i], `${path}[${String(i)}]`, seen);
-      if (hit) return hit;
+      const item: unknown = value[i];
+      if (typeof item === 'number' ? !Number.isFinite(item) : search(item, seen, trail)) {
+        trail.push(i);
+        return true;
+      }
     }
-    return null;
+    return false;
   }
-  for (const [key, child] of Object.entries(value)) {
-    const hit = findNonFinite(child, `${path}.${key}`, seen);
-    if (hit) return hit;
+  for (const key of Object.keys(value)) {
+    if (search((value as Record<string, unknown>)[key], seen, trail)) {
+      trail.push(key);
+      return true;
+    }
   }
-  return null;
+  return false;
+}
+
+export function findNonFinite(value: unknown, path = 'state'): string | null {
+  const trail: (string | number)[] = [];
+  if (!search(value, new Set<object>(), trail)) return null;
+  return trail.reduceRight<string>(
+    (acc, part) => (typeof part === 'number' ? `${acc}[${String(part)}]` : `${acc}.${part}`),
+    path,
+  );
 }
 
 export class NonFiniteStateError extends Error {

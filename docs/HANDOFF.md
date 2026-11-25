@@ -1,23 +1,27 @@
 # Handoff
 
-State: Pass 1B implemented and verified locally (see `docs/PROGRESS.md`); waiting for owner approval before 1C. Releases: the owner starts them from Actions → Release → Run workflow; `0.0.1` is not published yet.
+State: Pass 1C (movement and collision) implemented and verified locally; auto mode continues with Pass 1D. Releases: the owner starts them from Actions → Release → Run workflow (`0.0.1` is published).
 
-What exists for 1B (all in `src/core`, Node-only, no platform imports):
+What 1C added (all in `src/core`, Node-only):
 
-- `GameConfig` (`as const`, spec 3.4 and 4.1 values), `Ticks` (ms → ticks at module load), `CONFIG_HASH` (FNV-1a of canonical JSON, computed at module load).
-- `Hash` (FNV-1a 32 with u8/u32/f64/string writers, canonical JSON), `DMath` (4096-entry sine table built from a Taylor series, polynomial atan2), `EntityIds` (generation-tagged IDs, plain-data allocator), `Ids` (planet and difficulty unions; a test checks them against Appendix B).
-- `InputSanitize`: the simulation's input boundary; clamps, finite checks, and the network's i8 axis quantization (×127), idempotent.
-- `SimulationTypes`, `WorldSimulation` (`createWorld`, `cloneWorld`, `step` with the 13.4 order: inputs and edges, players X then Y; semi-implicit Euler; flat test floor), `StateHash`, `FiniteGuard` (N11 path-reporting assertion), `Replay` (RLE recorder, validation, `runReplay`).
-- Tools: `npm run replay:run -- <file>`, `npm run golden:record`, `npm run perf:bench` (run with `tsx`).
-- Tests: `tests/sim/*` (determinism, dt spike, pause, refresh-rate independence, derived reach), `tests/unit/core-basics.test.ts`, `tests/unit/replay.test.ts`, `tests/unit/layer-rules.test.ts` (canary), `tests/golden/*`, scenarios in `tests/fixtures/scenarios.ts`.
+- `level/LevelTypes.ts`, `level/AsciiParser.ts`: `parseLevel(raw)` validates level JSON (spec 5.2) into an immutable `Level` (tile flags, spawn, platforms, zones, content hash). It never throws and rejects anything whose behavior is not built yet (crumble/cracked tiles, enemies, decor, triggers).
+- `Collision.ts`: axis-separated `moveX`/`moveY` with sub-steps above 32 u, one-way crossing test with 6 u snap, corner correction (10 u, both heights checked), ledge forgiveness (14 u), `findSupport`, `wallContact`, `overlapsSolid`. Out-of-bounds columns and rows above the level are solid; rows below are a pit.
+- `player/PlayerController.ts`: the state machine (`ground`, `air`, `wallSlide`, `dash`, `hazardRespawn`, `dead`); `applyIntents` (edges, timers, buffer) runs before kinematics, `movePlayer` after.
+- `player/Hazards.ts`: hazard tiles, pits, kill planes, damage (shield first), safe-ground sampling, respawn and death sequences, shield recharge.
+- `MovingPlatforms.ts`: ping-pong paths, rider carry, pushes, crush → hazard respawn.
+- `WorldSimulation(level)`: tick order 1 (intents) → 2 (platforms) → 3 (players) → 6 (hazards, safe ground). `createWorld(setup, level)`, `setupFor(level, …)`.
+- Replays are format v2 (`levelId` + `levelHash` in the setup); `runReplay(replay, level)`.
+- Content: `content/levels/dev/test_arena.json` (one-way stack, spike pit, wall-jump shaft, ceiling notch, lava lake with a one-way moving platform, bottomless gap with a kill plane, ice strip, end ledge).
+- Tools: `tools/shared/levels.ts` (Node loader), `levels:lint` now parses every level (stage 1 of LevelLint).
+- Tests: `tests/sim/{reach,movement,platforms,hazards,tunneling}.test.ts`, `tests/unit/level-parser.test.ts`; fixtures `tests/fixtures/levels.ts` (`makeLevel`, `flatLevel`, `Harness`).
+
+Decisions this pass (details in `docs/DECISIONS.md`, spec updated): gravity is rising/falling only (the jump cut handles early release); the jetpack engages at the apex while Jump is held; wall-jump vy scales with sqrt(gravity); dash = 183 u; platform `w`/`h`; object anchoring; respawn fallbacks.
 
 Gotchas learned:
 
-- **dependency-cruiser:** `exclude: node_modules` hid every package import from every rule, so Pass 0's layer rules never checked packages. Use `doNotFollow` for node_modules, never `exclude`. The programmatic API only applies rules with `validate: true`.
-- **approach()** used to return the target when given NaN, silently hiding corruption; it now passes NaN through so the N11 assertion catches it (regression test in `tests/sim/determinism.test.ts`).
-- The spec's derived-reach table assumes velocity-then-position integration with gravity applied on the take-off tick. Keep that order in 1C.
-- The flat floor (`setup.floorY`) is temporary; 1C replaces it with tile collision and level loading. `aimMrad` is sanitized and recorded but not used by the simulation yet.
-- Changing `GameConfig` or the simulation changes golden hashes on purpose: run `npm run golden:record`, review the diff, commit.
-- Earlier gotchas (Phaser loader timeouts, WebKit XHR timeouts, Phaser `Scale.RESIZE`) are in the Pass 1A notes in git history and in `docs/DECISIONS.md`.
+- Test fixtures that place a player inside a wall get "landed" on that wall's top; always place bodies in free space (the Harness `placePlayer` does not check).
+- `scriptedInput` now presses Dash at tick 0, so tests that need a specific velocity should use explicit frames.
+- The N11 assertion used to build a path string per element and dominated test time; it now builds the path only on a hit.
+- Changing `GameConfig`, the simulation, or `test_arena.json` changes golden hashes on purpose: `npm run golden:record`, review, commit.
 
-Next: Pass 1C (spec section 23): player state machine, axis-separated tile collision, one-way and drop-through, coyote, buffer, jump cut with minimum hold, wall slide and jump, jetpack, dash, corner correction, ledge forgiveness, hazard respawn, one moving platform, minimal ASCII level parser and a test arena.
+Next: Pass 1D (spec 23): `TouchControls`, keyboard/mouse adapter, `InputRouter` with latching, `TouchControlView`, floating stick, Classic layout, cleanup triggers, standard-mapping `GamepadControls`, plus a scene that plays the test arena. Device checks (multi-touch, Android WebView controller, iPhone PWA) need the owner's phone.

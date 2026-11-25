@@ -2,18 +2,23 @@ import { describe, expect, it } from 'vitest';
 import { freeEntity, isEntityAlive } from '../../src/core/EntityIds';
 import { NonFiniteStateError } from '../../src/core/FiniteGuard';
 import type { InputFrame } from '../../src/core/InputTypes';
+import type { Level } from '../../src/core/level/LevelTypes';
 import type { WorldSetup, WorldState } from '../../src/core/SimulationTypes';
 import { hashWorld } from '../../src/core/StateHash';
-import { approach, cloneWorld, createWorld, WorldSimulation } from '../../src/core/WorldSimulation';
-import { SCENARIOS, scriptedInput, type Scenario } from '../fixtures/scenarios';
+import { approach, cloneWorld, createWorld, setupFor, WorldSimulation } from '../../src/core/WorldSimulation';
+import { loadLevelById } from '../../tools/shared/levels';
+import { flatLevel } from '../fixtures/levels';
+import { scenarioSetup, SCENARIOS, scriptedInput, type Scenario } from '../fixtures/scenarios';
+
+const ARENA: Level = loadLevelById('test_arena');
 
 function inputsAt(scenario: Scenario, world: WorldState, tick: number): InputFrame[] {
   return world.players.map((p) => scenario.input(tick, p.slot));
 }
 
-function runScenario(scenario: Scenario, setup: WorldSetup = scenario.setup) {
-  const world = createWorld(setup);
-  const sim = new WorldSimulation({ assertFinite: true });
+function runScenario(scenario: Scenario, setup: WorldSetup = scenarioSetup(scenario, ARENA)) {
+  const world = createWorld(setup, ARENA);
+  const sim = new WorldSimulation(ARENA, { assertFinite: true });
   const checkpoints: string[] = [];
   for (let tick = 0; tick < scenario.ticks; tick += 1) {
     sim.step(world, inputsAt(scenario, world, tick), tick);
@@ -22,9 +27,19 @@ function runScenario(scenario: Scenario, setup: WorldSetup = scenario.setup) {
   return { world, checkpoints, finalHash: hashWorld(world) };
 }
 
+const flatCache = new Map<string, Level>();
+/** One flat test level per planet (cached so world and simulation share the same instance). */
+function flat(planet: 'kepler' | 'cryos' | 'aether'): Level {
+  const cached = flatCache.get(planet);
+  if (cached) return cached;
+  const level = flatLevel(planet, 40, 12);
+  flatCache.set(planet, level);
+  return level;
+}
+
 describe('deterministic simulation', () => {
   for (const scenario of SCENARIOS) {
-    it(`same seed and inputs give the same hashes every 60 ticks (${scenario.name}, seed ${String(scenario.setup.seed)})`, () => {
+    it(`same seed and inputs give the same hashes every 60 ticks (${scenario.name}, seed ${String(scenario.seed)})`, () => {
       const a = runScenario(scenario);
       const b = runScenario(scenario);
       expect(b.checkpoints).toEqual(a.checkpoints);
@@ -38,7 +53,7 @@ describe('deterministic simulation', () => {
     const scenario = SCENARIOS[0];
     if (!scenario) throw new Error('no scenario');
     const a = runScenario(scenario);
-    const b = runScenario(scenario, { ...scenario.setup, seed: scenario.setup.seed + 1 });
+    const b = runScenario(scenario, { ...scenarioSetup(scenario, ARENA), seed: scenario.seed + 1 });
     expect(b.finalHash).not.toBe(a.finalHash);
   });
 
@@ -47,8 +62,8 @@ describe('deterministic simulation', () => {
     if (!scenario) throw new Error('no scenario');
     const full = runScenario(scenario);
 
-    const world = createWorld(scenario.setup);
-    const sim = new WorldSimulation({ assertFinite: true });
+    const world = createWorld(scenarioSetup(scenario, ARENA), ARENA);
+    const sim = new WorldSimulation(ARENA, { assertFinite: true });
     for (let tick = 0; tick < 500; tick += 1) sim.step(world, inputsAt(scenario, world, tick), tick);
     const snapshot = cloneWorld(world);
     sim.step(world, inputsAt(scenario, world, 500), 500); // the original keeps going independently
@@ -58,16 +73,11 @@ describe('deterministic simulation', () => {
   });
 
   it('sanitizes garbage input instead of corrupting the state', () => {
-    const world = createWorld({
-      seed: 5,
-      planet: 'cryos',
-      difficulty: 'easy',
-      playerCount: 2,
-      floorY: 900,
-      worldWidth: 2000,
-      spawnX: 100,
-    });
-    const sim = new WorldSimulation({ assertFinite: true });
+    const world = createWorld(
+      setupFor(flat('cryos'), { seed: 5, difficulty: 'easy', playerCount: 2 }),
+      flat('cryos'),
+    );
+    const sim = new WorldSimulation(flat('cryos'), { assertFinite: true });
     const garbage: InputFrame[] = [
       { moveX: Number.NaN, moveY: Number.POSITIVE_INFINITY, held: 1.5, aimMrad: Number.NaN },
       { moveX: 1e9, moveY: -1e9, held: 0xffff, aimMrad: 1e9 },
@@ -77,71 +87,74 @@ describe('deterministic simulation', () => {
     expect(world.players.every((p) => Number.isFinite(p.x) && Number.isFinite(p.y))).toBe(true);
   });
 
+  it('a NaN velocity neither hangs a tick nor slips past the assertion', () => {
+    const level = flat('kepler');
+    for (const value of [Number.NaN, Number.POSITIVE_INFINITY, 1e300]) {
+      const world = createWorld(setupFor(level, { seed: 1, difficulty: 'normal', playerCount: 1 }), level);
+      const player = world.players[0];
+      if (!player) throw new Error('no player');
+      player.vy = value;
+      player.grounded = false;
+      const sim = new WorldSimulation(level, { assertFinite: Number.isFinite(value) });
+      sim.step(world, [{ moveX: 0, moveY: 0, held: 0, aimMrad: 0 }], 0);
+      if (Number.isFinite(value)) expect(Number.isFinite(player.y)).toBe(true);
+    }
+  });
+
   it('the dev assertion names the first non-finite field (N11)', () => {
-    const world = createWorld({
-      seed: 1,
-      planet: 'kepler',
-      difficulty: 'normal',
-      playerCount: 1,
-      floorY: 500,
-      worldWidth: 1000,
-      spawnX: 10,
-    });
-    const sim = new WorldSimulation({ assertFinite: true });
+    const world = createWorld(
+      setupFor(flat('kepler'), { seed: 1, difficulty: 'normal', playerCount: 1 }),
+      flat('kepler'),
+    );
+    const sim = new WorldSimulation(flat('kepler'), { assertFinite: true });
     const player = world.players[0];
     if (!player) throw new Error('no player');
+    const run = { moveX: 1, moveY: 0, held: 0, aimMrad: 0 };
     player.vx = Number.NaN;
-    expect(() => sim.step(world, [scriptedInput(0, 0)], 0)).toThrow(NonFiniteStateError);
+    expect(() => sim.step(world, [run], 0)).toThrow(NonFiniteStateError);
     try {
       player.vx = Number.NaN;
-      sim.step(world, [scriptedInput(1, 0)], 1);
+      sim.step(world, [run], 1);
     } catch (error) {
       expect(error).toBeInstanceOf(NonFiniteStateError);
       expect((error as NonFiniteStateError).path).toBe('state.players[0].x');
     }
   });
 
+  it('refuses a simulation built for a different level', () => {
+    const world = createWorld(
+      setupFor(flat('kepler'), { seed: 1, difficulty: 'normal', playerCount: 1 }),
+      flat('kepler'),
+    );
+    expect(() => new WorldSimulation(ARENA).step(world, [scriptedInput(0, 0)], 0)).toThrow(/not test_arena/);
+  });
+
   it('refuses a wrong tick or a wrong number of inputs', () => {
-    const world = createWorld({
-      seed: 1,
-      planet: 'aether',
-      difficulty: 'normal',
-      playerCount: 2,
-      floorY: 500,
-      worldWidth: 1000,
-      spawnX: 10,
-    });
-    const sim = new WorldSimulation();
+    const world = createWorld(
+      setupFor(flat('aether'), { seed: 1, difficulty: 'normal', playerCount: 2 }),
+      flat('aether'),
+    );
+    const sim = new WorldSimulation(flat('aether'));
     expect(() => sim.step(world, [scriptedInput(0, 0), scriptedInput(0, 1)], 3)).toThrow();
     expect(() => sim.step(world, [scriptedInput(0, 0)], 0)).toThrow(RangeError);
   });
 
   it('rejects invalid setups', () => {
-    const good: WorldSetup = {
-      seed: 1,
-      planet: 'kepler',
-      difficulty: 'normal',
-      playerCount: 1,
-      floorY: 500,
-      worldWidth: 1000,
-      spawnX: 10,
-    };
-    expect(() => createWorld({ ...good, playerCount: 5 })).toThrow(RangeError);
-    expect(() => createWorld({ ...good, floorY: Number.NaN })).toThrow(RangeError);
-    expect(() => createWorld({ ...good, seed: 1.5 })).toThrow(RangeError);
-    expect(() => createWorld({ ...good, spawnX: 990, playerCount: 2 })).toThrow(RangeError);
+    const level = flat('kepler');
+    const good = setupFor(level, { seed: 1, difficulty: 'normal', playerCount: 1 });
+    expect(() => createWorld(good, level)).not.toThrow();
+    expect(() => createWorld({ ...good, playerCount: 5 }, level)).toThrow(RangeError);
+    expect(() => createWorld({ ...good, seed: 1.5 }, level)).toThrow(RangeError);
+    expect(() => createWorld({ ...good, levelHash: 'nothex!!' }, level)).toThrow(RangeError);
+    expect(() => createWorld({ ...good, levelHash: '00000000' }, level)).toThrow(/loaded level/);
+    expect(() => createWorld(good, ARENA)).toThrow(/loaded level/);
   });
 
   it('player IDs carry generations; a freed ID goes stale (N4)', () => {
-    const world = createWorld({
-      seed: 1,
-      planet: 'kepler',
-      difficulty: 'normal',
-      playerCount: 3,
-      floorY: 500,
-      worldWidth: 1000,
-      spawnX: 10,
-    });
+    const world = createWorld(
+      setupFor(flat('kepler'), { seed: 1, difficulty: 'normal', playerCount: 3 }),
+      flat('kepler'),
+    );
     const id = world.players[1]?.id ?? 0;
     expect(isEntityAlive(world.entities, id)).toBe(true);
     expect(freeEntity(world.entities, id)).toBe(true);

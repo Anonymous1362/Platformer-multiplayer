@@ -4,12 +4,13 @@ import { CONFIG_HASH } from '../../src/core/GameConfig';
 import { ReplayRecorder, runReplay, validateReplay } from '../../src/core/Replay';
 import { hashWorld } from '../../src/core/StateHash';
 import { createWorld, WorldSimulation } from '../../src/core/WorldSimulation';
-import { SCENARIOS } from '../fixtures/scenarios';
+import { loadLevelById } from '../../tools/shared/levels';
+import { scenarioSetup, SCENARIOS } from '../fixtures/scenarios';
 
 const dir = new URL('./replays/', import.meta.url);
 const files = readdirSync(dir).filter((f) => f.endsWith('.json'));
 const RERECORD =
-  'GameConfig or the simulation changed: if that was deliberate, run `npm run golden:record` and review the diff.';
+  'GameConfig, the simulation, or a level changed: if that was deliberate, run `npm run golden:record` and review the diff.';
 
 describe('golden replays (O2)', () => {
   it('has one recorded replay per scenario', () => {
@@ -22,7 +23,9 @@ describe('golden replays (O2)', () => {
       if (!parsed.ok) throw new Error(`${file}: ${parsed.error}`);
       const { replay } = parsed;
       expect(replay.configHash, `${file} seed ${String(replay.setup.seed)}: ${RERECORD}`).toBe(CONFIG_HASH);
-      const result = runReplay(replay);
+      const level = loadLevelById(replay.setup.levelId);
+      expect(level.hash, `${file}: ${RERECORD}`).toBe(replay.setup.levelHash);
+      const result = runReplay(replay, level);
       expect(result.finalHash, `${file} seed ${String(replay.setup.seed)}: ${RERECORD}`).toBe(
         replay.finalHash,
       );
@@ -31,9 +34,11 @@ describe('golden replays (O2)', () => {
 
   for (const scenario of SCENARIOS) {
     it(`${scenario.name}: the live scenario still matches its recording`, () => {
-      const world = createWorld(scenario.setup);
-      const sim = new WorldSimulation({ assertFinite: true });
-      const recorder = new ReplayRecorder(scenario.setup);
+      const level = loadLevelById(scenario.levelId);
+      const setup = scenarioSetup(scenario, level);
+      const world = createWorld(setup, level);
+      const sim = new WorldSimulation(level, { assertFinite: true });
+      const recorder = new ReplayRecorder(setup);
       for (let tick = 0; tick < scenario.ticks; tick += 1) {
         const frames = world.players.map((p) => scenario.input(tick, p.slot));
         recorder.record(frames);

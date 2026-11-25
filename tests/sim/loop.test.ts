@@ -1,27 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import { FixedLoop, MAX_STEPS_PER_FRAME } from '../../src/core/FixedLoop';
 import type { InputFrame } from '../../src/core/InputTypes';
-import type { WorldSetup } from '../../src/core/SimulationTypes';
 import { hashWorld } from '../../src/core/StateHash';
-import { createWorld, WorldSimulation } from '../../src/core/WorldSimulation';
+import { createWorld, setupFor, WorldSimulation } from '../../src/core/WorldSimulation';
+import { flatLevel } from '../fixtures/levels';
 import { scriptedInput } from '../fixtures/scenarios';
 
 const RUN_RIGHT: InputFrame = { moveX: 1, moveY: 0, held: 0, aimMrad: 0 };
 /** Max run speed at 60 Hz covers 7 u per tick. */
 const MAX_U_PER_TICK = 7;
-const SETUP: WorldSetup = {
-  seed: 3,
-  planet: 'obsidian',
-  difficulty: 'normal',
-  playerCount: 1,
-  floorY: 800,
-  worldWidth: 100000,
-  spawnX: 50,
-};
+const LEVEL = flatLevel('obsidian', 400, 12);
+const SETUP = setupFor(LEVEL, { seed: 3, difficulty: 'normal', playerCount: 1 });
 
 function setup() {
-  const world = createWorld(SETUP);
-  const sim = new WorldSimulation({ assertFinite: true });
+  const world = createWorld(SETUP, LEVEL);
+  const sim = new WorldSimulation(LEVEL, { assertFinite: true });
   const loop = new FixedLoop();
   const frame = (deltaS: number) =>
     loop.advance(deltaS, (tick) => {
@@ -32,8 +25,8 @@ function setup() {
 
 /** Drives the simulation through real frame deltas, stopping exactly at `ticks`. */
 function driveTo(ticks: number, deltas: readonly number[]) {
-  const world = createWorld(SETUP);
-  const sim = new WorldSimulation({ assertFinite: true });
+  const world = createWorld(SETUP, LEVEL);
+  const sim = new WorldSimulation(LEVEL, { assertFinite: true });
   const loop = new FixedLoop();
   for (let i = 0; world.tick < ticks; i += 1) {
     loop.advance(deltas[i % deltas.length] ?? 1 / 60, (tick) => {
@@ -75,8 +68,8 @@ describe('fixed loop driving the simulation (M7)', () => {
 
   it('display refresh rate never changes the outcome (60 Hz, 144 Hz, 30 Hz, uneven frames)', () => {
     const ticks = 600;
-    const reference = createWorld(SETUP);
-    const sim = new WorldSimulation({ assertFinite: true });
+    const reference = createWorld(SETUP, LEVEL);
+    const sim = new WorldSimulation(LEVEL, { assertFinite: true });
     for (let tick = 0; tick < ticks; tick += 1) sim.step(reference, [scriptedInput(tick, 0)], tick);
     const expected = hashWorld(reference);
 

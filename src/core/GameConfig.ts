@@ -45,12 +45,40 @@ export const GameConfig = {
     cornerCorrectionU: 10,
     ledgeForgivenessU: 14,
     wallSlideMaxFallUps: 260,
-    wallJump: { vxUps: 520, vyUps: -980, inputLockMs: 120 },
-    jetpack: { targetVyUps: -140, accelUps2: 2400, baseFuelS: 1, drainPerS: 1 },
+    /** vyUps is the 1.0x-gravity value; it scales with sqrt(planet gravity) like the jump (DECISIONS). */
+    wallJump: { vxUps: 520, vyUps: -980, inputLockMs: 120, contactProbeU: 6 },
+    /** Wall-slide contact probe: the collider must touch the wall. */
+    wallSlideProbeU: 1,
+    /** rechargePerS is the jetpack_recharge Lv0 rate (spec section 4.8). */
+    jetpack: { targetVyUps: -140, accelUps2: 2400, baseFuelS: 1, drainPerS: 1, rechargePerS: 0.55 },
     dash: { speedUps: 1100, durationMs: 160, cooldownMs: 950, iframesMs: 140 },
     slam: { vyUps: 1600, shockwaveRadiusU: 120, damage: 20, stunMs: 400, landingRecoveryMs: 120 },
     dropThroughGraceMs: 150,
     platformInheritCapUps: 300,
+  },
+  /** Spec section 4.3. */
+  health: {
+    baseHp: 100,
+    baseShield: 40,
+    shieldDelayMs: 3000,
+    shieldRegenPerS: 20,
+    hurtInvulnMs: 800,
+    deathSequenceMs: 1200,
+  },
+  hazard: {
+    damage: 25,
+    /** Fade out, move to safe ground at the midpoint, fade in; control returns at the end. */
+    respawnFadeMs: 500,
+    safeGroundMinAgeMs: 1000,
+    safeGroundClearanceTiles: 2,
+  },
+  /** Spec section 13.5. */
+  collision: {
+    oneWaySnapU: 6,
+    /** Anything moving farther than this in one tick is split into sub-steps (N3). */
+    maxStepU: 32,
+    /** Feet within this distance of a moving platform's top count as standing on it. */
+    platformSupportU: 0.01,
   },
   planets: {
     kepler: { gravity: 0.58, airDecelFactor: 0.85 },
@@ -135,6 +163,11 @@ export const Ticks = {
   dashCooldown: msToTicks(GameConfig.player.dash.cooldownMs),
   dashIframes: msToTicks(GameConfig.player.dash.iframesMs),
   dropThroughGrace: msToTicks(GameConfig.player.dropThroughGraceMs),
+  hurtInvuln: msToTicks(GameConfig.health.hurtInvulnMs),
+  shieldDelay: msToTicks(GameConfig.health.shieldDelayMs),
+  deathSequence: msToTicks(GameConfig.health.deathSequenceMs),
+  hazardRespawn: msToTicks(GameConfig.hazard.respawnFadeMs),
+  safeGroundMinAge: msToTicks(GameConfig.hazard.safeGroundMinAgeMs),
   slamStun: msToTicks(GameConfig.player.slam.stunMs),
   slamRecovery: msToTicks(GameConfig.player.slam.landingRecoveryMs),
 } as const;
