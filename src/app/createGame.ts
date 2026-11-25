@@ -1,21 +1,14 @@
 import Phaser from 'phaser';
-import { detectCapabilities, renderWebGLRequiredScreen } from './Capabilities';
+import type { CapabilityMatrix } from './Capabilities';
 import { BackgroundScene } from '../render/BackgroundScene';
 import { BootScene } from '../scenes/BootScene';
 import { ThemePalette } from '../theme/ThemePalette';
 
-export function createGame(): Phaser.Game | undefined {
+export function createGame(capabilities: CapabilityMatrix): Phaser.Game {
   const root = document.getElementById('game');
   const stage = document.getElementById('game-stage');
   if (!(root instanceof HTMLElement) || !(stage instanceof HTMLElement)) {
     throw new Error('The Cosmic Drift game mount points are missing.');
-  }
-
-  const capabilities = detectCapabilities();
-  root.dataset.webgl = String(capabilities.webgl);
-  if (!capabilities.webgl) {
-    renderWebGLRequiredScreen(root);
-    return undefined;
   }
 
   const game = new Phaser.Game({
