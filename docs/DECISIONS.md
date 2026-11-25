@@ -22,3 +22,4 @@
 - 2026-11-25: `CONFIG_HASH` is computed at module load (same value the build-time version in spec 21.2 would produce); `BuildInfo.ts` arrives with Pass 7.
 - 2026-11-25: Pass 1B uses a flat test floor (`setup.floorY`) so movement can be tested before tile collision (Pass 1C replaces it). World coordinates stay non-negative, as the snapshot packet requires.
 - 2026-11-25: Fixed `.dependency-cruiser.cjs`: `exclude` no longer drops node_modules (it hid package imports from all rules); added `core-no-packages`; added a canary test.
+- 2026-11-25: Owner switched the build to auto mode: milestones run back to back (each one fully green locally and in CI, documented, and pushed before the next starts). The agent stops only for device checks, owner-only decisions, or stop-the-line rules. AGENTS.md and spec 22.2 updated.
