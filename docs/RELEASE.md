@@ -4,11 +4,11 @@
 
 Builds run in GitHub Actions; no Android SDK is needed on any personal device.
 
-1. Set `version` in `package.json` (semver) and add `release-notes/<version>.md`.
-2. Commit, then push a matching tag: `git tag v<version> && git push origin v<version>`.
-3. `.github/workflows/release.yml` runs `verify`, builds a signed release APK, checks the signing certificate, and publishes a GitHub Release with `cosmic-drift-<version>.apk` and its SHA-256.
+1. Set `version` in `package.json` (semver) and add `release-notes/<version>.md`. Commit to `main`.
+2. Start the release: GitHub → **Actions** → **Release** → **Run workflow** (branch `main`). Pushing a tag `v<version>` from a computer also works. (The agent sandbox cannot push tags; its proxy refuses them.)
+3. `.github/workflows/release.yml` checks the version is not already released, runs `verify`, builds a signed release APK, checks the signing certificate, and publishes a GitHub Release (tag `v<version>` on that commit) with `cosmic-drift-<version>.apk` and its SHA-256.
 
-`versionCode = major × 10000 + minor × 100 + patch` (spec section 21.3). A tag that does not match `package.json` fails the build.
+`versionCode = major × 10000 + minor × 100 + patch` (spec section 21.3). A tag that does not match `package.json`, or a version that is already released, fails the run.
 
 ### Signing (one-time setup by the owner)
 
