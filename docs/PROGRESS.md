@@ -6,16 +6,16 @@ Last updated: 2026-11-24
 
 ## Milestones
 
-| Milestone                                 | Status      | Date       | Branch / tag                            | Notes                                                                                                                                                                                  |
-| ----------------------------------------- | ----------- | ---------- | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Pass 0 — Bootstrap                        | IN REVIEW   | 2026-11-24 | `arena/d6467a6e-platformer-multiplayer` | Acceptance is green locally and in GitHub Actions run #45484531897, including Chromium/WebKit viewport checks. PR #2 is ready for review; await explicit user approval before Pass 1A. |
-| Pass 1A — Boot & canvas                   | NOT STARTED | —          | —                                       | Requires explicit approval after Pass 0 handoff.                                                                                                                                       |
-| Pass 1B — Headless simulation             | NOT STARTED | —          | —                                       | —                                                                                                                                                                                      |
-| Pass 1C — Movement & collision            | NOT STARTED | —          | —                                       | —                                                                                                                                                                                      |
-| Pass 1D — Keyboard & multi-touch          | NOT STARTED | —          | —                                       | —                                                                                                                                                                                      |
-| Pass 1E — Gameplay loop, art, audio, feel | NOT STARTED | —          | —                                       | —                                                                                                                                                                                      |
-| Pass 1F — Hardening & acceptance          | NOT STARTED | —          | —                                       | —                                                                                                                                                                                      |
-| Passes 2–8                                | NOT STARTED | —          | —                                       | —                                                                                                                                                                                      |
+| Milestone                                 | Status      | Date       | Branch / tag                            | Notes                                                                                  |
+| ----------------------------------------- | ----------- | ---------- | --------------------------------------- | -------------------------------------------------------------------------------------- |
+| Pass 0 — Bootstrap                        | APPROVED    | 2026-11-24 | `arena/d6467a6e-platformer-multiplayer` | User approved proceeding to Pass 1A.                                                   |
+| Pass 1A — Boot & canvas                   | IN REVIEW   | 2026-11-24 | `arena/d6467a6e-platformer-multiplayer` | Implementation and local gates pass; Playwright browser acceptance remains unverified. |
+| Pass 1B — Headless simulation             | NOT STARTED | —          | —                                       | —                                                                                      |
+| Pass 1C — Movement & collision            | NOT STARTED | —          | —                                       | —                                                                                      |
+| Pass 1D — Keyboard & multi-touch          | NOT STARTED | —          | —                                       | —                                                                                      |
+| Pass 1E — Gameplay loop, art, audio, feel | NOT STARTED | —          | —                                       | —                                                                                      |
+| Pass 1F — Hardening & acceptance          | NOT STARTED | —          | —                                       | —                                                                                      |
+| Passes 2–8                                | NOT STARTED | —          | —                                       | —                                                                                      |
 
 ## §25 hardening traceability
 
@@ -48,7 +48,7 @@ Last updated: 2026-11-24
 | N15  | Every handoff        | IN REVIEW   |
 | O1   | 1F                   | NOT STARTED |
 | O2   | 1B onward            | NOT STARTED |
-| O3   | 1A                   | NOT STARTED |
+| O3   | 1A                   | IN REVIEW   |
 | O4   | 1F                   | NOT STARTED |
 | O5   | 1F                   | NOT STARTED |
 | O6   | 1F, 6D               | NOT STARTED |

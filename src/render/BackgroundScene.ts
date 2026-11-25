@@ -1,70 +1,109 @@
 import Phaser from 'phaser';
-import { SeededRandom } from '../core/Random';
+import { FrameTelemetry } from './FrameTelemetry';
 
-const CANVAS_WIDTH = 1920;
-const CANVAS_HEIGHT = 1080;
+interface DebugBadgeController {
+  update(): void;
+  destroy(): void;
+}
 
 export class BackgroundScene extends Phaser.Scene {
+  private readonly telemetry = new FrameTelemetry();
+  private background: Phaser.GameObjects.Image | undefined;
+  private title: Phaser.GameObjects.Text | undefined;
+  private tagline: Phaser.GameObjects.Text | undefined;
+  private signal: Phaser.GameObjects.Text | undefined;
+  private debugBadge: DebugBadgeController | undefined;
+  private renderStartedAt: number | undefined;
+  private isShuttingDown = false;
+
+  private readonly measureRenderStart = (): void => {
+    this.renderStartedAt = performance.now();
+  };
+
+  private readonly measureRenderEnd = (): void => {
+    if (this.renderStartedAt === undefined) {
+      return;
+    }
+    this.telemetry.record('render', performance.now() - this.renderStartedAt);
+    this.renderStartedAt = undefined;
+  };
+
   constructor() {
     super('BackgroundScene');
   }
 
   create(): void {
-    const canvas = this.game.canvas;
-    canvas.setAttribute('role', 'img');
-    canvas.setAttribute('aria-label', 'Cosmic Drift title screen artwork');
-
-    const art = this.add.graphics();
-    art.fillStyle(0x080c18, 1);
-    art.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-
-    art.fillStyle(0x111b35, 0.48);
-    art.fillCircle(1450, 345, 420);
-    art.fillStyle(0x102c42, 0.32);
-    art.fillCircle(1450, 345, 290);
-    art.lineStyle(3, 0x50d9e8, 0.48);
-    art.strokeCircle(1450, 345, 214);
-    art.lineStyle(1, 0xa5f6ff, 0.2);
-    art.strokeCircle(1450, 345, 244);
-
-    const random = new SeededRandom(0xc05c1c);
-    for (let index = 0; index < 180; index += 1) {
-      const x = random.nextFloat() * CANVAS_WIDTH;
-      const y = random.nextFloat() * CANVAS_HEIGHT;
-      const radius = random.nextFloat() > 0.92 ? 2.2 : 1.1;
-      const alpha = 0.25 + random.nextFloat() * 0.65;
-      art.fillStyle(0xd6f5ff, alpha);
-      art.fillCircle(x, y, radius);
+    const textureKey = this.registry.get('titleBackgroundTexture');
+    if (typeof textureKey !== 'string' || !this.textures.exists(textureKey)) {
+      throw new Error('The boot scene did not provide a valid background texture.');
     }
 
-    this.add
-      .text(190, 390, 'COSMIC DRIFT', {
-        color: '#eaf6ff',
+    this.game.canvas.setAttribute('role', 'img');
+    this.game.canvas.setAttribute('aria-label', 'Cosmic Drift title screen artwork');
+
+    this.background = this.add.image(0, 0, textureKey).setOrigin(0);
+    this.title = this.add
+      .text(0, 0, 'COSMIC DRIFT', {
+        color: '#EAF6FF',
         fontFamily: 'Arial, sans-serif',
         fontSize: '78px',
         fontStyle: 'bold',
         letterSpacing: 5,
       })
       .setOrigin(0, 0.5);
-
-    this.add
-      .text(196, 472, 'NO ONE DRIFTS ALONE', {
-        color: '#75dbe8',
+    this.tagline = this.add
+      .text(0, 0, 'NO ONE DRIFTS ALONE', {
+        color: '#00F5D4',
         fontFamily: 'Arial, sans-serif',
         fontSize: '24px',
         letterSpacing: 7,
       })
       .setOrigin(0, 0.5);
-
-    this.add
-      .text(196, 716, 'A signal is still out there.', {
-        color: '#a5b6ce',
+    this.signal = this.add
+      .text(0, 0, 'A signal is still out there.', {
+        color: '#A5B6CE',
         fontFamily: 'Arial, sans-serif',
         fontSize: '22px',
       })
       .setOrigin(0, 0.5);
 
-    art.lineStyle(2, 0x50d9e8, 0.7);
-    art.lineBetween(196, 526, 390, 526);
+    this.resizeContent();
+    this.scale.on(Phaser.Scale.Events.RESIZE, this.resizeContent, this);
+    this.game.events.on(Phaser.Core.Events.PRE_RENDER, this.measureRenderStart);
+    this.game.events.on(Phaser.Core.Events.POST_RENDER, this.measureRenderEnd);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.shutdown, this);
+
+    if (import.meta.env.DEV) {
+      void import('../debug/DebugBadge').then(({ DebugBadge }) => {
+        if (!this.isShuttingDown) {
+          this.debugBadge = new DebugBadge(this, this.telemetry);
+        }
+      });
+    }
+  }
+
+  override update(_time: number, delta: number): void {
+    const updateStartedAt = performance.now();
+    this.telemetry.recordFrameDelta(delta);
+    this.telemetry.record('update', performance.now() - updateStartedAt);
+    this.debugBadge?.update();
+  }
+
+  private resizeContent(): void {
+    const width = this.scale.width;
+    const height = this.scale.height;
+    this.background?.setPosition(0, 0).setDisplaySize(width, height);
+    this.title?.setPosition(width * 0.12, height * 0.39);
+    this.tagline?.setPosition(width * 0.125, height * 0.47);
+    this.signal?.setPosition(width * 0.125, height * 0.68);
+  }
+
+  private shutdown(): void {
+    this.isShuttingDown = true;
+    this.scale.off(Phaser.Scale.Events.RESIZE, this.resizeContent, this);
+    this.game.events.off(Phaser.Core.Events.PRE_RENDER, this.measureRenderStart);
+    this.game.events.off(Phaser.Core.Events.POST_RENDER, this.measureRenderEnd);
+    this.debugBadge?.destroy();
+    this.debugBadge = undefined;
   }
 }
