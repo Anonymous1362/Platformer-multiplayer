@@ -1,6 +1,6 @@
 # Cosmic Drift — Session Handoff
 
-- **Current milestone:** Pass 1A — Boot & canvas (IN REVIEW; implementation and local gates complete, browser acceptance not yet verified in this sandbox)
+- **Current milestone:** Pass 1A — Boot & canvas (IN REVIEW; acceptance gates pass, awaiting user review and approval)
 - **Branch:** `arena/d6467a6e-platformer-multiplayer`
 - **Base commit:** `96725ae3da44fc78c21a278a036787d75bae6258`
 - **Pull request:** [#2](https://github.com/Anonymous1362/Platformer-multiplayer/pull/2)
@@ -28,12 +28,15 @@ No dependencies added or removed. No install command was needed for this milesto
 
 - `npx --yes --package=node@24.22.3 --package=npm@11.21.3 -c 'node ./node_modules/prettier/bin/prettier.cjs --write . && npm run verify'` — first run found four TypeScript issues; those were fixed.
 - `npx --yes --package=node@24.22.3 --package=npm@11.21.3 -c 'node ./node_modules/prettier/bin/prettier.cjs --write src/assets/AssetRegistry.ts && npm run verify'` — **PASS**. Format, lint, strict typecheck, dependency check (15 modules / 13 dependencies; no violations), stub scan, Vitest (**5 files / 19 tests passed**), golden-test no-tests gate, empty-level gate, and production build all passed.
+- After fixing the no-WebGL initialization issue: `npx --yes --package=node@24.22.3 --package=npm@11.21.3 -c 'node ./node_modules/prettier/bin/prettier.cjs --write src/main.ts src/app/createGame.ts && npm run verify && git diff --check'` — **PASS** with the same 19 unit tests and project gates.
 - `git diff --check` — **PASS**.
 - `node_modules/.bin/playwright install chromium webkit` — **FAILED locally**: browser download from `cdn.playwright.dev` returned `ECONNRESET`; no local browser binaries were installed.
-- GitHub Actions run `45537312282` on commit `1546c7a` — build and local gates passed; Playwright installed browsers and ran all four cases. Both responsive-boot tests passed (Chromium and WebKit, including 4:3, 16:9, 19.5:9 and failed-response checks); both no-WebGL fallback tests failed because the screen did not render. This exposed the eager Phaser import before capability detection. Fixed by moving game creation behind a dynamic import; the same CI E2E run must be rerun against the fix.
+- GitHub Actions run `45537312282` on commit `1546c7a` — all local gates passed; responsive browser tests passed on Chromium and WebKit, but both no-WebGL cases failed. This exposed Phaser's eager static import before capability detection.
+- Fixed the eager import by performing capability detection in `main.ts` and dynamically importing the Phaser game module only when WebGL is available.
+- GitHub Actions run `45537710897` on commit `0be1ea9` — **PASS**, including `npm run verify`, browser installation, and Playwright E2E: **4 passed** (Chromium and WebKit; responsive boot at 4:3, 16:9, 19.5:9; no-WebGL screen; response checks).
 - Vite HTTP smoke on port 4173 returned the app HTML and transformed `createGame.ts` / `BootScene.ts`. The development server remains running for preview.
 - Production build emitted a 1,380.31 kB raw / 362.08 kB gzip main JS chunk and Vite's default >500 kB raw advisory. No build failure; this remains a bundle-size polish item.
-- Existing remote CI check `45485083396` is for the Pass 0 baseline, not these unpushed Pass 1A changes.
+- The earlier remote CI check `45485083396` was the Pass 0 baseline. Pass 1A CI is `45537710897` (PASS) on commit `0be1ea9`.
 
 ## 4. Acceptance status
 
@@ -75,4 +78,4 @@ Complete the Pass 1A browser acceptance run, review/fix any findings, then prese
 
 ## 10. STOP
 
-Pass 1A remains **IN REVIEW** because its browser acceptance has not run against this implementation. Awaiting review and approval; no later milestone is authorized.
+Pass 1A acceptance gates pass, including Chromium and WebKit browser tests in GitHub Actions. The milestone remains **IN REVIEW** pending user review and approval. No later milestone is authorized.
