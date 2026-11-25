@@ -1,0 +1,106 @@
+name: Release
+
+# Push a tag like v0.0.1 (matching package.json "version") to build a signed APK and publish it as a GitHub Release.
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      HAS_SIGNING: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.ANDROID_KEYSTORE_PASSWORD != '' }}
+      # SHA-256 of the release certificate. Builds signed with any other key are refused.
+      EXPECTED_CERT_SHA256: 941fc2e7a86b8fcd5f68ac595ff806410e4dbfd144449814bc6bee1488617384
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Require signing secrets
+        if: env.HAS_SIGNING != 'true'
+        run: |
+          echo "::error::Missing repository secrets ANDROID_KEYSTORE_BASE64 and/or ANDROID_KEYSTORE_PASSWORD. See docs/RELEASE.md."
+          exit 1
+
+      - name: Version from tag
+        id: ver
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          PKG=$(node -p "require('./package.json').version")
+          if [ "$TAG" != "$PKG" ]; then
+            echo "::error::Tag v$TAG does not match package.json version $PKG"
+            exit 1
+          fi
+          CORE="${PKG%%-*}"
+          IFS='.' read -r MA MI PA <<< "$CORE"
+          echo "name=$PKG" >> "$GITHUB_OUTPUT"
+          echo "code=$((MA * 10000 + MI * 100 + PA))" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - run: npm ci
+      - run: npm run verify
+      - run: npx cap sync android
+
+      - name: Decode keystore
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: printf '%s' "$KEYSTORE_B64" | tr -d '[:space:]' | base64 -d > "$RUNNER_TEMP/release.jks"
+
+      - name: Build signed APK
+        working-directory: android
+        env:
+          CD_KEYSTORE_PATH: ${{ runner.temp }}/release.jks
+          CD_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          CD_KEY_ALIAS: cosmicdrift
+          CD_KEY_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: >-
+          ./gradlew assembleRelease --no-daemon --stacktrace
+          -PcdVersionName=${{ steps.ver.outputs.name }}
+          -PcdVersionCode=${{ steps.ver.outputs.code }}
+
+      - name: Verify signature and certificate
+        run: |
+          APK=android/app/build/outputs/apk/release/app-release.apk
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          "$BT/apksigner" verify --verbose "$APK"
+          ACTUAL=$("$BT/apksigner" verify --print-certs "$APK" | sed -n 's/.*certificate SHA-256 digest: //p' | head -1)
+          if [ "$ACTUAL" != "$EXPECTED_CERT_SHA256" ]; then
+            echo "::error::APK signed with an unexpected certificate ($ACTUAL)"
+            exit 1
+          fi
+
+      - name: Remove keystore
+        if: always()
+        run: rm -f "$RUNNER_TEMP/release.jks"
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${{ steps.ver.outputs.name }}"
+          OUT="cosmic-drift-$VERSION.apk"
+          cp android/app/build/outputs/apk/release/app-release.apk "$OUT"
+          sha256sum "$OUT" > "$OUT.sha256"
+          NOTES="release-notes/$VERSION.md"
+          if [ ! -f "$NOTES" ]; then NOTES="release-notes/default.md"; fi
+          FLAGS=""
+          case "$VERSION" in *-*) FLAGS="--prerelease" ;; esac
+          gh release create "$GITHUB_REF_NAME" "$OUT" "$OUT.sha256" \
+            --title "Cosmic Drift $VERSION" --notes-file "$NOTES" $FLAGS
