@@ -5,7 +5,7 @@
 | 0 | DONE, approved. |
 | APK pipeline test (slice of 7B, approved early) | Debug APK builds in CI on every push. Signing secrets added by the owner. Releases start from Actions → Release → Run workflow (the agent cannot push tags); `0.0.1` not yet published. |
 | 1A | DONE, approved. |
-| 1B | DONE locally, awaiting owner approval. CI result recorded below once seen. |
+| 1B | DONE and green in CI (run 45607110857: Node 24 verify, perf:bench, Chromium and WebKit browser tests, Android debug build), awaiting owner approval. |
 | 1C onward | Not started |
 
 ## Pass 1B evidence (2026-11-25)
