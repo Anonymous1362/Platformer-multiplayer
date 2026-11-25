@@ -4,7 +4,7 @@
 | --- | --- |
 | 0 | DONE, approved. |
 | APK pipeline test (slice of 7B, approved early) | Debug APK builds in CI on every push. Signed release workflow ready; first release (`v0.0.1`) waits for the owner to add the two signing secrets (docs/RELEASE.md). |
-| 1A | DONE locally, awaiting owner approval. CI result below. |
+| 1A | DONE and green in CI (run 45601521566: Node 24 verify, Chromium and WebKit browser tests, Android debug build), awaiting owner approval. |
 | 1B onward | Not started |
 
 ## Pass 1A evidence (2026-11-25)
@@ -23,6 +23,6 @@
 ## Not verified yet
 
 - Real phones (Android app, iPhone Safari). Owner to install the APK once the release is published.
-- WebKit (Safari engine) runs in CI only.
+- WebKit (Safari engine) runs in CI only (passing).
 
 Distribution plan: Android sideload APK (built in GitHub Actions) plus an installable PWA for iPhone/iPad. Native iOS is optional and paid.
