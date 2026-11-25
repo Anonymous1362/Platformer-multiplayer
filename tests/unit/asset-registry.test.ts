@@ -85,14 +85,15 @@ describe('AssetRegistry', () => {
     const { registry, store, warnings, fallbacksMade } = setup();
     registry.register([image('bg_a')]);
     registry.beginScope('global');
-    registry.onFileFailed('bg_a', 'load-error');
+    registry.onFileFailed('bg_a', 'timeout');
     registry.onFileFailed('bg_a', 'load-error');
     registry.endScope('global');
     expect(registry.statusOf('bg_a')).toBe('fallback');
     expect(store.textures.get('bg_a')?.origin).toBe('fallback');
     expect(fallbacksMade).toEqual(['bg_a']);
     expect(warnings).toHaveLength(1);
-    expect(warnings[0]).toContain('bg_a');
+    expect(warnings[0]).toContain('bg_a: timeout');
+    expect(registry.snapshot()['bg_a']?.reason).toBe('timeout');
   });
 
   it('falls back for anything still pending when the scope ends (timeouts, decode errors)', () => {

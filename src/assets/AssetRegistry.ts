@@ -9,7 +9,8 @@ import type { AssetKind, AssetManifestEntry, AssetPolicy } from './AssetTypes';
  */
 export type AssetStatus = 'pending' | 'loaded' | 'fallback' | 'procedural' | 'late';
 
-export type FallbackReason = 'load-error' | 'not-loaded' | 'bad-dimensions' | 'too-large' | 'not-in-manifest';
+export type FallbackReason =
+  'load-error' | 'timeout' | 'not-loaded' | 'bad-dimensions' | 'too-large' | 'not-in-manifest';
 
 /** The small part of Phaser's TextureManager the registry needs; faked in unit tests. */
 export interface TextureStore {

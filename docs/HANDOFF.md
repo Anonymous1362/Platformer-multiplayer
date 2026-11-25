@@ -12,7 +12,7 @@ What exists for 1A:
 
 Gotchas learned:
 
-- **Phaser 4 loader timeout:** each file gets its own default `timeout: 0` in its XHR settings, and that overrides the game-wide `loader.timeout`. Pass `xhrSettings` with the timeout on every file (`assetXhrSettings()` in `loadScope.ts`). The e2e stalled-asset test guards this.
+- **Per-file timeout:** enforced by our own timer in `loadScope.ts` (1500 ms). XHR timeouts are only a backstop (2500 ms): Phaser 4 gives each file a default `timeout: 0` that overrides the game-wide `loader.timeout` (so `assetXhrSettings()` sets it per file), and WebKit treats XHR timeouts as network idle timeouts that may never fire for a stalled request. The e2e stalled-asset test guards both engines.
 - Image decode failures do not emit `loaderror`; they surface at loader `complete`, where `endScope()` falls back (reason `not-loaded`).
 - Late arrivals are dropped if their scene's loader shuts down first; with a 1500 ms per-file timeout and a 6000 ms scope budget this only happens if decoding stalls. Scope loading moves to a Loading scene in 2D.
 - Phaser 4 `Scale.RESIZE` ignores `scale.resize()` inside the window `resize` event; `main.ts` defers it (Pass 0).

@@ -45,7 +45,7 @@ for (const vp of [
 
 test('a stalled asset falls back within the timeout and warns once', async ({ page }) => {
   const seen = watch(page);
-  // Never answer: the request hangs until the 1500 ms per-file timeout.
+  // Never answer: the request hangs, so only the game's 1500 ms per-file timer can settle it.
   await page.route('**/assets/global/bg_starfield.png', () => undefined);
   const started = Date.now();
   await page.goto('/?test=1');
@@ -55,7 +55,7 @@ test('a stalled asset falls back within the timeout and warns once', async ({ pa
   expect((await snapshot(page))['bg_starfield']).toEqual({
     status: 'fallback',
     source: 'custom',
-    reason: 'load-error',
+    reason: 'timeout',
   });
   expect(elapsedMs).toBeLessThan(5000);
   expect(seen.warnings).toHaveLength(1);

@@ -12,7 +12,7 @@
 - `npm run verify`: passes (format, lint, typecheck, layer rules, stub scan, 74 unit and property tests, golden placeholder, levels guard, build).
 - Browser tests in Chrome (sandbox): 15 of 15 pass.
   - Boots cleanly at 844x390 (phone 19.5:9) and 1280x720 with zero failed requests, zero page errors, zero asset warnings.
-  - A stalled star-field file falls back after the 1500 ms per-file timeout (whole boot under 5 s), with exactly one warning.
+  - A stalled star-field file falls back after the 1500 ms per-file timer (whole boot under 5 s), with exactly one warning, in Chromium and WebKit.
   - A 404, a corrupt PNG, and a malformed manifest all fall back with no errors.
   - With WebGL blocked, the "Graphics are not available" screen shows, its button is focused, and no canvas is created.
   - `?debug=1` shows the rounded FPS badge (FPS, EMA frame time, p95).
