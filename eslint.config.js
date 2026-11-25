@@ -44,6 +44,13 @@ export default tseslint.config(
         'localStorage',
         'requestAnimationFrame',
       ],
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "BinaryExpression[operator='**'], AssignmentExpression[operator='**=']",
+          message: 'Exponentiation can differ between engines; use multiplication in simulation code.',
+        },
+      ],
     },
   },
   {

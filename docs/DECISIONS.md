@@ -16,3 +16,9 @@
 - 2026-11-25: Scenes get a `GameServices` object through their constructors (asset registry, capabilities, warn) instead of globals or Phaser's data registry.
 - 2026-11-25: The performance badge lives in `src/app/` and shows in dev builds or with `?debug=1`, so it also works in staging and phone builds (spec 21.1 "performance overlay available").
 - 2026-11-25: `?test=1` exposes a read-only `window.__CD_TEST__` (asset snapshot, capabilities) for browser tests.
+- 2026-11-25: Added `tsx` (dev) to run TypeScript tools that import `src/core` (`tools/replay-run`, `tools/perf-bench`). Alternatives: Node type stripping (needs `.ts` import extensions everywhere), `vite-node` (less common). Dev only, no runtime cost.
+- 2026-11-25: `Ids.ts` is hand-written for now (planets, difficulties) with a test that checks it against spec Appendix B, instead of a generator; a generator comes when the ID lists grow.
+- 2026-11-25: The simulation quantizes inputs at its boundary to the network encoding (axes ×127 as i8, 6 button bits, aim ±3142 mrad), so local play, replays, and online matches see identical numbers.
+- 2026-11-25: `CONFIG_HASH` is computed at module load (same value the build-time version in spec 21.2 would produce); `BuildInfo.ts` arrives with Pass 7.
+- 2026-11-25: Pass 1B uses a flat test floor (`setup.floorY`) so movement can be tested before tile collision (Pass 1C replaces it). World coordinates stay non-negative, as the snapshot packet requires.
+- 2026-11-25: Fixed `.dependency-cruiser.cjs`: `exclude` no longer drops node_modules (it hid package imports from all rules); added `core-no-packages`; added a canary test.

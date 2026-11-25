@@ -1,4 +1,4 @@
-/** Layer rules from spec section 12.2. */
+/** Layer rules from spec section 12.2. `tests/unit/layer-rules.test.ts` proves the core rules fire. */
 module.exports = {
   forbidden: [
     {
@@ -11,9 +11,19 @@ module.exports = {
     {
       name: 'core-imports-only-core',
       severity: 'error',
-      comment: 'src/core runs in Node and imports only src/core.',
+      comment:
+        'src/core runs in Node and imports only src/core: no Phaser, DOM libraries, Capacitor, PeerJS, or any package.',
       from: { path: '^src/core/' },
       to: { pathNot: '^src/core/' },
+    },
+    {
+      name: 'core-no-packages',
+      severity: 'error',
+      comment: 'src/core may not import npm packages or Node built-ins.',
+      from: { path: '^src/core/' },
+      to: {
+        dependencyTypes: ['npm', 'npm-dev', 'npm-optional', 'npm-peer', 'npm-no-pkg', 'npm-unknown', 'core'],
+      },
     },
     {
       name: 'input-imports-core-input-types-only',
@@ -37,9 +47,11 @@ module.exports = {
     },
   ],
   options: {
+    // Do not descend into packages, but keep the edges to them so the rules above can see them.
+    // (Excluding node_modules here once hid every package import from every rule.)
     doNotFollow: { path: 'node_modules' },
     tsPreCompilationDeps: true,
     tsConfig: { fileName: 'tsconfig.json' },
-    exclude: { path: '^(dist|node_modules)/' },
+    exclude: { path: '^dist/' },
   },
 };

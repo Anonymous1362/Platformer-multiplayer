@@ -10,3 +10,4 @@ docs
 android
 ios
 release-notes
+tests/golden/replays

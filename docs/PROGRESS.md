@@ -3,9 +3,20 @@
 | Pass | Status |
 | --- | --- |
 | 0 | DONE, approved. |
-| APK pipeline test (slice of 7B, approved early) | Debug APK builds in CI on every push. Signed release workflow ready; first release (`v0.0.1`) waits for the owner to add the two signing secrets (docs/RELEASE.md). |
-| 1A | DONE and green in CI (run 45601521566: Node 24 verify, Chromium and WebKit browser tests, Android debug build), awaiting owner approval. |
-| 1B onward | Not started |
+| APK pipeline test (slice of 7B, approved early) | Debug APK builds in CI on every push. Signing secrets added by the owner. Releases start from Actions → Release → Run workflow (the agent cannot push tags); `0.0.1` not yet published. |
+| 1A | DONE, approved. |
+| 1B | DONE locally, awaiting owner approval. CI result recorded below once seen. |
+| 1C onward | Not started |
+
+## Pass 1B evidence (2026-11-25)
+
+- `npm run verify`: passes (117 unit, property, and simulation tests; 5 golden replay tests; layer rules 0 errors).
+- Same seed and inputs give identical state hashes every 60 ticks in two scripted scenarios (2 players on Kepler, 4 players on Vulcanis Hard); a different seed changes the hash; a mid-run snapshot resumes to the identical final hash.
+- dt spike: a 5 s frame runs exactly 4 ticks (no teleport) and the dropped backlog never returns; pause and resume never simulate paused time; 60 Hz, 144 Hz, 30 Hz, and uneven frame timing all reach the identical hash at tick 600.
+- Spec 4.1 derived reach reproduced on all five planets (full-jump apex within ±2 u, flat jump distance within ±2 u).
+- Golden replays reproduce their hashes through `npm run test:golden` and the CLI (`npm run replay:run -- tests/golden/replays/basic_movement_kepler.json`).
+- `perf:bench`: 0.001 ms mean per tick with 4 players (budget 2 ms; players only so far).
+- Negative checks: a Phaser import planted in `src/core` fails `deps:check` (now a permanent canary test); `Math.random`, `Math.sin`, `Math.pow`, `**`, `window`, `Date.now`, and `performance.now` in `src/core` all fail ESLint.
 
 ## Pass 1A evidence (2026-11-25)
 

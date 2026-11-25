@@ -23,6 +23,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run verify
+      - name: Simulation benchmark
+        run: npm run perf:bench
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium webkit
       - run: npm run test:e2e

@@ -36,6 +36,7 @@
     "peer": "1.0.2",
     "prettier": "3.10.1",
     "sharp": "0.35.5",
+    "tsx": "4.23.15",
     "typescript": "6.0.3",
     "typescript-eslint": "8.74.0",
     "vite": "8.3.8",
@@ -52,10 +53,13 @@
     "format:check": "prettier --check .",
     "deps:check": "depcruise src --config .dependency-cruiser.cjs",
     "stub:scan": "node tools/stub-scan/stub-scan.mjs",
-    "test": "vitest run",
-    "test:golden": "vitest run tests/golden --passWithNoTests",
+    "test": "vitest run tests/unit tests/sim tests/input tests/net",
+    "test:golden": "vitest run tests/golden",
     "test:e2e": "vite build && playwright test",
     "levels:lint": "node tools/levels-lint/index.mjs",
-    "verify": "npm run format:check && npm run lint && npm run typecheck && npm run deps:check && npm run stub:scan && npm run test && npm run test:golden && npm run levels:lint && npm run build"
+    "verify": "npm run format:check && npm run lint && npm run typecheck && npm run deps:check && npm run stub:scan && npm run test && npm run test:golden && npm run levels:lint && npm run build",
+    "replay:run": "tsx tools/replay-run/main.ts",
+    "golden:record": "tsx tools/replay-run/record-golden.ts",
+    "perf:bench": "tsx tools/perf-bench/main.ts"
   }
 }
