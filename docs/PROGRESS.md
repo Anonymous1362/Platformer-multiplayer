@@ -6,8 +6,8 @@
 | APK pipeline test (slice of 7B, approved early) | Debug APK builds in CI on every push. Signing secrets added by the owner. Releases start from Actions → Release → Run workflow (the agent cannot push tags). `0.0.1` published 2026-11-25 (release run 45609929624, signed APK 3.66 MB). |
 | 1A | DONE, approved. |
 | 1B | DONE, approved (CI run 45607110857). |
-| 1C | DONE locally (see evidence); CI result recorded below once green. |
-| 1D | NEXT (auto mode). |
+| 1C | DONE and green in CI (run 45620958633: verify, perf:bench, Chromium and WebKit browser tests, Android debug build). |
+| 1D | IN PROGRESS (auto mode). |
 | 1E onward | Not started |
 
 ## Pass 1C evidence (2026-11-25)
