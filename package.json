@@ -27,6 +27,7 @@
     "@capacitor/cli": "8.6.2",
     "@playwright/test": "1.65.1",
     "@preact/preset-vite": "2.10.6",
+    "@types/node": "24.19.3",
     "dependency-cruiser": "18.9.0",
     "eslint": "10.15.0",
     "fast-check": "4.11.0",
@@ -40,5 +41,21 @@
     "vite": "8.3.8",
     "vite-plugin-pwa": "2.0.0",
     "vitest": "5.1.1"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "deps:check": "depcruise src --config .dependency-cruiser.cjs",
+    "stub:scan": "node tools/stub-scan/stub-scan.mjs",
+    "test": "vitest run",
+    "test:golden": "vitest run tests/golden --passWithNoTests",
+    "test:e2e": "vite build && playwright test",
+    "levels:lint": "node tools/levels-lint/index.mjs",
+    "verify": "npm run format:check && npm run lint && npm run typecheck && npm run deps:check && npm run stub:scan && npm run test && npm run test:golden && npm run levels:lint && npm run build"
   }
 }

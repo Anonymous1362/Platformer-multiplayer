@@ -1325,9 +1325,9 @@ cosmic-drift/
     "noEmit": true,
     "jsx": "react-jsx",
     "jsxImportSource": "preact",
-    "types": ["vite/client"]
+    "types": ["vite/client", "node"]
   },
-  "include": ["src", "tests", "tools", "vite.config.ts", "capacitor.config.ts"]
+  "include": ["src", "tests", "tools", "vite.config.ts", "vitest.config.ts", "playwright.config.ts", "capacitor.config.ts"]
 }
 ```
 
