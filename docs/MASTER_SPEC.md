@@ -1891,6 +1891,26 @@ At startup in the native shell: lock orientation to landscape (`@capacitor/scree
 | **Google Play** | App Bundle, target API level per the current Play rule (API 36 since 31 Aug 2026), Play App Signing, data safety form, IARC content rating, privacy policy URL, phone and tablet screenshots, feature graphic. |
 | **App Store** | Built with Xcode 26 and the iOS 26 SDK (required since 28 Apr 2026), privacy labels (no data collected), age rating questionnaire, screenshots per device class, TestFlight beta first. |
 
+### 21.8 Update system (Pass 7E)
+
+Goal: players never reinstall for ordinary updates, and see what changed, like a store game.
+
+| Part | Behavior |
+| --- | --- |
+| One push, both platforms | A tagged release builds the web bundle once. It deploys to the PWA host and is also published as a signed live-update bundle for the Android app. Only changes to the native shell (plugins, permissions, Capacitor version) need a new `.apk`. |
+| Version check | On launch (and every 30 minutes while on the title or hub screens, never mid-level or mid-match) the game fetches a small signed `version.json`: version, build ID, release notes (`new`, `improved`, `fixed` lists), download size, `minNativeVersion`, and `required` (true when the multiplayer protocol changed). |
+| Update screen | Rounded panel: version number, "What's new" with New / Improved / Fixed sections, size in MB, **Update now** and **Later**. A required update blocks multiplayer but never blocks offline play. |
+| Download | Progress bar with percent, MB downloaded and total, speed, Cancel and Retry. Resumable, verified (hash and signature) before applying; a failed or tampered download leaves the current version untouched. |
+| Apply | "Restart to apply". The new bundle becomes active on the next launch; if it fails to boot, the app rolls back to the previous bundle automatically. |
+| Saves | Saves and settings live outside the bundle (IndexedDB on web, Capacitor Filesystem on Android) and are never touched by an update. Every update that changes a schema ships a migration with tests (section 15). The old save is backed up before migrating. |
+| Android shell updates | When `minNativeVersion` is newer than the installed `.apk`, show "Download new app version" opening the Releases link. Installing over the old app keeps data only if every build uses the same signing key. A native in-app APK installer is optional and only by ADR. |
+| iPhone / iPad PWA | The service worker downloads the new version in the background and shows the same update screen. "Restart to apply" reloads the app. |
+| Multiplayer | The handshake compares build ID and config hash. A mismatch shows "Update needed" before joining, never a desync. |
+| Security | Bundles are signed with the owner key (section 17); the app refuses unsigned or older-than-installed bundles. |
+| Tool choice | Choose the Capacitor live-update tool by ADR at Pass 7E, favoring free and self-hostable options (GitHub Releases or Cloudflare Pages as the host). Check current store policy for the Android side at that time. |
+
+Acceptance: update from version N to N+1 on a real Android phone and an iPhone PWA with the save intact, the changelog shown, the progress bar moving, a forced failure rolling back, and a tampered bundle rejected.
+
 ### 21.7 Optional services (Pass 8)
 
 Accounts, cloud saves, leaderboards, public matchmaking, server-authoritative competitive rooms, platform attestation, signed remote config, and consented crash reporting. Suggested stack (from v2): Node.js + TypeScript + Fastify, PostgreSQL, Redis only if presence or queues need it, HTTPS/WSS only, secrets server-side, and every client request validated for authentication, ownership, schema, size, rate, and replay.
@@ -1940,7 +1960,7 @@ Accounts, cloud saves, leaderboards, public matchmaking, server-authoritative co
 
 ### 22.6 Order of work
 
-Pass 0 → 1A → 1B → 1C → 1D → 1E → 1F → 2A … 2F → 3A … 3E → 4A … 4F → 5A … 5E → 6A … 6D → 7A … 7E → (8, optional). Features from §25 are tagged with the milestone where they are introduced; **never implement a tagged feature earlier than its tag.**
+Pass 0 → 1A → 1B → 1C → 1D → 1E → 1F → 2A … 2F → 3A … 3E → 4A … 4F → 5A … 5E → 6A … 6D → 7A … 7F → (8, optional). Features from §25 are tagged with the milestone where they are introduced; **never implement a tagged feature earlier than its tag.**
 
 ---
 
@@ -2043,7 +2063,8 @@ Each chapter splits into four milestones: **(1)** new enemies and mechanics, **(
 | **7B** | Android: Capacitor (8.x, or 9.x by ADR), plugins, lifecycle, back button, deep links, haptics, filesystem saves, orientation and system bars, release signing, sideload APK, device tests |
 | **7C** | iPhone/iPad via PWA (free route): Add-to-Home-Screen install, safe areas, standalone display, audio and silent switch, service-worker update flow, lifecycle, device tests in Safari and installed mode. *Optional, paid:* native iOS on macOS with Xcode 26 and TestFlight |
 | **7D** | Security hardening (§17.3–§17.5): owner keys and tokens, content signing, selective obfuscation, secret scanning, optional memory masking, release-bundle checks |
-| **7E** | Release candidate: §26 checklists, store listings if publishing, privacy policy, rating questionnaires, final regression, tag `v1.0.0` |
+| **7E** | Update system (section 21.8): version check, update screen with changelog and size, live updates with progress bar, rollback, signed bundles, Android shell update prompt, iPhone PWA update flow |
+| **7F** | Release candidate: §26 checklists, store listings if publishing, privacy policy, rating questionnaires, final regression, tag `v1.0.0` |
 
 ### Pass 8 — Optional live services
 
