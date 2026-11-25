@@ -7,7 +7,8 @@ Copyright (c) 2026 Anonymous1362. All rights reserved. This repository is public
 
 ## Status
 
-Pass 0 (foundation) is done: build, checks, first tests, and a responsive canvas. No gameplay yet.
+Pass 0 (foundation) and Pass 1A (boot, asset loading with fallbacks, device checks) are done. No gameplay yet.
+Android builds: see `docs/RELEASE.md`.
 See `docs/PROGRESS.md` for the current milestone and `docs/MASTER_SPEC.md` for the full specification.
 
 ## Commands

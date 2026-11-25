@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "key": "bg_starfield",
+      "scope": "global",
+      "kind": "image",
+      "source": "custom",
+      "required": true,
+      "files": [
+        {
+          "path": "global/bg_starfield.png",
+          "sha256": "2681bfb0f80454a67b492c869c0447302ae921b2e63b2edc28a4684acf40a4ab",
+          "width": 512,
+          "height": 512
+        }
+      ]
+    },
+    {
+      "key": "fx_soft_dot",
+      "scope": "global",
+      "kind": "image",
+      "source": "procedural",
+      "required": true,
+      "files": []
+    }
+  ]
+}

@@ -11,3 +11,8 @@
 - 2026-11-25: Vite `base: './'` so one build works in the Android WebView and under a web sub-path.
 - 2026-11-25: CI builds a debug APK on every push to `main` (public repo, Actions minutes are free). Release APKs only from `v*` tags via `release.yml`.
 - 2026-11-25: GitHub Pages preview deferred: the proxy blocks enabling Pages, and the final PWA origin must be chosen deliberately at Pass 7A because origin = save storage (all `*.github.io` sites of one account share an origin).
+- 2026-11-25: Asset manifest file entries gain optional `width`/`height` (pixel size) so O3 can check dimensions at load; spec Appendix A updated.
+- 2026-11-25: Vite `build.assetsDir: 'app'` so `dist/assets/` holds only game assets and the manifest (cleaner caching rules for the PWA later).
+- 2026-11-25: Scenes get a `GameServices` object through their constructors (asset registry, capabilities, warn) instead of globals or Phaser's data registry.
+- 2026-11-25: The performance badge lives in `src/app/` and shows in dev builds or with `?debug=1`, so it also works in staging and phone builds (spec 21.1 "performance overlay available").
+- 2026-11-25: `?test=1` exposes a read-only `window.__CD_TEST__` (asset snapshot, capabilities) for browser tests.

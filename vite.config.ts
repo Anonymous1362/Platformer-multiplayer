@@ -7,6 +7,8 @@ export default defineConfig({
   plugins: [preact()],
   build: {
     target: 'es2022',
+    // Built code goes to dist/app so dist/assets holds only game assets and the manifest.
+    assetsDir: 'app',
     sourcemap: false,
     chunkSizeWarningLimit: 1500,
   },

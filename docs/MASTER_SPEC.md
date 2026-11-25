@@ -2385,7 +2385,8 @@ export interface DialogueLine {
 export interface AssetManifestEntry {
   key: string; scope: string; kind: "image" | "atlasFrame" | "spritesheet" | "rig" | "audio" | "font";
   source: "custom" | "ai" | "procedural"; required: boolean;
-  files: { path: string; sha256: string; density?: 1 | 2; codec?: "aac" | "opus" }[];
+  files: { path: string; sha256: string; density?: 1 | 2; codec?: "aac" | "opus";
+           width?: number; height?: number }[];   // pixel size, checked at load (O3)
   frames?: { count: number; fps: number; loop: boolean };
   pivot?: { x: number; y: number }; loopPoints?: { startSec: number; endSec: number };
   bus?: "music" | "sfx" | "ui" | "voice" | "ambience"; minIntervalMs?: number;

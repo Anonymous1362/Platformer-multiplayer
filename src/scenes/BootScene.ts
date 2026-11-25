@@ -1,68 +1,41 @@
 import Phaser from 'phaser';
-import { Random } from '../core/Random';
-import { cameraZoomFor } from '../app/Viewport';
+import { assetXhrSettings, ASSETS_BASE, loadScope } from '../assets/loadScope';
+import { validateManifest } from '../assets/ManifestValidation';
+import type { GameServices } from '../app/GameServices';
 
-export const BOOT_READY_EVENT = 'cd-boot-ready';
+const MANIFEST_CACHE_KEY = 'cd_asset_manifest';
 
-const SKY = 0x0b1020;
-const HORIZON = 0x1b2a55;
-const GROUND = 0x14182c;
-const PLANET = 0xf59e0b;
-const STAR = 0xdbeafe;
-
-/** Pass 0 placeholder: a fallback space background and a size readout. Real boot work starts in Pass 1A. */
+/** Loads and validates the asset manifest, loads the `global` scope with fallbacks, then moves on. */
 export class BootScene extends Phaser.Scene {
-  private label: Phaser.GameObjects.Text | undefined;
+  private readonly services: GameServices;
 
-  constructor() {
+  constructor(services: GameServices) {
     super('BootScene');
+    this.services = services;
+  }
+
+  preload(): void {
+    this.load.json({
+      key: MANIFEST_CACHE_KEY,
+      url: `${ASSETS_BASE}ASSET_MANIFEST.json`,
+      xhrSettings: assetXhrSettings('text'),
+    });
   }
 
   create(): void {
-    const camera = this.cameras.main;
-    camera.setBackgroundColor(SKY);
-
-    const art = this.add.graphics();
-    art.fillStyle(HORIZON, 1).fillRect(-4000, -200, 8000, 800);
-    art.fillStyle(PLANET, 0.9).fillCircle(520, -160, 150);
-    art.fillStyle(0x000000, 0.25).fillCircle(560, -190, 140);
-    art.fillStyle(GROUND, 1).fillRect(-4000, 300, 8000, 600);
-
-    // Render-side randomness only; this generator never touches the simulation.
-    const rng = new Random(20260101);
-    for (let i = 0; i < 160; i += 1) {
-      const x = rng.nextFloat() * 4000 - 2000;
-      const y = rng.nextFloat() * 620 - 540;
-      const size = 1 + rng.nextInt(3);
-      art.fillStyle(STAR, 0.4 + rng.nextFloat() * 0.6).fillRect(x, y, size, size);
+    const raw: unknown = this.cache.json.exists(MANIFEST_CACHE_KEY)
+      ? this.cache.json.get(MANIFEST_CACHE_KEY)
+      : null;
+    const { entries, issues } = validateManifest(raw);
+    for (const issue of issues) {
+      this.services.warn(
+        `[assets] manifest ${issue.code} (entry ${String(issue.index)}, ${issue.key ?? '?'}): ${issue.message}`,
+      );
     }
+    this.services.assets.register(entries);
 
-    this.add
-      .text(0, -40, 'COSMIC DRIFT', { fontFamily: 'sans-serif', fontSize: '96px', color: '#e0f2fe' })
-      .setOrigin(0.5);
-    this.label = this.add
-      .text(0, 80, '', { fontFamily: 'monospace', fontSize: '30px', color: '#8be9ff' })
-      .setOrigin(0.5);
-
-    const onResize = (): void => {
-      this.layout();
-    };
-    this.scale.on(Phaser.Scale.Events.RESIZE, onResize);
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      this.scale.off(Phaser.Scale.Events.RESIZE, onResize);
+    void loadScope(this, this.services.assets, 'global').then(() => {
+      this.scene.start('HoldingScene');
     });
-    this.layout();
-    this.game.events.emit(BOOT_READY_EVENT);
-  }
-
-  private layout(): void {
-    const { width, height } = this.scale.gameSize;
-    const zoom = cameraZoomFor(height);
-    const camera = this.cameras.main;
-    camera.setZoom(zoom);
-    camera.centerOn(0, 0);
-    this.label?.setText(
-      `${String(width)}x${String(height)}  aspect ${(width / height).toFixed(2)}  zoom ${zoom.toFixed(3)}`,
-    );
   }
 }
