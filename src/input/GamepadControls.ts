@@ -71,7 +71,7 @@ export class GamepadControls implements InputSource {
   private menuHeld = 0;
   private stickUp = false;
   private stickDown = false;
-  private readonly tuning: StickTuning;
+  private tuning: StickTuning;
   private held = 0;
   private latched = 0;
   private suppressed = 0;
@@ -84,6 +84,11 @@ export class GamepadControls implements InputSource {
   private ids: string[] = [];
 
   constructor(tuning: StickTuning = DEFAULT_STICK_TUNING) {
+    this.tuning = tuning;
+  }
+
+  /** Deadzone, saturation, and curve from Settings (spec 14.3); per controller arrives in 2B-5. */
+  setTuning(tuning: StickTuning): void {
     this.tuning = tuning;
   }
 

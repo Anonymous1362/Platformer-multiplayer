@@ -1,5 +1,13 @@
 import type Phaser from 'phaser';
-import { decayTrauma, followFactor, HIT_STOP_MS, SHAKE, shakeStrength } from './FxMath';
+import {
+  decayTrauma,
+  DEFAULT_FX_PREFS,
+  followFactor,
+  HIT_STOP_MS,
+  SHAKE,
+  shakeStrength,
+  type FxPrefs,
+} from './FxMath';
 
 /** 60 fps lerp factor of the camera follow (unchanged from Pass 1D). */
 const FOLLOW_PER_FRAME = 0.14;
@@ -20,7 +28,14 @@ export class CameraRig {
   private kickLeftMs = 0;
   private timeMs = 0;
 
-  constructor(camera: Phaser.Cameras.Scene2D.Camera, reducedMotion: boolean) {
+  private readonly prefs: () => FxPrefs;
+
+  constructor(
+    camera: Phaser.Cameras.Scene2D.Camera,
+    reducedMotion: boolean,
+    prefs: () => FxPrefs = () => DEFAULT_FX_PREFS,
+  ) {
+    this.prefs = prefs;
     this.camera = camera;
     this.reducedMotion = reducedMotion;
   }
@@ -38,7 +53,7 @@ export class CameraRig {
 
   /** A short push (u) that decays over the hit-stop duration. */
   kick(dx: number, dy: number): void {
-    const scale = this.reducedMotion ? SHAKE.reducedMotionCap : 1;
+    const scale = (this.reducedMotion ? SHAKE.reducedMotionCap : 1) * this.prefs().shake;
     this.kickX = dx * scale;
     this.kickY = dy * scale;
     this.kickLeftMs = HIT_STOP_MS;
@@ -56,7 +71,7 @@ export class CameraRig {
   }
 
   private apply(): void {
-    const s = shakeStrength(this.trauma, this.reducedMotion);
+    const s = this.shake;
     const t = this.timeMs / 1000;
     // Smooth pseudo-noise from mixed sines: visual only, so Math.sin is fine here.
     const nx = Math.sin(t * 47.3) * 0.6 + Math.sin(t * 91.7 + 1.3) * 0.4;
@@ -74,7 +89,8 @@ export class CameraRig {
     return this.camera.scrollX + this.camera.width / 2;
   }
 
+  /** Shake strength after the reduced-motion cap and the player's Camera shake setting. */
   get shake(): number {
-    return shakeStrength(this.trauma, this.reducedMotion);
+    return shakeStrength(this.trauma, this.reducedMotion) * this.prefs().shake;
   }
 }

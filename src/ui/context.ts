@@ -1,6 +1,7 @@
 import { createContext } from 'preact';
 import { useContext } from 'preact/hooks';
 import type { NavStack } from './nav';
+import type { SettingsStore } from '../settings/SettingsStore';
 import type { UiPrefs } from './prefs';
 import { useStore } from './store';
 
@@ -18,6 +19,9 @@ export interface UiContextValue {
   readonly feedback: UiFeedback;
   readonly prefs: UiPrefs;
   readonly nav: NavStack;
+  /** Null in previews that have no settings. */
+  readonly settings: SettingsStore | null;
+  readonly about: { readonly version: string; readonly build: string };
 }
 
 export const UiContext = createContext<UiContextValue | null>(null);

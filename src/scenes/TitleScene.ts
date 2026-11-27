@@ -27,11 +27,19 @@ export class TitleScene extends Phaser.Scene {
     input.router.releaseAll();
     input.touchView?.setSuppressed(true);
     const { width, height } = this.scale;
-    this.nebula = this.add.tileSprite(0, 0, width, height, 'bg_nebula').setOrigin(0, 0).setAlpha(0.9);
+    this.nebula = this.add.tileSprite(0, 0, width, height, 'bg_nebula').setOrigin(0, 0);
     this.stars = this.add
       .tileSprite(0, 0, width, height, 'bg_starfield')
       .setOrigin(0, 0)
       .setBlendMode(Phaser.BlendModes.ADD);
+    // Background effects intensity (spec 8.6) applies live.
+    const applyIntensity = (): void => {
+      const k = this.services.settings.get().graphics.backgroundIntensity / 100;
+      this.nebula?.setAlpha(0.9 * Math.max(0.35, k));
+      this.stars?.setAlpha(k);
+    };
+    applyIntensity();
+    const offSettings = this.services.settings.subscribe(applyIntensity);
     const onResize = (size: Phaser.Structs.Size): void => {
       this.nebula?.setSize(size.width, size.height);
       this.stars?.setSize(size.width, size.height);
@@ -39,6 +47,7 @@ export class TitleScene extends Phaser.Scene {
     this.scale.on(Phaser.Scale.Events.RESIZE, onResize);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, onResize);
+      offSettings();
       ui.hide();
       this.nebula = null;
       this.stars = null;
@@ -82,11 +91,13 @@ export class TitleScene extends Phaser.Scene {
   override update(_time: number, deltaMs: number): void {
     const { input, ui } = this.services;
     input.frame();
-    input.router.takePause(); // Esc and Start mean nothing here; do not leave one queued for the level
+    // Esc and Start close an open Settings pop-up; otherwise they mean nothing here (never queue one).
+    if (input.router.takePause()) ui.closeTopModal();
     const intents = input.takeMenuIntents();
     if (ui.active && !ui.covered) ui.handleIntents(intents);
-    const reduced = ui.prefs.reduced;
-    if (!reduced) {
+    // Menu background: Animated drifts (Current planet arrives with the hub, 2D); Static stays still.
+    const still = ui.prefs.reduced || this.services.settings.get().graphics.menuBackground === 'static';
+    if (!still) {
       const drift = deltaMs / 1000;
       if (this.nebula) this.nebula.tilePositionX += drift * 4;
       if (this.stars) this.stars.tilePositionX += drift * 9;

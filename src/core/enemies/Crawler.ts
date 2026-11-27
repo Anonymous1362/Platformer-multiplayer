@@ -190,7 +190,7 @@ function contact(ctx: SimContext, enemy: EnemyState): void {
     if (!canBeTargeted(p)) continue;
     const h = hurtBox(p);
     if (h.left < box.right && h.right > box.left && h.top < box.bottom && h.bottom > box.top) {
-      hurtPlayer(p, C.contactDamage, enemy.x, ctx.difficulty, ctx.events, ctx.tick);
+      hurtPlayer(p, C.contactDamage, enemy.x, ctx, ctx.events, ctx.tick);
     }
   }
 }

@@ -87,15 +87,26 @@ export class ParallaxView {
   private lastW = -1;
   private lastH = -1;
 
-  constructor(scene: Phaser.Scene, levelHeightU: number, tier: QualityTier) {
+  /**
+   * `layers` overrides the tier (Settings: Parallax layers 3 or 5; 3 keeps the Battery set) and
+   * `intensity` (Settings: Background effects intensity, 0–1) scales every layer's opacity.
+   */
+  constructor(
+    scene: Phaser.Scene,
+    levelHeightU: number,
+    tier: QualityTier,
+    options: { readonly layers?: 3 | 5 | null; readonly intensity?: number } = {},
+  ) {
     this.levelHeightU = levelHeightU;
-    this.layers = LAYERS.filter((l) => tier !== 'battery' || l.battery).map((l) => {
+    const few = options.layers === 3 || (options.layers == null && tier === 'battery');
+    const intensity = Math.min(1, Math.max(0, options.intensity ?? 1));
+    this.layers = LAYERS.filter((l) => !few || l.battery).map((l) => {
       const sprite = scene.add
         .tileSprite(0, 0, 16, 16, l.key)
         .setOrigin(0, 0)
         .setScrollFactor(0)
         .setDepth(l.depth)
-        .setAlpha(l.alpha);
+        .setAlpha(l.alpha * (l.key === 'bg_nebula' ? Math.max(0.35, intensity) : intensity));
       if (l.additive) sprite.setBlendMode(Phaser.BlendModes.ADD);
       return { sprite, factor: l.factor, bottomAnchored: l.bottom };
     });
@@ -108,7 +119,7 @@ export class ParallaxView {
         .setDepth(Depth.Foreground)
         .setBlendMode(Phaser.BlendModes.ADD)
         .setTint(rng.nextFloat() < 0.7 ? 0xffffff : 0x00f5d4)
-        .setAlpha(0.12 + rng.nextFloat() * 0.12)
+        .setAlpha((0.12 + rng.nextFloat() * 0.12) * intensity)
         .setScale(scale);
       this.motes.push({
         image,

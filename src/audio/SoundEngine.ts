@@ -1,5 +1,14 @@
 import { Random } from '../core/Random';
-import { BUSES, DEFAULT_GAINS, DUCK, LIMITER, VOICE_CAPS, type Bus } from './AudioTypes';
+import {
+  BUSES,
+  DEFAULT_GAINS,
+  DUCK,
+  LIMITER,
+  NIGHT,
+  VOICE_CAPS,
+  type Bus,
+  type MixSettings,
+} from './AudioTypes';
 import { spatial } from './Spatial';
 import { recipeDuration, recipeFor, type Layer, type Recipe, type SfxKey } from './SynthRecipes';
 import { VoicePool } from './VoicePool';
@@ -65,6 +74,9 @@ export class SoundEngine {
   private ctx: BaseAudioContext | null = null;
   private master: GainNode | null = null;
   private limiter: DynamicsCompressorNode | null = null;
+  private night: DynamicsCompressorNode | null = null;
+  private makeup: GainNode | null = null;
+  private mix: MixSettings = { gains: DEFAULT_GAINS, mono: false, night: false };
   private readonly buses = new Map<Bus, GainNode>();
   private readonly pools = new Map<Exclude<Bus, 'music'>, VoicePool>();
   private readonly live = new Map<number, LiveVoice>();
@@ -126,17 +138,23 @@ export class SoundEngine {
     limiter.attack.value = LIMITER.attackS;
     limiter.release.value = LIMITER.releaseS;
     limiter.connect(ctx.destination);
+    // master → night stage (transparent in Full) → make-up gain → limiter → output.
+    const night = ctx.createDynamicsCompressor();
+    const makeup = ctx.createGain();
+    night.connect(makeup);
+    makeup.connect(limiter);
     const master = ctx.createGain();
-    master.gain.value = DEFAULT_GAINS.master;
-    master.connect(limiter);
+    master.connect(night);
     for (const bus of BUSES) {
       const g = ctx.createGain();
-      g.gain.value = DEFAULT_GAINS[bus];
       g.connect(master);
       this.buses.set(bus, g);
     }
     this.master = master;
     this.limiter = limiter;
+    this.night = night;
+    this.makeup = makeup;
+    this.applyMix(true);
     // One second of white noise, shared by every noise layer (render-side generator, never the sim's).
     const length = Math.max(1, Math.floor(ctx.sampleRate));
     const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
@@ -207,6 +225,54 @@ export class SoundEngine {
     }
   }
 
+  /** Player volumes, mono, and night mode (spec 8.6 Audio). Applies at once, or when the context exists. */
+  setMix(mix: MixSettings): void {
+    this.mix = mix;
+    this.applyMix();
+  }
+
+  private applyMix(immediate = false): void {
+    const ctx = this.ctx;
+    if (!ctx || !this.master || !this.limiter || !this.night || !this.makeup) return;
+    const now = ctx.currentTime;
+    // Short ramps so dragging a slider never clicks.
+    const ramp = (param: AudioParam, value: number): void => {
+      param.cancelScheduledValues(now);
+      if (immediate) param.value = value;
+      else param.setTargetAtTime(value, now, 0.015);
+    };
+    ramp(this.master.gain, this.mix.gains.master);
+    for (const [bus, gain] of this.buses) ramp(gain.gain, this.mix.gains[bus]);
+    const n = this.night;
+    const on = this.mix.night;
+    n.threshold.value = on ? NIGHT.thresholdDb : 0;
+    n.knee.value = on ? NIGHT.kneeDb : 0;
+    n.ratio.value = on ? NIGHT.ratio : 1;
+    n.attack.value = NIGHT.attackS;
+    n.release.value = NIGHT.releaseS;
+    ramp(this.makeup.gain, on ? NIGHT.makeupGain : 1);
+    // Mono: the limiter downmixes to one channel; the output upmixes it to both speakers.
+    this.limiter.channelCountMode = 'explicit';
+    this.limiter.channelCount = this.mix.mono ? 1 : 2;
+  }
+
+  /** The mixer as it stands (tests and diagnostics). */
+  describeMix(): {
+    readonly master: number;
+    readonly music: number;
+    readonly sfx: number;
+    readonly mono: boolean;
+    readonly night: boolean;
+  } {
+    return {
+      master: this.mix.gains.master,
+      music: this.mix.gains.music,
+      sfx: this.mix.gains.sfx,
+      mono: this.limiter?.channelCount === 1,
+      night: (this.night?.ratio.value ?? 1) > 1,
+    };
+  }
+
   /** The camera center and view width (u) that pan and attenuation are measured from. */
   setListener(x: number, viewWidthU: number): void {
     this.listenerX = x;
@@ -219,7 +285,7 @@ export class SoundEngine {
     const music = this.buses.get('music');
     if (!ctx || !music) return;
     const now = ctx.currentTime;
-    const base = DEFAULT_GAINS.music;
+    const base = this.mix.gains.music;
     music.gain.cancelScheduledValues(now);
     music.gain.setTargetAtTime(base * 10 ** (db / 20), now, DUCK.attackMs / 3000);
     music.gain.setTargetAtTime(base, now + (DUCK.attackMs + holdMs) / 1000, DUCK.releaseMs / 3000);

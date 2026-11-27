@@ -33,7 +33,7 @@ const IDLE_STICK: StickState = { x: 0, y: 0, magnitude: 0, active: false };
 export class TouchControls implements InputSource {
   readonly kind = 'touch';
   private layout: TouchLayout;
-  private readonly tuning: StickTuning;
+  private tuning: StickTuning;
   private readonly touches = new Map<number, ActiveTouch>();
   private readonly owners = new Map<TouchControlRole, number>();
   /** Origin of the stick finger (floating stick: where it landed). */
@@ -44,6 +44,11 @@ export class TouchControls implements InputSource {
 
   constructor(layout: TouchLayout, tuning: StickTuning = DEFAULT_STICK_TUNING) {
     this.layout = layout;
+    this.tuning = tuning;
+  }
+
+  /** Deadzone, saturation, and curve from Settings (spec 14.3). */
+  setTuning(tuning: StickTuning): void {
     this.tuning = tuning;
   }
 

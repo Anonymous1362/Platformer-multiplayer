@@ -210,5 +210,7 @@ test('the pause menu turns the performance overlay on and off', async ({ page })
   await expect(page.locator('[data-action="perf"]')).toHaveText('Performance overlay: On');
   await expect(page.locator('#perf-badge')).toBeVisible();
   await expect(page.locator('#perf-badge')).toHaveText(/fps/, { timeout: 5000 });
-  expect(await page.evaluate(() => localStorage.getItem('cd.perf'))).toBe('1');
+  // Pass 2B: the overlay is Settings → Show FPS, stored with the other settings.
+  const stored = await page.evaluate(() => localStorage.getItem('cd.settings'));
+  expect((JSON.parse(stored ?? '{}') as { graphics?: { showFps?: boolean } }).graphics?.showFps).toBe(true);
 });

@@ -20,6 +20,8 @@ export class GameInput {
   private view: TouchControlView | null = null;
   private readonly interruptListeners = new Set<(reason: string) => void>();
   private readonly detach: (() => void)[] = [];
+  private size = { width: 0, height: 0 };
+  private touchPrefs = { floatingStick: true, buttonScale: 1, opacity: 70 };
 
   constructor(win: Window, touchDevice: boolean) {
     this.win = win;
@@ -36,6 +38,7 @@ export class GameInput {
   attach(canvas: HTMLElement, overlayParent: HTMLElement): void {
     const now = (): number => this.win.performance.now();
     this.view = new TouchControlView(overlayParent, this.touch, this.showTouch);
+    this.view.setOpacity(this.touchPrefs.opacity);
     this.detach.push(
       attachTouchListeners(canvas, this.touch, now, () => this.view?.show()),
       attachKeyboardMouse(this.win, canvas, this.keyboard, now),
@@ -46,7 +49,26 @@ export class GameInput {
 
   /** Canvas CSS size changed: recompute control bounds (never cache startup coordinates). */
   resize(width: number, height: number): void {
-    if (width > 0 && height > 0) this.touch.setLayout(classicLayout(width, height));
+    this.size = { width, height };
+    this.relayout();
+  }
+
+  /** Stick type, button size, and opacity from Settings; applied at once. */
+  setTouchPrefs(prefs: {
+    readonly floatingStick: boolean;
+    readonly buttonScale: number;
+    readonly opacity: number;
+  }): void {
+    this.touchPrefs = { ...prefs };
+    this.relayout();
+    this.view?.setOpacity(prefs.opacity);
+  }
+
+  private relayout(): void {
+    const { width, height } = this.size;
+    const p = this.touchPrefs;
+    if (width > 0 && height > 0)
+      this.touch.setLayout(classicLayout(width, height, p.floatingStick, p.buttonScale));
   }
 
   /** Once per rendered frame: poll the Gamepad API and refresh the touch view. */

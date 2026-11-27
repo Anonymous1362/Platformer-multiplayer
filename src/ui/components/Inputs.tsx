@@ -65,6 +65,8 @@ export interface TabsProps<T extends string> {
   readonly value: T;
   readonly onChange: (id: T) => void;
   readonly label: string;
+  /** Class for the panel (for example a scroll area). */
+  readonly panelClass?: string;
 }
 
 /** Tabs: roving tabindex, arrow keys, and the 180 ms cross-fade-and-slide between panels. */
@@ -86,7 +88,7 @@ export function Tabs<T extends string>(props: TabsProps<T>): JSX.Element {
   };
   const active = props.tabs[index];
   return (
-    <div>
+    <div class="cd-tabs">
       <div
         class="cd-tablist"
         role="tablist"
@@ -120,6 +122,7 @@ export function Tabs<T extends string>(props: TabsProps<T>): JSX.Element {
       </div>
       <div
         ref={panel}
+        class={props.panelClass}
         role="tabpanel"
         id={active ? `tabpanel-${active.id}` : undefined}
         aria-labelledby={active ? `tab-${active.id}` : undefined}

@@ -1,4 +1,5 @@
 import { Button, type InputFrame } from '../core/InputTypes';
+import { DEFAULT_INPUT_OPTIONS, ShootShaper, type InputOptions } from './InputOptions';
 
 /** What every input adapter (touch, keyboard and mouse, gamepad) reports. */
 export interface SourceSample {
@@ -32,6 +33,8 @@ const AIM_LIMIT_MRAD = 3142;
  */
 export class InputRouter {
   private readonly sources: readonly InputSource[];
+  private readonly shaper = new ShootShaper();
+  private options: InputOptions = DEFAULT_INPUT_OPTIONS;
   private last: InputFrame = { moveX: 0, moveY: 0, held: 0, aimMrad: 0 };
   private releases = 0;
 
@@ -61,10 +64,16 @@ export class InputRouter {
     // A device aiming on purpose (mouse shooting, right stick) sets AimManual; otherwise the
     // simulation auto-aims (spec 4.2).
     if (aim !== null) held |= Button.AimManual;
+    held = this.shaper.apply(held, this.options);
     const aimMrad =
       aim === null ? this.last.aimMrad : Math.max(-AIM_LIMIT_MRAD, Math.min(AIM_LIMIT_MRAD, aim));
     this.last = { moveX, moveY, held, aimMrad };
     return this.last;
+  }
+
+  /** Shoot toggle, auto-fire, and aim mode from Settings; applies from the next frame. */
+  setOptions(options: InputOptions): void {
+    this.options = options;
   }
 
   /** The last frame handed to the simulation (debug overlay and tests). */
@@ -99,6 +108,7 @@ export class InputRouter {
    */
   releaseAll(): void {
     for (const source of this.sources) source.releaseAll();
+    this.shaper.reset();
     this.last = { moveX: 0, moveY: 0, held: 0, aimMrad: this.last.aimMrad };
     this.releases += 1;
   }

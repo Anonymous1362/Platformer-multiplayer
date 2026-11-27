@@ -619,3 +619,86 @@
 .cd-ui[data-motion='reduced'] .cd-button[data-pressed='true'] {
   transform: none;
 }
+
+/* ---- Settings (spec 8.6) ---- */
+.cd-tablist {
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+  touch-action: pan-x;
+}
+.cd-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-height: 0;
+  flex: 1;
+}
+.cd-settings {
+  width: min(760px, 100%);
+  max-width: 760px;
+  height: min(620px, 100%);
+  padding: var(--space-4) var(--space-5);
+}
+.cd-settings-panel {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  padding-inline-end: var(--space-2);
+}
+.cd-settings-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.cd-setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  min-height: 56px;
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--stroke);
+}
+.cd-setting-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1 1 200px;
+  min-width: 0;
+}
+.cd-setting-label {
+  font-weight: 600;
+}
+.cd-setting-control {
+  display: flex;
+  justify-content: flex-end;
+  flex: 0 1 auto;
+  max-width: 100%;
+}
+.cd-setting-wide {
+  flex: 1 1 260px;
+}
+.cd-setting-control .cd-segmented {
+  flex-wrap: wrap;
+  border-radius: var(--radius-lg);
+}
+.cd-setting-heading {
+  margin: var(--space-4) 0 0;
+  font: 700 var(--size-caption) / 1.2 var(--font-ui);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+.cd-settings-footer {
+  border-top: 1px solid var(--stroke);
+  padding-top: var(--space-2);
+}
+.cd-gear {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-4);
+}

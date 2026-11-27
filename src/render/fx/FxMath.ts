@@ -50,3 +50,23 @@ export function progress(nowMs: number, startMs: number, durationMs: number): nu
   if (durationMs <= 0) return 1;
   return Math.min(1, Math.max(0, (nowMs - startMs) / durationMs));
 }
+
+/** Player effect settings (spec 8.6 Gameplay), read live every frame so changes apply at once. */
+export interface FxPrefs {
+  /** Camera shake scale, 0 to 1 (Settings: 0–100). */
+  readonly shake: number;
+  readonly hitStop: boolean;
+  /**
+   * Full: as designed. Reduced (default): the damage vignette at half strength. Off: no vignette and no
+   * white hit flash on sprites (a hit still shows sparks, knockback, and the sound).
+   */
+  readonly flashes: 'full' | 'reduced' | 'off';
+  readonly damageNumbers: boolean;
+}
+
+export const DEFAULT_FX_PREFS: FxPrefs = { shake: 1, hitStop: true, flashes: 'reduced', damageNumbers: true };
+
+/** Damage vignette strength for the flash setting. */
+export function flashScale(flashes: FxPrefs['flashes']): number {
+  return flashes === 'full' ? 1 : flashes === 'reduced' ? 0.5 : 0;
+}

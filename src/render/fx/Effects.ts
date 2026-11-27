@@ -8,7 +8,7 @@ import { Depth } from '../world/Depth';
 import { HERO_ANIMS, sheetScale } from '../world/SpriteSheets';
 import type { CameraRig } from './CameraRig';
 import type { EntityFx, SpriteSnapshot } from './EntityFx';
-import { BIG_LANDING_U, HIT_FLASH_MS, HIT_STOP_MS, progress } from './FxMath';
+import { BIG_LANDING_U, DEFAULT_FX_PREFS, HIT_FLASH_MS, HIT_STOP_MS, progress, type FxPrefs } from './FxMath';
 import type { Particles, ParticleSpec } from './Particles';
 import type { ScreenFx } from './ScreenFx';
 
@@ -42,6 +42,7 @@ export class Effects implements EntityFx {
   private readonly screen: ScreenFx;
   private readonly level: Level;
   private readonly reducedMotion: boolean;
+  private readonly prefs: () => FxPrefs;
   private readonly snapshot: (id: number) => SpriteSnapshot | null;
   private readonly heroScale: number;
   private readonly rng = new Random(0x0c0ffee);
@@ -63,8 +64,11 @@ export class Effects implements EntityFx {
       readonly level: Level;
       readonly reducedMotion: boolean;
       readonly snapshot: (id: number) => SpriteSnapshot | null;
+      /** Player effect settings, read live (spec 8.6 Gameplay). */
+      readonly prefs?: () => FxPrefs;
     },
   ) {
+    this.prefs = options.prefs ?? ((): FxPrefs => DEFAULT_FX_PREFS);
     this.particles = options.particles;
     this.camera = options.camera;
     this.screen = options.screen;
@@ -196,12 +200,12 @@ export class Effects implements EntityFx {
         break;
       case 'enemyHurt':
         this.burst(e.x, e.y, 6, { tint: 0xffffff, speed: 260, lifeMs: 240, size: 0.16 });
-        this.flashUntil.set(e.enemyId, this.now + HIT_FLASH_MS);
+        this.hitFlash(e.enemyId);
         this.number(String(e.damage), e.x, e.y - 20, '#FFFFFF');
         break;
       case 'playerHurt': {
-        this.flashUntil.set(e.playerId, this.now + HIT_FLASH_MS);
-        this.freezeUntil.set(e.playerId, this.now + HIT_STOP_MS);
+        this.hitFlash(e.playerId);
+        if (this.prefs().hitStop) this.freezeUntil.set(e.playerId, this.now + HIT_STOP_MS);
         const p = this.player(world, e.playerId);
         this.camera.kick(p ? Math.sign(p.x - e.sourceX) * 8 : 0, -4);
         this.camera.addTrauma(0.35);
@@ -213,7 +217,7 @@ export class Effects implements EntityFx {
         if (p) {
           const tint = e.cause === 'lava' ? Palette.magmaAmber : Palette.neonCrimson;
           this.burst(p.x, p.y - PLAYER_H / 3, 6, { tint, speed: 240, lifeMs: 280, size: 0.2 });
-          this.flashUntil.set(p.id, this.now + HIT_FLASH_MS);
+          this.hitFlash(p.id);
         }
         this.camera.addTrauma(0.3);
         this.screen.flashDamage();
@@ -425,7 +429,13 @@ export class Effects implements EntityFx {
     this.burst(x, y, 10, { tint: Palette.nebulaViolet, speed: 280, lifeMs: 360, size: 0.2 });
   }
 
+  /** The white hit flash on a sprite (off when Screen flashes is Off). */
+  private hitFlash(id: number): void {
+    if (this.prefs().flashes !== 'off') this.flashUntil.set(id, this.now + HIT_FLASH_MS);
+  }
+
   private number(label: string, x: number, y: number, color: string): void {
+    if (!this.prefs().damageNumbers) return;
     const slot =
       this.numbers.find((n) => !n.active) ?? this.numbers.reduce((a, b) => (a.start <= b.start ? a : b));
     slot.active = true;

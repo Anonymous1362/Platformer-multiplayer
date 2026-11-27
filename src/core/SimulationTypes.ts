@@ -175,6 +175,24 @@ export interface RunState {
   completeTick: number;
 }
 
+/**
+ * Assist options that change the simulation (spec 3.4). They are part of the setup, so replays and
+ * matches carry them. Game speed and auto-fire act outside the simulation (step rate, input).
+ */
+export interface Assists {
+  readonly invulnerable: boolean;
+  readonly infiniteFuel: boolean;
+  readonly hazardNoDamage: boolean;
+}
+
+export const NO_ASSISTS: Assists = { invulnerable: false, infiniteFuel: false, hazardNoDamage: false };
+
+/** Bit mask of the active assists (0 when none, which keeps older replays' hashes unchanged). */
+export function assistBits(assists: Assists | undefined): number {
+  if (!assists) return 0;
+  return (assists.invulnerable ? 1 : 0) | (assists.infiniteFuel ? 2 : 0) | (assists.hazardNoDamage ? 4 : 0);
+}
+
 /** Everything that, with a level, fully determines a world's starting state. */
 export interface WorldSetup {
   readonly seed: number;
@@ -183,6 +201,8 @@ export interface WorldSetup {
   readonly levelId: string;
   /** `Level.hash` of the level the run was made on; mismatches are refused. */
   readonly levelHash: string;
+  /** Absent means no assists. */
+  readonly assists?: Assists;
 }
 
 export interface WorldState {

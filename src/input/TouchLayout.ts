@@ -61,14 +61,24 @@ export interface TouchLayout {
   readonly fixedStick: { readonly cx: number; readonly cy: number };
 }
 
-export function classicLayout(width: number, height: number, floatingStick = true): TouchLayout {
+/**
+ * The Classic preset (spec 8.8). `buttonScale` (Settings: Button size 75–150%) scales the gameplay
+ * buttons around their centers; overlapping hit areas still split by nearest center.
+ */
+export function classicLayout(
+  width: number,
+  height: number,
+  floatingStick = true,
+  buttonScale = 1,
+): TouchLayout {
   const m = TOUCH_METRICS;
+  const scale = Math.min(1.5, Math.max(0.75, buttonScale));
   const buttons: PlacedButton[] = CLASSIC_BUTTONS.map((b) => ({
     role: b.role,
     cx: width + b.dx,
     cy: height - b.dy,
-    radius: b.diameter / 2,
-    hitRadius: b.diameter / 2 + m.hitSlopPx,
+    radius: (b.diameter * scale) / 2,
+    hitRadius: (b.diameter * scale) / 2 + m.hitSlopPx,
   }));
   const pauseRadius = m.pauseDiameterPx / 2;
   buttons.push({

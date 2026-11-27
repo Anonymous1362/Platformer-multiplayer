@@ -6,6 +6,7 @@ import type { PlayerMode } from '../core/SimulationTypes';
 import type { Capabilities } from './Capabilities';
 import type { GameInput } from './GameInput';
 import type { Log } from './Log';
+import type { SettingsStore } from '../settings/SettingsStore';
 import type { UiService } from '../ui/UiService';
 import type { QualityGovernor } from './QualityGovernor';
 
@@ -29,6 +30,9 @@ export interface SimProbe {
   /** Render quality the level was built with (O6) and whether the game runs in Safe Mode. */
   readonly quality: string;
   readonly safeMode: boolean;
+  /** The run's difficulty and assist bits (from Settings at the level start, or the replay). */
+  readonly difficulty: string;
+  readonly assists: number;
   readonly players: readonly {
     readonly x: number;
     readonly y: number;
@@ -85,6 +89,8 @@ export interface GameServices {
   readonly safeMode: boolean;
   /** Text for "Copy diagnostics" (build, capabilities, settings, last 50 log lines). */
   readonly diagnostics: () => string;
+  /** The player's settings (spec 8.6), per device. */
+  readonly settings: SettingsStore;
   /** The DOM UI layer (menus, notices, transitions). */
   readonly ui: UiService;
   /** First-screen flow: the photosensitivity flag and the test-mode shortcut to the level. */
