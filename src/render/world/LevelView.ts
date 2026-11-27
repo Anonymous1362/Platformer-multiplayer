@@ -56,7 +56,7 @@ export class LevelView {
       this.platforms.push(g);
     });
 
-    this.shadows = new SpritePool(scene, 'fx_shadow', 24, (img) => img.setDepth(Depth.Shadows));
+    this.shadows = new SpritePool(scene, 'fx_shadow', 40, (img) => img.setDepth(Depth.Shadows));
     this.shards = new SpritePool(scene, 'pickup_shard', 24, (img) => img.setDepth(Depth.Pickups));
     this.enemies = new SpritePool(scene, 'enemy_crawler', 4, (img) =>
       img.setOrigin(0.5, 1).setDepth(Depth.Enemies),
