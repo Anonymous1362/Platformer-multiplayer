@@ -12,7 +12,7 @@ import { hashWorld } from '../../src/core/StateHash';
 import { createWorld, setupFor, WorldSimulation } from '../../src/core/WorldSimulation';
 import { loadLevelById } from '../../tools/shared/levels';
 import { flatLevel } from '../fixtures/levels';
-import { scenarioSetup, SCENARIOS } from '../fixtures/scenarios';
+import { scenarioDriver, scenarioSetup, SCENARIOS } from '../fixtures/scenarios';
 
 const ARENA = loadLevelById('test_arena');
 
@@ -23,10 +23,12 @@ function record(ticks = 300): Replay {
   const world = createWorld(setup, ARENA);
   const sim = new WorldSimulation(ARENA, { assertFinite: true });
   const recorder = new ReplayRecorder(setup);
+  const drive = scenarioDriver(scenario, ARENA);
   for (let tick = 0; tick < ticks; tick += 1) {
-    const frames = world.players.map((p) => scenario.input(tick, p.slot));
+    const frames = drive(tick, world);
     recorder.record(frames);
     sim.step(world, frames, tick);
+    recorder.afterStep(world);
   }
   return recorder.finish(hashWorld(world));
 }
@@ -56,7 +58,35 @@ describe('replays (M1)', () => {
       ticks: 300,
       configMatches: true,
       hashMatches: true,
+      firstDivergenceTick: null,
     });
+    expect(replay.checkpoints).toHaveLength(5);
+  });
+
+  it('names the first diverging checkpoint (O1)', () => {
+    const replay = record();
+    // Change player 1's input for ticks 130–159: checkpoints 60 and 120 still match, 180 differs first.
+    const frames = [...framesFromRuns(replay.inputs[0] ?? [])];
+    const recorder = new ReplayRecorder(replay.setup);
+    const world = createWorld(replay.setup, ARENA);
+    const sim = new WorldSimulation(ARENA, { assertFinite: true });
+    const second = [...framesFromRuns(replay.inputs[1] ?? [])];
+    for (let tick = 0; tick < replay.ticks; tick += 1) {
+      const f0 = frames[tick] ?? { moveX: 0, moveY: 0, held: 0, aimMrad: 0 };
+      const edited = tick >= 130 && tick < 160 ? { ...f0, held: 0, moveX: f0.moveX > 0 ? -1 : 1 } : f0;
+      const pair = [edited, second[tick] ?? f0];
+      recorder.record(pair);
+      sim.step(world, pair, tick);
+      recorder.afterStep(world);
+    }
+    const tampered: Replay = {
+      ...recorder.finish(hashWorld(world)),
+      checkpoints: replay.checkpoints,
+      finalHash: replay.finalHash,
+    };
+    const result = runReplay(tampered, ARENA);
+    expect(result.hashMatches).toBe(false);
+    expect(result.firstDivergenceTick).toBe(180);
   });
 
   it('survives a JSON round trip', () => {
@@ -97,6 +127,10 @@ describe('replays (M1)', () => {
       ['player count', { ...good, inputs: [] }],
       ['range', { ...good, inputs: [[[60, 500, 0, 0, 0]], [[60, 0, 0, 0, 0]]] }],
       ['nan', { ...good, inputs: [[[60, Number.NaN, 0, 0, 0]], [[60, 0, 0, 0, 0]]] }],
+      ['checkpoints missing', { ...good, checkpoints: undefined }],
+      ['checkpoint count', { ...good, checkpoints: [] }],
+      ['checkpoint hash', { ...good, checkpoints: ['zzzzzzzz'] }],
+      ['old version', { ...good, version: 2 }],
     ];
     for (const [label, raw] of cases) {
       const result = validateReplay(raw);

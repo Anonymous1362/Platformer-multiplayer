@@ -1,7 +1,8 @@
 import type { DifficultyId } from '../../src/core/Ids';
 import { Button, type InputFrame } from '../../src/core/InputTypes';
 import type { Level } from '../../src/core/level/LevelTypes';
-import type { WorldSetup } from '../../src/core/SimulationTypes';
+import type { WorldSetup, WorldState } from '../../src/core/SimulationTypes';
+import { arenaAutopilot } from './autopilot';
 
 /** Scripted, deterministic input sessions shared by simulation tests, golden replays, and the benchmark. */
 export interface Scenario {
@@ -11,7 +12,20 @@ export interface Scenario {
   readonly difficulty: DifficultyId;
   readonly playerCount: number;
   readonly ticks: number;
-  input(tick: number, slot: number): InputFrame;
+  /** Open-loop input by tick and slot. */
+  readonly input?: (tick: number, slot: number) => InputFrame;
+  /** Closed-loop input that reads the world (a fresh pilot per run). */
+  readonly pilot?: (level: Level) => (world: WorldState, slot: number) => InputFrame;
+}
+
+/** Frames for every player at one tick; create one driver per run (pilots keep state). */
+export function scenarioDriver(
+  scenario: Scenario,
+  level: Level,
+): (tick: number, world: WorldState) => InputFrame[] {
+  const pilot = scenario.pilot?.(level);
+  const open = scenario.input ?? scriptedInput;
+  return (tick, world) => world.players.map((p) => (pilot ? pilot(world, p.slot) : open(tick, p.slot)));
 }
 
 export function scenarioSetup(scenario: Scenario, level: Level): WorldSetup {
@@ -64,5 +78,15 @@ export const SCENARIOS: readonly Scenario[] = [
     playerCount: 4,
     ticks: 1200,
     input: scriptedInput,
+  },
+  {
+    // The start-to-finish acceptance run: the autopilot reaches the exit near tick 1691.
+    name: 'arena_autopilot',
+    levelId: 'test_arena',
+    seed: 1,
+    difficulty: 'normal',
+    playerCount: 1,
+    ticks: 1800,
+    pilot: arenaAutopilot,
   },
 ];

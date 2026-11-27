@@ -2,25 +2,41 @@ import type { MenuIntent } from '../input/MenuNav';
 import { UiTokens } from '../theme/ThemePalette';
 import { MenuModel } from './MenuModel';
 
-export type PauseAction = 'resume' | 'restart';
+export type PauseAction = 'resume' | 'restart' | 'perf';
 
-const LABELS: Readonly<Record<PauseAction, string>> = { resume: 'Resume', restart: 'Restart level' };
-const ITEMS: readonly [PauseAction, ...PauseAction[]] = ['resume', 'restart'];
+const ITEMS: readonly [PauseAction, ...PauseAction[]] = ['resume', 'restart', 'perf'];
+
+export interface PauseMenuOptions {
+  readonly reducedMotion: boolean;
+  /** Current state of the performance overlay (the item shows On or Off). */
+  readonly perfShown: boolean;
+  /** Item selected when the menu opens. */
+  readonly initial?: PauseAction;
+  /** Play the open animation (off when the menu is rebuilt in place). */
+  readonly animate?: boolean;
+}
 
 /**
- * The Pass 1 pause menu: Resume and Restart (the full Pause screen with Settings, Controls, and Quit
- * arrives with the UI layer in Pass 2A). A full-screen backdrop catches every touch while open. Works
+ * The Pass 1 pause menu: Resume, Restart, and the performance overlay toggle used for device records
+ * (the full Pause screen with Settings, Controls, and Quit arrives with the UI layer in Pass 2A). A full-screen backdrop catches every touch while open. Works
  * with touch and mouse (buttons), keyboard (arrows or W/S, Enter or Space), and gamepads (D-pad or
  * stick, A, B). Opens with the §8.4 panel motion; opacity only under reduced motion.
  */
 export class PauseMenu {
   private readonly root: HTMLElement;
   private readonly buttons: HTMLButtonElement[] = [];
-  private readonly model = new MenuModel<PauseAction>(ITEMS);
+  private readonly model: MenuModel<PauseAction>;
   private readonly onAction: (action: PauseAction) => void;
   private done = false;
 
-  constructor(parent: HTMLElement, onAction: (action: PauseAction) => void, reducedMotion: boolean) {
+  constructor(parent: HTMLElement, onAction: (action: PauseAction) => void, options: PauseMenuOptions) {
+    const { reducedMotion } = options;
+    this.model = new MenuModel<PauseAction>(ITEMS, Math.max(0, ITEMS.indexOf(options.initial ?? 'resume')));
+    const labels: Readonly<Record<PauseAction, string>> = {
+      resume: 'Resume',
+      restart: 'Restart level',
+      perf: `Performance overlay: ${options.perfShown ? 'On' : 'Off'}`,
+    };
     this.onAction = onAction;
     this.root = document.createElement('div');
     this.root.dataset['role'] = 'pause-overlay';
@@ -61,7 +77,7 @@ export class PauseMenu {
       const b = document.createElement('button');
       b.type = 'button';
       b.dataset['action'] = action;
-      b.textContent = LABELS[action];
+      b.textContent = labels[action];
       Object.assign(b.style, {
         minHeight: '48px',
         padding: '0 18px',
@@ -99,7 +115,7 @@ export class PauseMenu {
     parent.append(this.root);
     this.render();
 
-    if (typeof this.root.animate === 'function') {
+    if (options.animate !== false && typeof this.root.animate === 'function') {
       this.root.animate([{ opacity: 0 }, { opacity: 1 }], {
         duration: reducedMotion ? 120 : 160,
         easing: 'linear',

@@ -10,6 +10,19 @@ import { Palette, cssHex } from '../theme/ThemePalette';
 import type { Capabilities } from './Capabilities';
 import type { GameInput } from './GameInput';
 import { BOOT_READY_EVENT, type GameServices } from './GameServices';
+import type { Log } from './Log';
+import type { QualityGovernor } from './QualityGovernor';
+
+export interface GameOptions {
+  readonly capabilities: Capabilities;
+  readonly policy: AssetPolicy;
+  readonly input: GameInput;
+  readonly log: Log;
+  readonly quality: QualityGovernor;
+  readonly safeMode: boolean;
+  readonly diagnostics: () => string;
+  readonly perf: GameServices['perf'];
+}
 
 export interface CreatedGame {
   readonly game: Phaser.Game;
@@ -33,13 +46,11 @@ function phaserTextureStore(textures: () => Phaser.Textures.TextureManager): Tex
 }
 
 /** Creates the WebGL-only Phaser game inside `root`, sized to the root element. */
-export function createGame(
-  root: HTMLElement,
-  capabilities: Capabilities,
-  policy: AssetPolicy,
-  warn: (message: string) => void,
-  input: GameInput,
-): CreatedGame {
+export function createGame(root: HTMLElement, options: GameOptions): CreatedGame {
+  const { capabilities, policy, input, log } = options;
+  const warn = (message: string): void => {
+    log.warn('assets', message.replace(/^\[assets\]\s*/, ''));
+  };
   let gameRef: Phaser.Game | null = null;
   const textures = (): Phaser.Textures.TextureManager => {
     if (!gameRef) throw new Error('Phaser game not created yet');
@@ -55,10 +66,24 @@ export function createGame(
     maxTextureSize: capabilities.maxTextureSize,
     policy,
   });
+  // Safe Mode runs without sound (spec 19.2).
   const audio = new SoundEngine(() =>
-    capabilities.webAudio ? new AudioContext({ latencyHint: 'interactive' }) : null,
+    capabilities.webAudio && !options.safeMode ? new AudioContext({ latencyHint: 'interactive' }) : null,
   );
-  const services: GameServices = { assets, capabilities, warn, input, audio, probe: { current: null } };
+  const services: GameServices = {
+    assets,
+    capabilities,
+    warn,
+    input,
+    audio,
+    probe: { current: null },
+    level: { current: null },
+    log,
+    quality: options.quality,
+    safeMode: options.safeMode,
+    diagnostics: options.diagnostics,
+    perf: options.perf,
+  };
 
   gameRef = new Phaser.Game({
     type: Phaser.WEBGL,
@@ -79,6 +104,10 @@ export function createGame(
   const game = gameRef;
   game.events.once(Phaser.Core.Events.READY, () => {
     input.attach(game.canvas, root);
+  });
+  // Adaptive quality (O6) watches real frame times; a hidden page feeds nothing.
+  game.events.on(Phaser.Core.Events.STEP, (time: number, delta: number) => {
+    if (document.visibilityState === 'visible') options.quality.sample(delta, time);
   });
   return { game, assets, services };
 }

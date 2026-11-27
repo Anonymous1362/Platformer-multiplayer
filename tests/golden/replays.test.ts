@@ -5,7 +5,7 @@ import { ReplayRecorder, runReplay, validateReplay } from '../../src/core/Replay
 import { hashWorld } from '../../src/core/StateHash';
 import { createWorld, WorldSimulation } from '../../src/core/WorldSimulation';
 import { loadLevelById } from '../../tools/shared/levels';
-import { scenarioSetup, SCENARIOS } from '../fixtures/scenarios';
+import { scenarioDriver, scenarioSetup, SCENARIOS } from '../fixtures/scenarios';
 
 const dir = new URL('./replays/', import.meta.url);
 const files = readdirSync(dir).filter((f) => f.endsWith('.json'));
@@ -39,10 +39,12 @@ describe('golden replays (O2)', () => {
       const world = createWorld(setup, level);
       const sim = new WorldSimulation(level, { assertFinite: true });
       const recorder = new ReplayRecorder(setup);
+      const drive = scenarioDriver(scenario, level);
       for (let tick = 0; tick < scenario.ticks; tick += 1) {
-        const frames = world.players.map((p) => scenario.input(tick, p.slot));
+        const frames = drive(tick, world);
         recorder.record(frames);
         sim.step(world, frames, tick);
+        recorder.afterStep(world);
       }
       const live = recorder.finish(hashWorld(world));
       const parsed = validateReplay(JSON.parse(readFileSync(new URL(`${scenario.name}.json`, dir), 'utf8')));

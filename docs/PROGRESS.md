@@ -9,7 +9,32 @@
 | 1C | DONE and green in CI (run 45620958633: verify, perf:bench, Chromium and WebKit browser tests, Android debug build). |
 | 1D | DONE and green in CI (run 45951307716). Released as `0.0.2` (release run 2, signed APK 3.68 MB). Device checks (2–3 fingers on a real phone, controller in the Android app) pending with the owner. |
 | 1E | DONE and green in CI (1E-1 run 45953613318, 1E-2 run 45958847738, 1E-3 run 45961388044 after a fix: CI's Chromium 159 needs `startRendering` to tell offline audio contexts apart). Parry and slam are deferred to 3A, where the spec schedules them in full. Release notes for `0.0.3` are ready; the owner can run the Release workflow. |
-| 1F onward | Not started |
+| 1F | DONE locally (CI pending on merge). Every automated Pass 1 checklist item passes; three items need the owner's phone (marked below). |
+| 2A onward | Not started |
+
+## Pass 1F evidence and the Pass 1 checklist (2026-11-27)
+
+- `npm run verify`: passes (317 unit, input, property, and simulation tests; 7 golden replays incl. `arena_autopilot`; `levels:lint`; build).
+- `npm run test:e2e` (Chrome, local): 36 of 36, including the acceptance run, replay export → headless re-simulation, 50 restarts, Safe Mode, error recovery, background/resume, and the overlay toggle.
+- Replays v3 store a hash every 60 ticks; a changed input at ticks 130–159 is reported as first diverging at tick 180 (unit test).
+- Device record: docs/DEVICES.md.
+
+| Pass 1 checklist item | Status | Evidence |
+| --- | --- | --- |
+| `npm ci`, `npm run verify` pass | Pass | Above; CI on every push |
+| Tests cover loop, collision, input, determinism | Pass | tests/sim, tests/input, property tests, goldens |
+| Responsive canvas on desktop and mobile browser | Desktop pass; **mobile browser pending owner** | boot.spec (phone and desktop sizes in Chrome and WebKit) |
+| No required-asset 404s; logged fallbacks | Pass | boot.spec (zero failed requests; broken manifest boots with fallbacks) |
+| 60 fixed ticks/s; interpolation never changes outcomes | Pass | FixedLoop tests; acceptance replay renders and matches the headless hash |
+| Background/resume pauses safely | Pass | hardening.spec (no tick burst, no teleport), blur test |
+| Multi-touch combos | Automated pass; **real-device pending owner** | touch tests, CDP multi-finger tests |
+| One finger never releases another; no ownership stealing | Automated pass; **real-device pending owner** | per-finger ownership tests, single-finger lift test |
+| Deadzone, saturation, diagonals, no drift | Automated pass; **real-device pending owner** | input tests |
+| Keyboard gives the same gameplay through `InputFrame` | Pass | devices tests, keyboard e2e, exported replay re-simulates |
+| Full verb set, finish or restart the arena | Pass | arena autopilot (Normal and Hard), restart tests |
+| Same seed + inputs ⇒ same hash; rendering/audio don't change it | Pass | goldens; in-browser playback of `arena_autopilot` matches |
+| No uncaught errors, rejections, or unexplained requests | Pass | acceptance run: no page errors, no error log lines, no foreign requests |
+| Handoff records devices, frame times, memory, limitations | Pass for what can be measured here; **owner phone numbers pending** | docs/DEVICES.md |
 
 ## Pass 1E-3 evidence and 1E acceptance (2026-11-27)
 

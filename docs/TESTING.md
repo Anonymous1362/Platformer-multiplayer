@@ -26,4 +26,5 @@ Notes:
 - Browser tests run on software WebGL, which renders the Battery look and runs the game slower than real time; tests poll the probe with timeouts instead of assuming 60 ticks per second.
 - Audio: pure parts (voice pool, space, pitch chain, recipes, event mapping with a recording player) are unit-tested; the real Web Audio graph is checked in the browser through `__CD_TEST__.audio` (state, limiter settings, and `stress()`, an offline worst-case render whose peak must stay below 1.0).
 - `tests/sim/arena-run.test.ts` is a closed-loop autopilot that plays `test_arena` to the exit. If the arena changes, keep the autopilot passing (it decides by position, so small edits rarely break it).
-- Real-device checks (touch, iOS silent switch, latency) are manual; see spec section 20.5.
+- `tests/e2e/hardening.spec.ts` (Pass 1F) plays the `arena_autopilot` golden replay in the browser at 8× and checks the hash, exports a live run and re-simulates it in Node, restarts the level 50 times and compares leak counters (`__CD_TEST__.counters()`), seeds two failed boots for Safe Mode, forces a scene error (`__CD_TEST__.crash()`), and fakes `visibilitychange`.
+- Real-device checks (touch, iOS silent switch, latency) are manual; see spec section 20.5 and docs/DEVICES.md.

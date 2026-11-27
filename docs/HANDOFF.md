@@ -1,6 +1,6 @@
 # Handoff
 
-State: Pass 1E (gameplay loop, art, audio, feel) is done and green in CI (last run 45961388044). Version 0.0.3 is prepared (package.json and release notes) for the owner's Release run. Next is Pass 1F (hardening and acceptance). Auto mode is on (owner, 2026-11-27). Owner device checks for builds 0.0.2+ are still pending. Releases: the owner starts them from Actions → Release → Run workflow; the APK appears on the Releases page.
+State: Pass 1 (1A–1F) is done; only the owner's phone checks remain (docs/DEVICES.md). Next is Pass 2A (UI foundation), after the owner approves. Manual mode. The owner is collecting free assets with the Art Hunting Brief; integrating them is its own step when they arrive.
 
 What 1C added (all in `src/core`, Node-only):
 
@@ -49,6 +49,8 @@ Gotchas learned:
 - `touch-action: none` is still on `body` (from 1A); when DOM menus arrive in 2A, scope it to the canvas and HUD so menus scroll.
 
 Owner device checks still open (spec 8.13 records): 2–3 fingers on a real phone, a controller inside the Android app, the iPhone PWA.
+
+What 1F added: replays v3 (hash every 60 ticks, first-divergence report), the `arena_autopilot` golden, in-level replay record/playback and a `?debug=1` panel (Export/Import replay), a 200-entry log ring buffer with global error handlers, a recovery panel for scene errors, the boot guard and Safe Mode screen, `QualityGovernor` (first tier from capabilities, p95-driven drops and raises at scene boundaries), leak and memory counters (`?test=1`), the performance overlay toggle in the pause menu, and docs/DEVICES.md. Pass 1 is done except the owner's phone checks.
 
 What 1E-2 added (render, HUD, input; the simulation is unchanged):
 
