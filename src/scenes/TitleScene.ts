@@ -84,7 +84,7 @@ export class TitleScene extends Phaser.Scene {
     input.frame();
     input.router.takePause(); // Esc and Start mean nothing here; do not leave one queued for the level
     const intents = input.takeMenuIntents();
-    if (ui.active && !ui.transitioning) ui.handleIntents(intents);
+    if (ui.active && !ui.covered) ui.handleIntents(intents);
     const reduced = ui.prefs.reduced;
     if (!reduced) {
       const drift = deltaMs / 1000;

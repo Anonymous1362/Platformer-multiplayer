@@ -45,22 +45,31 @@ function animate(
  */
 export class Transitions {
   private readonly host: HTMLElement;
-  private running = false;
+  private phase: 'idle' | 'cover' | 'reveal' = 'idle';
+  private tail: Promise<void> = Promise.resolve();
 
   constructor(host: HTMLElement) {
     this.host = host;
   }
 
-  get busy(): boolean {
-    return this.running;
+  /** The screen is being covered: input must wait. During the reveal the new screen already takes input. */
+  get covering(): boolean {
+    return this.phase === 'cover';
   }
 
-  async run(options: TransitionOptions, midpoint: () => void | Promise<void>): Promise<void> {
-    if (this.running) {
-      await midpoint();
-      return;
-    }
-    this.running = true;
+  get busy(): boolean {
+    return this.phase !== 'idle';
+  }
+
+  /** Runs after any transition already in progress, so two never overlap. */
+  run(options: TransitionOptions, midpoint: () => void | Promise<void>): Promise<void> {
+    const next = this.tail.then(() => this.runOne(options, midpoint));
+    this.tail = next.catch(() => undefined);
+    return next;
+  }
+
+  private async runOne(options: TransitionOptions, midpoint: () => void | Promise<void>): Promise<void> {
+    this.phase = 'cover';
     const overlay = document.createElement('div');
     overlay.className = 'cd-transition';
     overlay.dataset['role'] = 'transition';
@@ -99,6 +108,9 @@ export class Transitions {
         });
       }
       await midpoint();
+      // The new screen is live from here: taps and keys reach it while the veil fades.
+      this.phase = 'reveal';
+      overlay.style.pointerEvents = 'none';
       await animate(fade, [{ opacity: 1 }, { opacity: 0 }], {
         duration: Math.max(reveal, Duration.instant),
         easing: Easing.linear,
@@ -106,7 +118,7 @@ export class Transitions {
       });
     } finally {
       overlay.remove();
-      this.running = false;
+      this.phase = 'idle';
     }
   }
 }

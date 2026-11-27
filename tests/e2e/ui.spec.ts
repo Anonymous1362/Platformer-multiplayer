@@ -302,6 +302,8 @@ test('phone size: the notice fits the screen and its button is at least 48 px ta
   await page.waitForSelector('#game-root[data-ready="true"]');
   const notice = page.locator('[data-role="photosensitivity-notice"] [role="dialog"]');
   await expect(notice).toBeVisible();
+  // Measure the settled layout, not a frame of the 220 ms scale-in (WebKit measured 47.8 px mid-animation).
+  await settle(page);
   const box = await notice.boundingBox();
   expect(box).not.toBeNull();
   expect((box?.y ?? -1) >= 0 && (box?.y ?? 0) + (box?.height ?? 9999) <= 390).toBe(true);

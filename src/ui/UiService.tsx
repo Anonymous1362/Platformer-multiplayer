@@ -204,8 +204,9 @@ export class UiService {
     return t.run({ kind, reduced: this.prefs.reduced, ...(origin ? { origin } : {}) }, midpoint);
   }
 
-  get transitioning(): boolean {
-    return this.transitions?.busy ?? false;
+  /** A transition is covering the screen (menu input waits until the new screen is showing). */
+  get covered(): boolean {
+    return this.transitions?.covering ?? false;
   }
 
   destroy(): void {

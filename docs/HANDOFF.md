@@ -20,6 +20,8 @@ Gotchas learned:
 - Inside the game, keyboard menu input arrives twice (window key → intent, and the browser's native button activation). `UiService` (driven mode) prevents the native default for Enter, Space, and Up/Down; Left/Right, Tab, and text fields stay native.
 - preact typings reject `role="dialog"` on `<aside>`; use a `div`.
 - `@playwright/test` uses Chromium build 1243 here; a bare `playwright` script needs `executablePath: '/opt/pw-browsers/chromium-1243/chrome-linux64/chrome'`.
+- Transitions queue (never overlap). Only the covering half blocks input (`ui.covered`); during the reveal the new screen already takes taps and keys, so an early Enter is never lost.
+- Measure element sizes only after `document.getAnimations()` settle: WebKit reports mid-scale boxes (47.8 px for a 48 px button).
 - `?test=1` boots straight into the level; browser tests that need the Title must add `&flow=1`.
 
 Deferred on purpose: Title Settings/Credits (2B and later), attract loop (2D), "Skip tutorial" (2C); Pause Settings, Controls, Difficulty, "Restart from checkpoint" with those features; haptics (7B); UI navigation for left/right intents (gamepad sliders/tabs) with the 2B rebinding work.
