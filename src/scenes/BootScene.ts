@@ -42,7 +42,7 @@ export class BootScene extends Phaser.Scene {
     );
 
     void loadScope(this, this.services.assets, 'global').then(() => {
-      this.scene.start('LevelScene');
+      this.scene.start(this.services.flow.skipToLevel ? 'LevelScene' : 'TitleScene');
     });
   }
 }

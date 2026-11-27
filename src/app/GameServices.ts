@@ -6,6 +6,7 @@ import type { PlayerMode } from '../core/SimulationTypes';
 import type { Capabilities } from './Capabilities';
 import type { GameInput } from './GameInput';
 import type { Log } from './Log';
+import type { UiService } from '../ui/UiService';
 import type { QualityGovernor } from './QualityGovernor';
 
 /** Read-only view of a running simulation for `?test=1` hooks and the debug overlay. */
@@ -84,6 +85,16 @@ export interface GameServices {
   readonly safeMode: boolean;
   /** Text for "Copy diagnostics" (build, capabilities, settings, last 50 log lines). */
   readonly diagnostics: () => string;
+  /** The DOM UI layer (menus, notices, transitions). */
+  readonly ui: UiService;
+  /** First-screen flow: the photosensitivity flag and the test-mode shortcut to the level. */
+  readonly flow: {
+    /** `?test=1` without `flow=1` starts the level directly (browser tests). */
+    readonly skipToLevel: boolean;
+    readonly noticeSeen: () => boolean;
+    readonly markNoticeSeen: () => void;
+    readonly version: string;
+  };
   /** The performance overlay (FPS, frame times, memory), toggled from the pause menu. */
   readonly perf: { readonly shown: () => boolean; readonly toggle: () => void };
 }

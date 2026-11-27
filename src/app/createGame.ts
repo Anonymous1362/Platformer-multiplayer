@@ -7,6 +7,10 @@ import { SoundEngine } from '../audio/SoundEngine';
 import { addSheetFrames } from '../render/world/SpriteSheets';
 import { BootScene } from '../scenes/BootScene';
 import { LevelScene } from '../scenes/LevelScene';
+import { TitleScene } from '../scenes/TitleScene';
+import { UiPrefs, glassAllowed } from '../ui/prefs';
+import { UiService } from '../ui/UiService';
+import '../ui/fonts';
 import { Palette, cssHex } from '../theme/ThemePalette';
 import type { Capabilities } from './Capabilities';
 import type { GameInput } from './GameInput';
@@ -23,6 +27,7 @@ export interface GameOptions {
   readonly safeMode: boolean;
   readonly diagnostics: () => string;
   readonly perf: GameServices['perf'];
+  readonly flow: GameServices['flow'];
 }
 
 export interface CreatedGame {
@@ -75,7 +80,26 @@ export function createGame(root: HTMLElement, options: GameOptions): CreatedGame
   const audio = new SoundEngine(() =>
     capabilities.webAudio && !options.safeMode ? new AudioContext({ latencyHint: 'interactive' }) : null,
   );
+  const prefs = new UiPrefs({
+    highContrast: false,
+    glass: glassAllowed(options.quality.tier, options.safeMode, false),
+  });
+  prefs.watchSystem(window);
+  const ui = new UiService({
+    driven: true,
+    prefs,
+    feedback: {
+      sound: (kind) => {
+        audio.play(`sfx_ui_${kind}`);
+      },
+      // Haptics arrive with Capacitor Haptics in 7B.
+      haptic: () => undefined,
+    },
+  });
+  ui.mount(root);
   const services: GameServices = {
+    ui,
+    flow: options.flow,
     assets,
     capabilities,
     warn,
@@ -101,7 +125,7 @@ export function createGame(root: HTMLElement, options: GameOptions): CreatedGame
     loader: { timeout: ASSET_TIMEOUT_MS, maxRetries: 0 },
     // Input is ours (src/input): Touch Events on the canvas, window keys, the Gamepad API (spec 14).
     input: { keyboard: false, mouse: false, touch: false, gamepad: false },
-    scene: [new BootScene(services), new LevelScene(services)],
+    scene: [new BootScene(services), new TitleScene(services), new LevelScene(services)],
   });
   gameRef.events.once(BOOT_READY_EVENT, () => {
     root.setAttribute('data-ready', 'true');

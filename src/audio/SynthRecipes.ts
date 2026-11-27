@@ -207,6 +207,14 @@ export const RECIPES = {
   },
   sfx_ui_tap: { bus: 'ui', layers: [tone('triangle', 1000, undefined, 0.08, 0.002, 0.05)] },
   sfx_ui_back: { bus: 'ui', layers: [tone('triangle', 700, 500, 0.08, 0.002, 0.07)] },
+  sfx_ui_toggle: {
+    bus: 'ui',
+    layers: [
+      tone('triangle', 820, undefined, 0.07, 0.002, 0.04),
+      tone('triangle', 1230, undefined, 0.07, 0.002, 0.05, 0.04),
+    ],
+  },
+  sfx_ui_error: { bus: 'ui', layers: [tone('square', 180, 130, 0.07, 0.002, 0.14)] },
 } as const satisfies Readonly<Record<string, Recipe>>;
 
 export type SfxKey = keyof typeof RECIPES;

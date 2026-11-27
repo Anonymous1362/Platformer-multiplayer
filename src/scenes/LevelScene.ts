@@ -21,7 +21,7 @@ import { createWorld, setupFor, WorldSimulation } from '../core/WorldSimulation'
 import { GameAudio } from '../audio/GameAudio';
 import { hudState } from '../hud/HudModel';
 import { HudView } from '../hud/HudView';
-import { PauseMenu, type PauseAction } from '../hud/PauseMenu';
+import type { PauseAction } from '../ui/screens/Screens';
 import { CameraRig } from '../render/fx/CameraRig';
 import { Effects } from '../render/fx/Effects';
 import { FallTracker } from '../render/fx/FallTracker';
@@ -92,7 +92,7 @@ export class LevelScene extends Phaser.Scene {
   private paused = false;
   private contextLost = false;
   private restarting = false;
-  private menu: PauseMenu | null = null;
+  private menuShown = false;
   private failed = false;
   private crashPending = false;
   private runCount = 0;
@@ -117,8 +117,9 @@ export class LevelScene extends Phaser.Scene {
     this.restarting = false;
     this.failed = false;
     this.crashPending = false;
-    this.menu = null;
+    this.menuShown = false;
     this.recovery = null;
+    this.services.input.touchView?.setSuppressed(false);
 
     const parsed = parseLevel(JSON.parse(arenaJson) as unknown);
     if (!parsed.ok) throw new Error(`test_arena failed validation: ${parsed.errors.join('; ')}`);
@@ -222,8 +223,7 @@ export class LevelScene extends Phaser.Scene {
       renderer.off(Phaser.Renderer.Events.LOSE_WEBGL, onLost);
       renderer.off(Phaser.Renderer.Events.RESTORE_WEBGL, onRestored);
       this.run?.audio.pause();
-      this.menu?.destroy();
-      this.menu = null;
+      this.hidePause();
       this.recovery?.destroy();
       this.recovery = null;
       hud?.destroy();
@@ -295,20 +295,28 @@ export class LevelScene extends Phaser.Scene {
     // M6: pausing releases all input; resuming never simulates the paused time (spec 13.2).
     this.services.input.router.releaseAll();
     this.run?.loop.reset();
-    this.menu?.destroy();
-    this.menu = null;
+    this.hidePause();
     if (paused) this.run?.audio.pause();
     this.services.audio.play(paused ? 'sfx_ui_tap' : 'sfx_ui_back');
-    const parent = this.game.canvas.parentElement;
-    if (paused && parent) {
-      this.menu = new PauseMenu(
-        parent,
-        (action) => {
-          this.onPauseAction(action);
-        },
-        { reducedMotion: this.services.capabilities.reducedMotion, perfShown: this.services.perf.shown() },
-      );
-    }
+    if (paused) this.showPause();
+  }
+
+  private showPause(): void {
+    this.menuShown = true;
+    this.services.ui.show({
+      id: 'pause',
+      perfShown: this.services.perf.shown(),
+      carriedShards: this.run?.world.run.shardsCarried ?? 0,
+      onAction: (action) => {
+        this.onPauseAction(action);
+      },
+    });
+  }
+
+  private hidePause(): void {
+    if (!this.menuShown) return;
+    this.menuShown = false;
+    this.services.ui.hide();
   }
 
   private isRestarting(): boolean {
@@ -320,25 +328,14 @@ export class LevelScene extends Phaser.Scene {
       this.restartLevel();
       return;
     }
+    if (action === 'quit') {
+      this.quitToTitle();
+      return;
+    }
     if (action === 'perf') {
-      // Toggle the overlay and keep the menu open on the same item.
+      // Toggle the overlay; the menu stays open on the same item (the screen re-renders in place).
       this.services.perf.toggle();
-      this.menu?.destroy();
-      const parent = this.game.canvas.parentElement;
-      this.menu = parent
-        ? new PauseMenu(
-            parent,
-            (a) => {
-              this.onPauseAction(a);
-            },
-            {
-              reducedMotion: this.services.capabilities.reducedMotion,
-              perfShown: this.services.perf.shown(),
-              initial: 'perf',
-              animate: false,
-            },
-          )
-        : null;
+      this.showPause();
       return;
     }
     if (this.contextLost) {
@@ -354,9 +351,18 @@ export class LevelScene extends Phaser.Scene {
   private restartLevel(data?: LevelSceneData): void {
     if (this.restarting) return;
     this.restarting = true;
-    this.menu?.destroy();
-    this.menu = null;
+    this.hidePause();
     this.scene.restart(data);
+  }
+
+  /** Quit to title: fade through deep space, then switch scenes while the screen is covered. */
+  private quitToTitle(): void {
+    if (this.restarting) return;
+    this.restarting = true;
+    this.hidePause();
+    void this.services.ui.transition('fade', () => {
+      this.scene.start('TitleScene');
+    });
   }
 
   override update(time: number, deltaMs: number): void {
@@ -382,8 +388,7 @@ export class LevelScene extends Phaser.Scene {
     });
     this.services.input.router.releaseAll();
     this.run?.audio.pause();
-    this.menu?.destroy();
-    this.menu = null;
+    this.hidePause();
     const parent = this.game.canvas.parentElement;
     if (!parent) return;
     this.recovery = new RecoveryScreen(parent, {
@@ -413,12 +418,13 @@ export class LevelScene extends Phaser.Scene {
     if (!run || this.restarting) return;
     const input = this.services.input;
     input.frame();
-    if (input.router.takePause()) {
+    const pressedPause = input.router.takePause();
+    if (pressedPause && !this.services.ui.closeTopModal()) {
       if (this.paused && this.contextLost) this.onPauseAction('resume');
       else this.setPaused(!this.paused);
     }
     const intents = input.takeMenuIntents();
-    this.menu?.handle(intents);
+    if (this.menuShown) this.services.ui.handleIntents(intents);
     if (this.isRestarting()) return; // a menu action may have started a restart just now
 
     let alpha = 1;
@@ -549,7 +555,7 @@ export class LevelScene extends Phaser.Scene {
       run: this.runCount,
       tick: run?.world.tick ?? 0,
       paused: this.paused,
-      menuOpen: this.menu !== null,
+      menuOpen: this.menuShown,
       contextLost: this.contextLost,
       lastFrame: this.services.input.router.lastFrame,
       counts: {
