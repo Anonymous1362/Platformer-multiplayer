@@ -22,6 +22,7 @@
 - 2026-11-25: `CONFIG_HASH` is computed at module load (same value the build-time version in spec 21.2 would produce); `BuildInfo.ts` arrives with Pass 7.
 - 2026-11-25: Pass 1B uses a flat test floor (`setup.floorY`) so movement can be tested before tile collision (Pass 1C replaces it). World coordinates stay non-negative, as the snapshot packet requires.
 - 2026-11-25: Fixed `.dependency-cruiser.cjs`: `exclude` no longer drops node_modules (it hid package imports from all rules); added `core-no-packages`; added a canary test.
+- 2026-11-27 (later the same day): Owner switched back to auto mode; this entry is the current rule. AGENTS.md and spec 22.2 updated.
 - 2026-11-27: Owner switched the build back to manual mode: after each milestone or sub-step (1E-1, 1E-2, ...) the agent stops and waits for approval. AGENTS.md and spec 22.2 updated. (Replaces the 2026-11-25 entry below.)
 - 2026-11-25: Owner switched the build to auto mode: milestones run back to back (each one fully green locally and in CI, documented, and pushed before the next starts). The agent stops only for device checks, owner-only decisions, or stop-the-line rules. AGENTS.md and spec 22.2 updated.
 - 2026-11-25 (Pass 1C): Gravity is "rising" (2600) while moving up and "falling" (4160) otherwise; releasing Jump early only applies the one-time jump cut. The spec's tap-jump figure (77 u, clears one tile) requires this; the old "or jump released" wording gave 61 u, which fails "taps clear one tile". Spec 4.1 updated.
