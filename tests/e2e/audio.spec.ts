@@ -58,6 +58,7 @@ test('audio never clips: a worst-case burst stays under full scale and respects 
     if (!hooks) throw new Error('test hooks missing');
     return hooks.audio.stress();
   });
+  expect(result.played).toBeGreaterThan(100); // the burst really played
   expect(result.peak).toBeGreaterThan(0.05); // it is actually loud
   expect(result.peak).toBeLessThan(1); // and never clips
   expect(result.maxSfxVoices).toBeLessThanOrEqual(24);

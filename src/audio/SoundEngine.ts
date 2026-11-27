@@ -34,8 +34,9 @@ interface LiveVoice {
 const SILENT = 0.0001;
 const STEAL_FADE_S = 0.012;
 
+/** A live context (not an OfflineAudioContext, which only renders and must never be resumed early). */
 function isRealtime(ctx: BaseAudioContext): ctx is AudioContext {
-  return typeof (ctx as Partial<AudioContext>).close === 'function';
+  return !('startRendering' in ctx);
 }
 
 /**
