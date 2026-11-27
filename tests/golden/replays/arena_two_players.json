@@ -1,6 +1,6 @@
 {
   "format": "cosmic-drift-replay",
-  "version": 2,
+  "version": 3,
   "configHash": "f2f060ea",
   "setup": {
     "seed": 1234,
@@ -272,5 +272,6 @@
       [13, -127, 0, 0, -1199]
     ]
   ],
+  "checkpoints": ["0409138f", "bd6c2ed5", "731f8a5d", "59a91ff3", "c703818d", "0c9c1ca7", "fe521343", "eac47d4e", "2b0cab81", "03a943be", "1f49f12c", "31ef3d19", "0ee5d277", "268b12de", "2797290b"],
   "finalHash": "2797290b"
 }

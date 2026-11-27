@@ -1,13 +1,18 @@
 import type { AssetRegistry } from '../assets/AssetRegistry';
 import type { SoundEngine } from '../audio/SoundEngine';
 import type { InputFrame } from '../core/InputTypes';
+import type { Replay } from '../core/Replay';
 import type { PlayerMode } from '../core/SimulationTypes';
 import type { Capabilities } from './Capabilities';
 import type { GameInput } from './GameInput';
+import type { Log } from './Log';
+import type { QualityGovernor } from './QualityGovernor';
 
 /** Read-only view of a running simulation for `?test=1` hooks and the debug overlay. */
 export interface SimProbe {
   readonly level: string;
+  /** Counts level starts (restarts included), so tests can tell runs apart. */
+  readonly run: number;
   readonly tick: number;
   readonly paused: boolean;
   /** The pause menu is on screen. */
@@ -20,6 +25,9 @@ export interface SimProbe {
   readonly fx: { readonly particles: number; readonly sprites: number; readonly shake: number };
   readonly shards: { readonly banked: number; readonly carried: number };
   readonly complete: boolean;
+  /** Render quality the level was built with (O6) and whether the game runs in Safe Mode. */
+  readonly quality: string;
+  readonly safeMode: boolean;
   readonly players: readonly {
     readonly x: number;
     readonly y: number;
@@ -33,6 +41,31 @@ export interface SimProbe {
   }[];
 }
 
+/** Progress of a replay played back in the level (O1). */
+export interface ReplayStatus {
+  readonly ticks: number;
+  readonly total: number;
+  readonly done: boolean;
+  readonly finalHash: string | null;
+  readonly expectedHash: string;
+  /** Null until the replay has finished. */
+  readonly matches: boolean | null;
+  /** First checkpoint tick whose hash differed, or null. */
+  readonly firstDivergenceTick: number | null;
+}
+
+/** Dev and test controls the running level publishes (`?test=1` hooks and the `?debug=1` panel). */
+export interface LevelControls {
+  restart(): void;
+  /** The run so far as a replay (inputs, checkpoint hashes, current hash). */
+  exportReplay(): Replay;
+  /** Restarts the level playing `replay` back at `speed`× (1–8); returns an error message or null. */
+  playReplay(replay: Replay, speed: number): string | null;
+  replayStatus(): ReplayStatus | null;
+  /** Makes the next update throw (tests the recoverable-error path). */
+  crashNextUpdate(): void;
+}
+
 /** Shared services handed to every scene by the composition root (no globals). */
 export interface GameServices {
   readonly assets: AssetRegistry;
@@ -43,6 +76,16 @@ export interface GameServices {
   readonly audio: SoundEngine;
   /** The running level scene publishes a probe here; nothing else writes it. */
   readonly probe: { current: (() => SimProbe) | null };
+  /** The running level publishes its dev/test controls here. */
+  readonly level: { current: LevelControls | null };
+  readonly log: Log;
+  readonly quality: QualityGovernor;
+  /** Started in Safe Mode after repeated failed boots (spec 19.2). */
+  readonly safeMode: boolean;
+  /** Text for "Copy diagnostics" (build, capabilities, settings, last 50 log lines). */
+  readonly diagnostics: () => string;
+  /** The performance overlay (FPS, frame times, memory), toggled from the pause menu. */
+  readonly perf: { readonly shown: () => boolean; readonly toggle: () => void };
 }
 
 /** Emitted on `game.events` once the first playable screen is drawn. */

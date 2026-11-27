@@ -8,20 +8,29 @@ import { hashWorld } from '../../src/core/StateHash';
 import { approach, cloneWorld, createWorld, setupFor, WorldSimulation } from '../../src/core/WorldSimulation';
 import { loadLevelById } from '../../tools/shared/levels';
 import { flatLevel } from '../fixtures/levels';
-import { scenarioSetup, SCENARIOS, scriptedInput, type Scenario } from '../fixtures/scenarios';
+import {
+  scenarioDriver,
+  scenarioSetup,
+  SCENARIOS,
+  scriptedInput,
+  type Scenario,
+} from '../fixtures/scenarios';
 
 const ARENA: Level = loadLevelById('test_arena');
 
+/** Open-loop scenarios only (closed-loop pilots go through `scenarioDriver`). */
 function inputsAt(scenario: Scenario, world: WorldState, tick: number): InputFrame[] {
-  return world.players.map((p) => scenario.input(tick, p.slot));
+  const input = scenario.input ?? scriptedInput;
+  return world.players.map((p) => input(tick, p.slot));
 }
 
 function runScenario(scenario: Scenario, setup: WorldSetup = scenarioSetup(scenario, ARENA)) {
   const world = createWorld(setup, ARENA);
   const sim = new WorldSimulation(ARENA, { assertFinite: true });
   const checkpoints: string[] = [];
+  const drive = scenarioDriver(scenario, ARENA);
   for (let tick = 0; tick < scenario.ticks; tick += 1) {
-    sim.step(world, inputsAt(scenario, world, tick), tick);
+    sim.step(world, drive(tick, world), tick);
     if (world.tick % 60 === 0) checkpoints.push(hashWorld(world));
   }
   return { world, checkpoints, finalHash: hashWorld(world) };

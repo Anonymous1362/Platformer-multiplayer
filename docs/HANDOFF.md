@@ -50,6 +50,26 @@ Gotchas learned:
 
 Owner device checks still open (spec 8.13 records): 2–3 fingers on a real phone, a controller inside the Android app, the iPhone PWA.
 
+## Pass 1F work in progress (branch `wip/pass-1f`, not on main yet)
+
+Done on this branch (needs the steps below before it can merge):
+- Replays v3: a state hash every 60 ticks (`checkpoints`), `runReplay` reports `firstDivergenceTick`; goldens re-recorded (final hashes unchanged) plus `arena_autopilot` (the autopilot run, finishes the arena).
+- `tests/fixtures/autopilot.ts` (moved from the arena test); scenarios accept closed-loop `pilot`s via `scenarioDriver`.
+- In-level replay recording and playback (`LevelControls`: export, play at 1–8×, status), dev panel (`?debug=1`: Export/Import replay).
+- Log ring buffer (200) + global error/unhandledrejection handlers; scene errors show a recovery panel (Restart level).
+- Boot guard: two failed boots → Safe Mode (battery tier, no audio) with a recovery screen (Continue in Safe Mode / Retry normal start / Reset settings / Copy diagnostics).
+- QualityGovernor (O6 basic): first tier from capabilities, p95 > 20 ms for 3 s drops a tier, < 12 ms for 10 s (30 s cooldown) raises one, applied at scene boundaries.
+- Leak counters (listeners, timers, DOM, textures, display objects, tweens, audio voices, heap) behind `?test=1`/`?debug=1`.
+- Performance overlay toggle in the pause menu (for device records); build version in diagnostics (`__APP_VERSION__`).
+- Unit tests `tests/unit/hardening.test.ts` (8 pass); browser tests `tests/e2e/hardening.spec.ts` (5 of 7 passed in the last run).
+
+Left to do, in order:
+1. `LevelScene`: add `private runCount = 0`, increment it first thing in `create()`, and add `run: this.runCount` to `probe()` (`SimProbe.run` already exists). In `tests/e2e/hardening.spec.ts` add `run: number` to `Probe` and make `restartOnce` wait for `run` to increase by one, then `tick > 3` (tick-based detection was racy).
+2. `npm run verify`, then `CHROME_PATH=/usr/bin/google-chrome PW_CHROMIUM_ONLY=1 npm run test:e2e` (all specs).
+3. `docs/DEVICES.md`: device record (local Chrome + SwiftShader numbers, CI Chromium and WebKit, owner's Android phone pending: pause menu → Performance overlay: On, play 2 minutes, note FPS, p95 and heap).
+4. PROGRESS: 1F row and the Pass 1 checklist with evidence; TESTING and DECISIONS notes; this section folded into the normal handoff.
+5. Merge to main, push, check CI, then stop (manual mode).
+
 What 1E-2 added (render, HUD, input; the simulation is unchanged):
 
 - Art (`src/assets/painters/NeoCelestial.ts`): procedural textures registered under manifest keys, so real art can replace any of them: nebula, dust, megastructure silhouettes, player suit and details, Crawler, a 24-frame shard spinner strip (frames named "0"–"23"), bolt, glow, shadow, ring, beam, vignette, slab side and top. `makeProceduralTexture` adds strip frames.

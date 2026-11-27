@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { ReplayRecorder } from '../../src/core/Replay';
 import { hashWorld } from '../../src/core/StateHash';
 import { createWorld, WorldSimulation } from '../../src/core/WorldSimulation';
-import { scenarioSetup, SCENARIOS } from '../../tests/fixtures/scenarios';
+import { scenarioDriver, scenarioSetup, SCENARIOS } from '../../tests/fixtures/scenarios';
 import { loadLevelById } from '../shared/levels';
 
 const outDir = fileURLToPath(new URL('../../tests/golden/replays/', import.meta.url));
@@ -22,17 +22,21 @@ for (const scenario of SCENARIOS) {
   const world = createWorld(setup, level);
   const sim = new WorldSimulation(level, { assertFinite: true });
   const recorder = new ReplayRecorder(setup);
+  const drive = scenarioDriver(scenario, level);
   for (let tick = 0; tick < scenario.ticks; tick += 1) {
-    const frames = world.players.map((p) => scenario.input(tick, p.slot));
+    const frames = drive(tick, world);
     recorder.record(frames);
     sim.step(world, frames, tick);
+    recorder.afterStep(world);
   }
   const replay = recorder.finish(hashWorld(world));
   // One input run per line keeps diffs readable.
-  const json = JSON.stringify(replay, null, 2).replace(
-    /\[\n\s+(-?\d+),\n\s+(-?\d+),\n\s+(-?\d+),\n\s+(-?\d+),\n\s+(-?\d+)\n\s+\]/g,
-    '[$1, $2, $3, $4, $5]',
-  );
+  const json = JSON.stringify(replay, null, 2)
+    .replace(/"checkpoints": \[[^\]]*\]/, (m) => m.replace(/\s+/g, ' ').replace('[ ', '[').replace(' ]', ']'))
+    .replace(
+      /\[\n\s+(-?\d+),\n\s+(-?\d+),\n\s+(-?\d+),\n\s+(-?\d+),\n\s+(-?\d+)\n\s+\]/g,
+      '[$1, $2, $3, $4, $5]',
+    );
   writeFileSync(`${outDir}${scenario.name}.json`, `${json}\n`);
   console.log(
     `${scenario.name}: ${String(replay.ticks)} ticks on ${level.id}, final hash ${replay.finalHash}`,

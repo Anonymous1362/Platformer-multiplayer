@@ -3,17 +3,21 @@ import { isDifficultyId } from './Ids';
 import { quantizeAxis, sanitizeAim, sanitizeHeld } from './InputSanitize';
 import type { InputFrame } from './InputTypes';
 import type { Level } from './level/LevelTypes';
-import type { WorldSetup } from './SimulationTypes';
+import type { WorldSetup, WorldState } from './SimulationTypes';
 import { hashWorld } from './StateHash';
 import { createWorld, WorldSimulation } from './WorldSimulation';
 
 /**
- * Deterministic replays (M1): the setup (seed, level ID, and level hash included), the config hash, and
- * every player's inputs run-length encoded as quantized integers. Replaying on the same level
- * reproduces the final state hash. Version 2 replaced the Pass 1B flat floor with levels.
+ * Deterministic replays (M1, O1): the setup (seed, level ID, and level hash included), the config hash,
+ * every player's inputs run-length encoded as quantized integers, and a state hash every 60 ticks.
+ * Replaying on the same level reproduces every checkpoint and the final hash; a mismatch names the
+ * first diverging checkpoint. Version 2 replaced the Pass 1B flat floor with levels; version 3 added
+ * the checkpoint hashes.
  */
 export const REPLAY_FORMAT = 'cosmic-drift-replay';
-export const REPLAY_VERSION = 2;
+export const REPLAY_VERSION = 3;
+/** A state hash is stored after every this many ticks (O1). */
+export const CHECKPOINT_TICKS = 60;
 
 /** `[count, moveX (-127..127), moveY (-127..127), held (0..63), aimMrad]` repeated `count` ticks. */
 export type InputRun = [number, number, number, number, number];
@@ -26,6 +30,8 @@ export interface Replay {
   readonly ticks: number;
   /** One run list per player, in slot order. */
   readonly inputs: readonly (readonly InputRun[])[];
+  /** State hash after tick 60, 120, ... (one per full 60 ticks). */
+  readonly checkpoints: readonly string[];
   readonly finalHash: string;
 }
 
@@ -36,6 +42,7 @@ const LEVEL_ID_RE = /^[a-z][a-z0-9_]{0,63}$/;
 export class ReplayRecorder {
   private readonly setup: WorldSetup;
   private readonly runs: InputRun[][];
+  private readonly checkpoints: string[] = [];
   private ticks = 0;
 
   constructor(setup: WorldSetup) {
@@ -63,6 +70,21 @@ export class ReplayRecorder {
     this.ticks += 1;
   }
 
+  /** Call after each simulated tick: stores the state hash on every 60th tick. */
+  afterStep(world: WorldState): void {
+    if (
+      this.ticks > 0 &&
+      this.ticks % CHECKPOINT_TICKS === 0 &&
+      this.checkpoints.length < this.ticks / CHECKPOINT_TICKS
+    ) {
+      this.checkpoints.push(hashWorld(world));
+    }
+  }
+
+  get length(): number {
+    return this.ticks;
+  }
+
   finish(finalHash: string): Replay {
     return {
       format: REPLAY_FORMAT,
@@ -71,6 +93,7 @@ export class ReplayRecorder {
       setup: { ...this.setup },
       ticks: this.ticks,
       inputs: this.runs.map((list) => list.map((run): InputRun => [...run])),
+      checkpoints: [...this.checkpoints],
       finalHash,
     };
   }
@@ -140,6 +163,15 @@ export function validateReplay(raw: unknown): ReplayValidation {
     if (total !== r['ticks']) return fail('input runs do not add up to ticks');
   }
 
+  const checkpoints = r['checkpoints'];
+  if (
+    !Array.isArray(checkpoints) ||
+    checkpoints.length !== Math.floor(r['ticks'] / CHECKPOINT_TICKS) ||
+    !checkpoints.every((h) => typeof h === 'string' && HASH_RE.test(h))
+  ) {
+    return fail(`checkpoints must hold one hash per ${String(CHECKPOINT_TICKS)} ticks`);
+  }
+
   const replay: Replay = {
     format: REPLAY_FORMAT,
     version: REPLAY_VERSION,
@@ -153,6 +185,7 @@ export function validateReplay(raw: unknown): ReplayValidation {
     },
     ticks: r['ticks'],
     inputs: (inputs as InputRun[][]).map((list) => list.map((run): InputRun => [...run])),
+    checkpoints: checkpoints as string[],
     finalHash: r['finalHash'],
   };
   return { ok: true, replay };
@@ -164,6 +197,11 @@ export interface ReplayResult {
   /** The replay was recorded with the same GameConfig as this build. */
   readonly configMatches: boolean;
   readonly hashMatches: boolean;
+  /**
+   * The first checkpoint tick whose hash differs (the divergence happened in the 60 ticks before it),
+   * the final tick if only the final hash differs, or null when everything matches (O1).
+   */
+  readonly firstDivergenceTick: number | null;
 }
 
 /**
@@ -178,6 +216,7 @@ export function runReplay(
   const world = createWorld(replay.setup, level);
   const sim = new WorldSimulation(level, { assertFinite: options.assertFinite ?? true });
   const streams = replay.inputs.map((runs) => framesFromRuns(runs));
+  let firstDivergenceTick: number | null = null;
   for (let tick = 0; tick < replay.ticks; tick += 1) {
     const frames = streams.map((stream) => {
       const next = stream.next();
@@ -185,12 +224,20 @@ export function runReplay(
       return next.value;
     });
     sim.step(world, frames, tick);
+    const done = tick + 1;
+    if (firstDivergenceTick === null && done % CHECKPOINT_TICKS === 0) {
+      const expected = replay.checkpoints[done / CHECKPOINT_TICKS - 1];
+      if (expected !== undefined && expected !== hashWorld(world)) firstDivergenceTick = done;
+    }
   }
   const finalHash = hashWorld(world);
+  const hashMatches = finalHash === replay.finalHash;
+  if (firstDivergenceTick === null && !hashMatches) firstDivergenceTick = replay.ticks;
   return {
     finalHash,
     ticks: replay.ticks,
     configMatches: replay.configHash === CONFIG_HASH,
-    hashMatches: finalHash === replay.finalHash,
+    hashMatches,
+    firstDivergenceTick,
   };
 }
