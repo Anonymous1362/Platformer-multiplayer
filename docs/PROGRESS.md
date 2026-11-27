@@ -9,7 +9,7 @@
 | 1C | DONE and green in CI (run 45620958633: verify, perf:bench, Chromium and WebKit browser tests, Android debug build). |
 | 1D | DONE and green in CI (run 45951307716). Released as `0.0.2` (release run 2, signed APK 3.68 MB). Device checks (2–3 fingers on a real phone, controller in the Android app) pending with the owner. |
 | 1E | DONE and green in CI (1E-1 run 45953613318, 1E-2 run 45958847738, 1E-3 run 45961388044 after a fix: CI's Chromium 159 needs `startRendering` to tell offline audio contexts apart). Parry and slam are deferred to 3A, where the spec schedules them in full. Release notes for `0.0.3` are ready; the owner can run the Release workflow. |
-| 1F | DONE locally (CI pending on merge). Every automated Pass 1 checklist item passes; three items need the owner's phone (marked below). |
+| 1F | DONE (CI green, run 45994813905). Every automated Pass 1 checklist item passes; three items need the owner's phone (marked below). |
 | 2A onward | Not started |
 
 ## Pass 1F evidence and the Pass 1 checklist (2026-11-27)
