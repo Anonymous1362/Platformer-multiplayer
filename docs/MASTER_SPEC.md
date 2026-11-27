@@ -2035,7 +2035,7 @@ Accounts, cloud saves, leaderboards, public matchmaking, server-authoritative co
 
 - Proceed only when every acceptance item passes **and** the user has explicitly approved.
 - "Continue" approves exactly one next milestone, never a whole pass.
-- **Owner override (2026-11-25): auto mode.** The owner approved running milestones back to back. Each milestone still completes the full cycle (§22.1) and must be green locally and in CI before the next starts; the agent stops only for device checks, owner-only decisions, or §22.3.
+- **Owner decision (2026-11-27): manual mode.** The 2026-11-25 auto mode is withdrawn. After each milestone, or each sub-step of a milestone that was split into sub-steps, the agent stops, reports, and waits for approval.
 - If the user asks for something out of order, say so, explain the risk in one or two sentences, and offer the in-order alternative before doing anything.
 
 ### 22.3 Stop-the-line rules
