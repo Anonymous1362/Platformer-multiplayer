@@ -1,6 +1,6 @@
 {
   "name": "cosmic-drift",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "type": "module",
   "description": "Cosmic Drift: 2.5D sci-fi platformer with cross-play co-op",
