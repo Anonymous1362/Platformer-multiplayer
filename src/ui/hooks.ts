@@ -53,10 +53,15 @@ export function useNavScope(ref: ElementRef<HTMLElement>, options: NavScopeOptio
     const onFocusOut = (event: FocusEvent): void => {
       if (event.target instanceof HTMLElement) delete event.target.dataset['selected'];
     };
-    const onOver = (event: PointerEvent): void => {
+    // Hover selects like a mouse menu, but only when the mouse really moves: content changing under a
+    // still pointer must never steal focus, and a focused slider or text field keeps it.
+    const onMove = (event: PointerEvent): void => {
       if (event.pointerType !== 'mouse' || !(event.target instanceof Element)) return;
+      if (event.movementX === 0 && event.movementY === 0) return;
+      const active = root.ownerDocument.activeElement;
+      if (active instanceof HTMLElement && active.matches('input, textarea, select')) return;
       const item = event.target.closest<HTMLElement>(NAV_SELECTOR);
-      if (item && root.contains(item) && item !== root.ownerDocument.activeElement) item.focus();
+      if (item && root.contains(item) && item !== active) item.focus();
     };
     const onKey = (event: KeyboardEvent): void => {
       if (!options.trap || event.key !== 'Tab') return;
@@ -77,7 +82,7 @@ export function useNavScope(ref: ElementRef<HTMLElement>, options: NavScopeOptio
     };
     root.addEventListener('focusin', onFocusIn);
     root.addEventListener('focusout', onFocusOut);
-    root.addEventListener('pointerover', onOver);
+    root.addEventListener('pointermove', onMove);
     root.addEventListener('keydown', onKey);
     if (options.autofocus !== false) {
       const first =
@@ -87,7 +92,7 @@ export function useNavScope(ref: ElementRef<HTMLElement>, options: NavScopeOptio
     return () => {
       root.removeEventListener('focusin', onFocusIn);
       root.removeEventListener('focusout', onFocusOut);
-      root.removeEventListener('pointerover', onOver);
+      root.removeEventListener('pointermove', onMove);
       root.removeEventListener('keydown', onKey);
       off();
       if (options.trap && previous instanceof HTMLElement && previous.isConnected) {

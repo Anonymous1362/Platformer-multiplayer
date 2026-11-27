@@ -18,7 +18,7 @@
 ## Pass 2B-1 evidence (2026-11-27)
 
 - `npm run verify`: passes (371 unit, input, property, and simulation tests incl. settings schema/store/derived and assists; 7 golden replays unchanged; `levels:lint`; build). Bundle 458 KB gzipped (budget 900 KB); Vite warns that the main chunk is over its 1500 kB minified warning size (Zod).
-- `npm run test:e2e` (Chrome, local): 59 of 59, including 11 settings tests (tests/e2e/settings.spec.ts). WebKit runs in CI.
+- `npm run test:e2e` (Chrome, local): 60 of 60, including 12 settings tests (tests/e2e/settings.spec.ts). WebKit runs in CI.
 - Persists and applies: master volume change reaches the mixer at once and survives a reload; mono and night reach the mixer; frame-rate cap applies at once; text size scales the UI; shoot toggle keeps firing until the next tap; difficulty (Easy) and infinite fuel apply at the restart; one invalid stored value falls back alone and is logged; Restore defaults resets only its tab; Esc closes only the pop-up (Title and Pause), focus returns to the opener.
 - axe (WCAG 2.1 A/AA, `meta-viewport` excluded by owner decision) passes on all 8 Settings tabs, from the Title, and at 844 × 390, where the dialog fits the screen and scrolls inside.
 - Simulation assists (tests/sim/assists.test.ts): hazard respawn without damage and invulnerability spare HP and shield; infinite fuel never drains; no assists hash exactly as before; replays carry assists and re-simulate to the same hash; malformed assists are refused. `perf:bench` 0.011 ms mean per tick.

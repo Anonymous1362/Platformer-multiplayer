@@ -250,3 +250,33 @@ test('phone size: Settings fits the screen and scrolls inside', async ({ page })
   expect(scrolls).toBe(true);
   await axe(page);
 });
+
+test('hover never steals focus from a slider; a moving mouse still selects menu items', async ({ page }) => {
+  await bootLevel(page);
+  await openSettingsFromPause(page);
+  const slider = page.getByRole('slider', { name: 'Master volume' });
+  await slider.focus();
+  // Content changing under a still mouse fires pointer events with no movement.
+  await page.locator('[data-action="close-settings"]').dispatchEvent('pointermove', {
+    pointerType: 'mouse',
+    movementX: 0,
+    movementY: 0,
+    bubbles: true,
+  });
+  await expect(slider).toBeFocused();
+  // Moving over another control while a slider is focused keeps the slider.
+  const close = page.locator('[data-action="close-settings"]');
+  const box = await close.boundingBox();
+  await page.mouse.move((box?.x ?? 0) + 5, (box?.y ?? 0) + 5);
+  await page.mouse.move((box?.x ?? 0) + 12, (box?.y ?? 0) + 12);
+  await expect(slider).toBeFocused();
+  for (let i = 0; i < 10; i += 1) await page.keyboard.press('ArrowLeft');
+  await expect(slider).toHaveValue('70');
+  // In a menu of buttons, hover still selects.
+  await page.locator('[data-action="close-settings"]').click();
+  const resume = page.locator('[data-role="pause-overlay"] [data-action="resume"]');
+  const r = await resume.boundingBox();
+  await page.mouse.move((r?.x ?? 0) + 10, (r?.y ?? 0) + 10);
+  await page.mouse.move((r?.x ?? 0) + 20, (r?.y ?? 0) + 12);
+  await expect(resume).toBeFocused();
+});

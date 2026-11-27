@@ -15,6 +15,7 @@ Gotchas learned:
 
 - The game keyboard handler used to `preventDefault` Arrow keys everywhere; form controls now keep their own keys (`isFormControl`).
 - `choice()` option lists need a `const` type parameter, or the literals widen to `string`.
+- Hover-to-focus follows only real mouse movement (`pointermove` with movement) and never takes focus from a slider or text field: content opening under a still mouse used to steal focus from a slider mid-adjustment (CI caught it).
 - Eight axe scans on software WebGL take about 30 s; that test has its own 120 s timeout.
 
 What 2A added (`src/ui`, Preact, DOM over the canvas inside `#game-root`):
