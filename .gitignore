@@ -10,3 +10,6 @@ android/app/build/
 playwright-report/
 test-results/
 .DS_Store
+
+# Third-party packs are fetched on demand (npm run assets:fetch); the list is tools/assets-fetch/packs.json.
+assets_src/third_party/*/

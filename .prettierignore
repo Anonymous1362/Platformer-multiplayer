@@ -11,3 +11,6 @@ android
 ios
 release-notes
 tests/golden/replays
+
+# Third-party skills keep their upstream formatting.
+.claude/skills/

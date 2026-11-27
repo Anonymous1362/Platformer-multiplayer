@@ -1,0 +1,68 @@
+{
+  "note": "Third-party CC0 packs fetched by `npm run assets:fetch` into assets_src/third_party/<id>/ (gitignored). Curated files are recolored and packed by assets:build (Pass 2F) and get a LICENSES.csv row each.",
+  "packs": [
+    {
+      "id": "kenney-particles",
+      "title": "Particle Pack 1.1 (Kenney)",
+      "license": "CC0-1.0",
+      "repo": "https://github.com/ETdoFresh/kenney.nl",
+      "commit": "45df48c4d45f8716216b1a9e22df0b69cd9f5932",
+      "path": "particlePack_1.1",
+      "use": "muzzle flashes, sparks, flares, smoke, rings: tinted to the Neo-Celestial palette"
+    },
+    {
+      "id": "kenney-smoke",
+      "title": "Smoke Particles (Kenney)",
+      "license": "CC0-1.0",
+      "repo": "https://github.com/ETdoFresh/kenney.nl",
+      "commit": "45df48c4d45f8716216b1a9e22df0b69cd9f5932",
+      "path": "smokeparticleassets",
+      "use": "dust, vent steam, explosions"
+    },
+    {
+      "id": "kenney-ui-space",
+      "title": "UI Pack: Space (Kenney)",
+      "license": "CC0-1.0",
+      "repo": "https://github.com/ETdoFresh/kenney.nl",
+      "commit": "45df48c4d45f8716216b1a9e22df0b69cd9f5932",
+      "path": "uipack-space",
+      "use": "reference and spare UI shapes (panels are drawn in CSS)"
+    },
+    {
+      "id": "kenney-digital-audio",
+      "title": "Digital Audio (Kenney)",
+      "license": "CC0-1.0",
+      "repo": "https://github.com/ETdoFresh/kenney.nl",
+      "commit": "45df48c4d45f8716216b1a9e22df0b69cd9f5932",
+      "path": "kenney_digitalaudio",
+      "use": "lasers, zaps, power-ups: blaster, pickups, checkpoint"
+    },
+    {
+      "id": "kenney-impact-sounds",
+      "title": "Impact Sounds (Kenney)",
+      "license": "CC0-1.0",
+      "repo": "https://github.com/ETdoFresh/kenney.nl",
+      "commit": "45df48c4d45f8716216b1a9e22df0b69cd9f5932",
+      "path": "kenney_impactsounds",
+      "use": "footsteps, landings, metal hits"
+    },
+    {
+      "id": "kenney-interface-sounds",
+      "title": "Interface Sounds (Kenney)",
+      "license": "CC0-1.0",
+      "repo": "https://github.com/ETdoFresh/kenney.nl",
+      "commit": "45df48c4d45f8716216b1a9e22df0b69cd9f5932",
+      "path": "kenney_interfacesounds",
+      "use": "menu taps, back, toggles"
+    },
+    {
+      "id": "kenney-ui-audio",
+      "title": "UI Audio (Kenney)",
+      "license": "CC0-1.0",
+      "repo": "https://github.com/ETdoFresh/kenney.nl",
+      "commit": "45df48c4d45f8716216b1a9e22df0b69cd9f5932",
+      "path": "kenney_uiaudio",
+      "use": "spare UI clicks and switches"
+    }
+  ]
+}

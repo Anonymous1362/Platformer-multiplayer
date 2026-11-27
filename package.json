@@ -57,6 +57,7 @@
     "test:golden": "vitest run tests/golden",
     "test:e2e": "vite build && playwright test",
     "levels:lint": "tsx tools/levels-lint/main.ts",
+    "assets:fetch": "tsx tools/assets-fetch/main.ts",
     "verify": "npm run format:check && npm run lint && npm run typecheck && npm run deps:check && npm run stub:scan && npm run test && npm run test:golden && npm run levels:lint && npm run build",
     "replay:run": "tsx tools/replay-run/main.ts",
     "golden:record": "tsx tools/replay-run/record-golden.ts",
