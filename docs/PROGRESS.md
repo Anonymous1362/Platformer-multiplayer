@@ -7,8 +7,16 @@
 | 1A | DONE, approved. |
 | 1B | DONE, approved (CI run 45607110857). |
 | 1C | DONE and green in CI (run 45620958633: verify, perf:bench, Chromium and WebKit browser tests, Android debug build). |
-| 1D | IN PROGRESS (auto mode). |
-| 1E onward | Not started |
+| 1D | DONE locally; device checks (2–3 fingers on a real phone, controller in the Android app) pending with the owner. |
+| 1E | NEXT (auto mode). |
+| 1F onward | Not started |
+
+## Pass 1D evidence (2026-11-26)
+
+- `npm run verify`: passes (244 unit, input, property, and simulation tests; 5 golden replay tests; `levels:lint`; build).
+- `npm run test:e2e` (Chrome, local): 20 of 20 pass, including the new play tests: keyboard run/jump/pause/resume; blur releases a held key and pauses, nothing moves until the key is pressed again; a mocked standard gamepad moves with the stick and jumps with A; real CDP touches hold the stick and Jump together and release-all clears both; lifting only the Jump finger keeps the stick moving, and touchcancel stops it.
+- Spec 14.5 unit tests (tests/input): two and three fingers; releasing Jump while moving; touch cancel per finger; a finger sliding across another control keeps its own; resize mid-touch keeps ownership; orientation change releases everything and old fingers stay released; two fingers on one button (first owner wins); no-drift deadzone; diagonal normalization; sub-tick tap latching; blur, page hide, orientation change, pointer cancel, and hidden visibility each release everything; a panel-open release; keyboard and touch together. Plus keyboard columns, key repeat, mouse aim, Esc/P/Start pause, gamepad standard mapping, D-pad, right-stick aim, refocus suppression, and hot-unplug.
+- Not yet verified (needs the owner's devices): 2–3 simultaneous touches on a real phone; a controller inside the Android app; the iPhone PWA (spec 8.13 records).
 
 ## Pass 1C evidence (2026-11-25)
 

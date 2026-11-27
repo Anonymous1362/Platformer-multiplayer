@@ -4,14 +4,16 @@ import type { AssetPolicy } from '../assets/AssetTypes';
 import { ASSET_TIMEOUT_MS } from '../assets/loadScope';
 import { makeProceduralTexture } from '../assets/ProceduralTextures';
 import { BootScene } from '../scenes/BootScene';
-import { HoldingScene } from '../scenes/HoldingScene';
+import { LevelScene } from '../scenes/LevelScene';
 import { Palette, cssHex } from '../theme/ThemePalette';
 import type { Capabilities } from './Capabilities';
+import type { GameInput } from './GameInput';
 import { BOOT_READY_EVENT, type GameServices } from './GameServices';
 
 export interface CreatedGame {
   readonly game: Phaser.Game;
   readonly assets: AssetRegistry;
+  readonly services: GameServices;
 }
 
 function phaserTextureStore(textures: () => Phaser.Textures.TextureManager): TextureStore {
@@ -35,6 +37,7 @@ export function createGame(
   capabilities: Capabilities,
   policy: AssetPolicy,
   warn: (message: string) => void,
+  input: GameInput,
 ): CreatedGame {
   let gameRef: Phaser.Game | null = null;
   const textures = (): Phaser.Textures.TextureManager => {
@@ -51,7 +54,7 @@ export function createGame(
     maxTextureSize: capabilities.maxTextureSize,
     policy,
   });
-  const services: GameServices = { assets, capabilities, warn };
+  const services: GameServices = { assets, capabilities, warn, input, probe: { current: null } };
 
   gameRef = new Phaser.Game({
     type: Phaser.WEBGL,
@@ -62,10 +65,16 @@ export function createGame(
     disableContextMenu: true,
     banner: false,
     loader: { timeout: ASSET_TIMEOUT_MS, maxRetries: 0 },
-    scene: [new BootScene(services), new HoldingScene(services)],
+    // Input is ours (src/input): Touch Events on the canvas, window keys, the Gamepad API (spec 14).
+    input: { keyboard: false, mouse: false, touch: false, gamepad: false },
+    scene: [new BootScene(services), new LevelScene(services)],
   });
   gameRef.events.once(BOOT_READY_EVENT, () => {
     root.setAttribute('data-ready', 'true');
   });
-  return { game: gameRef, assets };
+  const game = gameRef;
+  game.events.once(Phaser.Core.Events.READY, () => {
+    input.attach(game.canvas, root);
+  });
+  return { game, assets, services };
 }

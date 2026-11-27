@@ -3,6 +3,8 @@ import { parseAssetPolicy } from './assets/AssetTypes';
 import type { AssetSnapshotItem } from './assets/AssetRegistry';
 import { browserEnv, detectCapabilities, type Capabilities } from './app/Capabilities';
 import { createGame, type CreatedGame } from './app/createGame';
+import { GameInput } from './app/GameInput';
+import type { SimProbe } from './app/GameServices';
 import { attachPerfBadge } from './app/PerfBadge';
 import { computeStageSize, type StageSize } from './app/Viewport';
 import { installViewportGuards } from './app/ViewportGuards';
@@ -14,6 +16,9 @@ declare global {
     __CD_TEST__?: {
       readonly capabilities: Capabilities;
       readonly assets: () => Readonly<Record<string, AssetSnapshotItem>>;
+      /** The running level, or null before it starts. */
+      readonly sim: () => SimProbe | null;
+      readonly gamepads: () => readonly string[];
     };
   }
 }
@@ -25,8 +30,19 @@ const warn = (message: string): void => {
   console.warn(message);
 };
 
+/** The body's content box: the window minus the safe-area padding set in index.html. */
+function availableSize(): { width: number; height: number } {
+  const style = window.getComputedStyle(document.body);
+  const px = (value: string): number => Number.parseFloat(value) || 0;
+  return {
+    width: window.innerWidth - px(style.paddingLeft) - px(style.paddingRight),
+    height: window.innerHeight - px(style.paddingTop) - px(style.paddingBottom),
+  };
+}
+
 function applyStageSize(element: HTMLElement): StageSize {
-  const size = computeStageSize(window.innerWidth, window.innerHeight);
+  const available = availableSize();
+  const size = computeStageSize(available.width, available.height);
   element.style.width = `${String(size.width)}px`;
   element.style.height = `${String(size.height)}px`;
   return size;
@@ -45,10 +61,11 @@ function start(gameRoot: HTMLElement): void {
   installViewportGuards(gameRoot);
   applyStageSize(gameRoot);
 
+  const input = new GameInput(window, capabilities.touch);
   let created: CreatedGame;
   try {
     const policy = parseAssetPolicy(import.meta.env['VITE_ASSET_POLICY']);
-    created = createGame(gameRoot, capabilities, policy, warn);
+    created = createGame(gameRoot, capabilities, policy, warn, input);
   } catch (error: unknown) {
     gameRoot.style.display = 'none';
     showWebGLRequiredScreen(
@@ -58,10 +75,11 @@ function start(gameRoot: HTMLElement): void {
     );
     return;
   }
-  const { game, assets } = created;
+  const { game, assets, services } = created;
 
   window.addEventListener('resize', () => {
     const { width, height } = applyStageSize(gameRoot);
+    input.resize(width, height);
     // Phaser updates its cached parent size in its own resize handler; resize after it has run.
     window.setTimeout(() => {
       game.scale.resize(width, height);
@@ -69,7 +87,14 @@ function start(gameRoot: HTMLElement): void {
   });
 
   if (debug) attachPerfBadge(game, document.body);
-  if (testMode) window.__CD_TEST__ = { capabilities, assets: () => assets.snapshot() };
+  if (testMode) {
+    window.__CD_TEST__ = {
+      capabilities,
+      assets: () => assets.snapshot(),
+      sim: () => services.probe.current?.() ?? null,
+      gamepads: () => input.gamepad.connectedIds,
+    };
+  }
 }
 
 const root = document.getElementById('game-root');

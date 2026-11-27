@@ -35,7 +35,7 @@ export class BootScene extends Phaser.Scene {
     this.services.assets.register(entries);
 
     void loadScope(this, this.services.assets, 'global').then(() => {
-      this.scene.start('HoldingScene');
+      this.scene.start('LevelScene');
     });
   }
 }

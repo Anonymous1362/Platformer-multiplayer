@@ -1,6 +1,6 @@
 # Handoff
 
-State: Pass 1C (movement and collision) implemented and verified locally; auto mode continues with Pass 1D. Releases: the owner starts them from Actions → Release → Run workflow (`0.0.1` is published).
+State: Pass 1D (keyboard, controller, multi-touch, playable test arena) implemented and verified locally; owner device checks pending. Auto mode continues with Pass 1E. Releases: the owner starts them from Actions → Release → Run workflow (`0.0.1` is published).
 
 What 1C added (all in `src/core`, Node-only):
 
@@ -24,4 +24,20 @@ Gotchas learned:
 - The N11 assertion used to build a path string per element and dominated test time; it now builds the path only on a hit.
 - Changing `GameConfig`, the simulation, or `test_arena.json` changes golden hashes on purpose: `npm run golden:record`, review, commit.
 
-Next: Pass 1D (spec 23): `TouchControls`, keyboard/mouse adapter, `InputRouter` with latching, `TouchControlView`, floating stick, Classic layout, cleanup triggers, standard-mapping `GamepadControls`, plus a scene that plays the test arena. Device checks (multi-touch, Android WebView controller, iPhone PWA) need the owner's phone.
+What 1D added:
+
+- `src/input/`: `TouchLayout` (Classic preset, 12 px hit slop, nearest-center split, floating or fixed stick), `TouchControls` (finger ownership; pure logic + `attachTouchListeners`), `KeyboardMouseControls` (both 8.9 columns, repeat ignored, modified keys ignored, mouse aim through a scene resolver), `GamepadControls` (standard mapping, D-pad, right-stick aim, refocus suppression, hot-plug), `InputRouter` (latching merge, `releaseAll`, `installInputCleanup`).
+- `src/hud/TouchControlView.ts`: DOM controls over the canvas with `pointer-events: none`; shown on touch devices or after the first touch.
+- `src/app/GameInput.ts`: builds the adapters, attaches them to the canvas on Phaser READY, polls gamepads each frame, forwards interruptions to scenes.
+- `src/render/world/LevelView.ts`: plain-shape renderer (stand-in until the 1E art pass).
+- `src/scenes/LevelScene.ts`: plays the test arena: FixedLoop → one router frame per tick → `WorldSimulation`; render interpolation with teleport snapping; camera follow and zoom; minimal pause; releases input on shutdown; publishes the `?test=1` probe.
+- Phaser input plugins are off. Boot goes straight to `LevelScene`.
+
+Gotchas learned:
+
+- CDP `Input.dispatchTouchEvent` releases fingers by list position, not by id, and `touchEnd` must carry no points; use synthetic `TouchEvent`s to lift a specific finger.
+- `touch-action: none` is still on `body` (from 1A); when DOM menus arrive in 2A, scope it to the canvas and HUD so menus scroll.
+
+Owner device checks still open (spec 8.13 records): 2–3 fingers on a real phone, a controller inside the Android app, the iPhone PWA.
+
+Next: Pass 1E (spec 23): Crawler enemy, Pulse Blaster, shards, checkpoint, exit, minimal HUD, pause and restart, procedural Neo-Celestial art, SoundEngine with synthesized SFX, juice, reduced motion.

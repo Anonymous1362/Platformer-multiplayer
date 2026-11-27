@@ -21,4 +21,5 @@ Notes:
 - Rule tests build tiny ASCII maps with `tests/fixtures/levels.ts` (`makeLevel`, `flatLevel`, `Harness`). The Harness drives one world tick by tick and keeps every event.
 - Property tests use fixed fast-check seeds so failures reproduce; a failure prints the seed, the path, and the counterexample map.
 - Golden replays and the benchmark run on `content/levels/dev/test_arena.json`. Editing that level changes its hash, so re-record the goldens.
+- Browser play tests (`tests/e2e/play.spec.ts`) read the running level through the `?test=1` probe (`window.__CD_TEST__.sim()`). Multi-touch uses the Chrome DevTools Protocol for real touches (it releases fingers by list position, not id) and synthetic `TouchEvent`s to lift one specific finger; both are Chromium-only. The gamepad test replaces `navigator.getGamepads`.
 - Real-device checks (touch, iOS silent switch, latency) are manual; see spec section 20.5.
