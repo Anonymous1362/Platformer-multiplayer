@@ -21,8 +21,8 @@ export const GameConfig = {
   input: {
     /** Stick axes are quantized to this many steps per direction (matches the i8 network encoding). */
     axisSteps: 127,
-    /** Six defined buttons: jump, dash, shoot, parry, gadget, interact. */
-    heldMask: 0b111111,
+    /** Six buttons (jump, dash, shoot, parry, gadget, interact) plus the AimManual flag. */
+    heldMask: 0b1111111,
     aimLimitMrad: 3142,
     downThreshold: 0.6,
   },
@@ -64,6 +64,53 @@ export const GameConfig = {
     shieldRegenPerS: 20,
     hurtInvulnMs: 800,
     deathSequenceMs: 1200,
+  },
+  /** Spec sections 4.2 and 4.3. */
+  combat: {
+    knockback: { vxUps: 280, vyUps: -320, controlLockMs: 200 },
+    autoAim: { coneHalfAngleDeg: 30, rangeU: 900 },
+    heat: { max: 100, dissipateFiringPerS: 12, dissipateIdlePerS: 40, ventMs: 1200 },
+    projectile: { radiusU: 6, maxRangeU: 1200 },
+    /** Muzzle offset from the player's feet: forward along the facing, and up. */
+    muzzleU: { forward: 28, up: 52 },
+  },
+  /** Spec section 4.7. */
+  weapons: {
+    pulse_blaster: { fireIntervalMs: 200, damage: 10, speedUps: 750, heatPerShot: 4 },
+  },
+  /** Spec section 4.4. */
+  enemies: {
+    activationRangeU: 1400,
+    sleepRangeU: 2200,
+    engageRangeU: { x: 800, y: 450 },
+    alertMs: 400,
+    loseInterestMs: 2000,
+    gravityUps2: 4160,
+    crawler: {
+      hp: 30,
+      colliderU: { width: 56, height: 40 },
+      patrolUps: 120,
+      windupMs: 350,
+      chargeUps: 260,
+      chargeMaxU: 520,
+      /** Charges start when the target is this close, horizontally and vertically. */
+      chargeReachU: { x: 560, y: 96 },
+      contactDamage: 15,
+      recoverMs: 600,
+      shards: 3,
+    },
+  },
+  /** Spec sections 3.5 and 4.3; M5 enlarged pickup radius. */
+  pickups: {
+    shardRadiusU: 44,
+    /** shard_magnet Lv0 (spec 4.8). */
+    magnetRadiusU: 65,
+    magnetUps: 600,
+    shardSizeU: 16,
+    dropPopVyUps: -380,
+    dropSpreadVxUps: 140,
+    checkpointU: { width: 64, height: 128 },
+    exitU: { width: 96, height: 128 },
   },
   hazard: {
     damage: 25,
@@ -164,6 +211,13 @@ export const Ticks = {
   dashIframes: msToTicks(GameConfig.player.dash.iframesMs),
   dropThroughGrace: msToTicks(GameConfig.player.dropThroughGraceMs),
   hurtInvuln: msToTicks(GameConfig.health.hurtInvulnMs),
+  knockbackLock: msToTicks(GameConfig.combat.knockback.controlLockMs),
+  vent: msToTicks(GameConfig.combat.heat.ventMs),
+  blasterInterval: msToTicks(GameConfig.weapons.pulse_blaster.fireIntervalMs),
+  enemyAlert: msToTicks(GameConfig.enemies.alertMs),
+  loseInterest: msToTicks(GameConfig.enemies.loseInterestMs),
+  crawlerWindup: msToTicks(GameConfig.enemies.crawler.windupMs),
+  crawlerRecover: msToTicks(GameConfig.enemies.crawler.recoverMs),
   shieldDelay: msToTicks(GameConfig.health.shieldDelayMs),
   deathSequence: msToTicks(GameConfig.health.deathSequenceMs),
   hazardRespawn: msToTicks(GameConfig.hazard.respawnFadeMs),

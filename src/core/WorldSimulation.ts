@@ -1,4 +1,7 @@
 import { findSupport, type CollisionWorld } from './Collision';
+import { stepProjectiles } from './combat/Projectiles';
+import { stepWeapon } from './combat/Weapons';
+import { spawnEnemies, stepEnemies } from './enemies/Enemies';
 import { allocateEntity, createAllocator } from './EntityIds';
 import { assertFiniteState } from './FiniteGuard';
 import { GameConfig } from './GameConfig';
@@ -7,9 +10,12 @@ import { sanitizeInputFrame } from './InputSanitize';
 import type { InputFrame } from './InputTypes';
 import type { Level } from './level/LevelTypes';
 import { createPlatformStates, stepPlatforms } from './MovingPlatforms';
+import { spawnLevelShards, stepPickups } from './pickups/Pickups';
 import { hazardAt, hitHazard, isSafeGround, recordSafeGround, tickHealth } from './player/Hazards';
-import { applyIntents, createPlayer, movePlayer, type PlayerContext } from './player/PlayerController';
+import { applyIntents, createPlayer, movePlayer } from './player/PlayerController';
+import { createRun, resetAfterDeath, stepTriggers } from './Progress';
 import { Random } from './Random';
+import type { PlanetPhysics, SimContext } from './SimContext';
 import type {
   PlayerState,
   SimulationEvent,
@@ -65,7 +71,22 @@ export function createWorld(setup: WorldSetup, level: Level): WorldState {
     if (id === null) throw new Error('entity capacity exhausted while spawning players');
     players.push(createPlayer(id, slot, world));
   }
-  return { tick: 0, setup: { ...setup }, rng: new Random(setup.seed).state(), entities, players, platforms };
+  const state: WorldState = {
+    tick: 0,
+    setup: { ...setup },
+    rng: new Random(setup.seed).state(),
+    entities,
+    players,
+    platforms,
+    enemies: [],
+    projectiles: [],
+    pickups: [],
+    run: createRun(level),
+  };
+  // Spawn order is part of determinism: players, then enemies, then level shards.
+  spawnEnemies(state, level.enemies, setup.difficulty);
+  spawnLevelShards(state, level);
+  return state;
 }
 
 /** Deep copy for snapshots and rollback; the copy evolves independently. */
@@ -74,14 +95,15 @@ export function cloneWorld(state: WorldState): WorldState {
 }
 
 /**
- * The per-tick order of spec section 13.4. Implemented phases: (1) input edges, timers, buffers;
- * (2) moving platforms and their riders; (3) players, X then Y; (6) hazards and safe ground.
- * Enemies, projectiles, pickups, and modes plug into the same order in later passes.
+ * The per-tick order of spec section 13.4: (1) input edges, timers, buffers; (2) moving platforms and
+ * their riders; (3) players, X then Y, then their weapons; (4) enemies; (5) projectiles; (6) hazards,
+ * safe ground, pickups, and triggers; (7) progression (death resets). Lists iterate by ascending
+ * entity ID.
  */
 export class WorldSimulation implements Simulation {
   readonly level: Level;
   private readonly assertFinite: boolean;
-  private readonly planet: { readonly gravity: number; readonly airDecelFactor: number };
+  private readonly planet: PlanetPhysics;
 
   constructor(level: Level, options: SimulationOptions = {}) {
     this.level = level;
@@ -101,29 +123,43 @@ export class WorldSimulation implements Simulation {
       throw new Error(`world is for level ${state.setup.levelId}, not ${this.level.id}`);
     const events: SimulationEvent[] = [];
     const world: CollisionWorld = { level: this.level, platforms: state.platforms };
-    const ctx: PlayerContext = { world, planet: this.planet, events, tick };
+    const ctx: SimContext = {
+      state,
+      level: this.level,
+      world,
+      planet: this.planet,
+      difficulty: state.setup.difficulty,
+      events,
+      tick,
+    };
 
     // 1. Inputs: sanitize at the boundary, derive edges, tick timers.
     const frames = state.players.map((_, i) => sanitizeInputFrame(inputs[i]));
+    const frameOf = (i: number): InputFrame => frames[i] ?? sanitizeInputFrame(undefined);
     state.players.forEach((player, i) => {
-      applyIntents(player, frames[i] ?? sanitizeInputFrame(undefined));
+      applyIntents(player, frameOf(i));
       tickHealth(player);
     });
 
     // 2. Kinematics carry their riders before anyone integrates.
-    stepPlatforms(world, state.platforms, state.players, events, tick);
+    stepPlatforms(ctx);
 
-    // 3. Players in slot order: state machine, X, then Y.
+    // 3. Players in slot order: state machine, X, then Y; then weapons fire from the new position.
     state.players.forEach((player, i) => {
-      movePlayer(player, frames[i] ?? sanitizeInputFrame(undefined), ctx);
+      movePlayer(player, frameOf(i), ctx);
+      stepWeapon(player, frameOf(i), ctx);
     });
 
-    // 6. Hazards, then safe-ground sampling for whoever is still standing.
+    // 4. Enemies. 5. Projectiles.
+    stepEnemies(ctx);
+    stepProjectiles(ctx);
+
+    // 6. Hazards, safe ground, pickups, triggers.
     for (const player of state.players) {
       if (player.mode === 'hazardRespawn' || player.mode === 'dead') continue;
       const cause = hazardAt(this.level, player);
       if (cause) {
-        hitHazard(player, cause, events, tick);
+        hitHazard(player, cause, ctx.difficulty, events, tick);
         continue;
       }
       if (player.grounded) {
@@ -131,6 +167,11 @@ export class WorldSimulation implements Simulation {
         if (isSafeGround(this.level, player, support)) recordSafeGround(player, tick);
       }
     }
+    stepPickups(ctx);
+    stepTriggers(ctx);
+
+    // 7. Progression: a death respawn resets the checkpoint section once.
+    if (events.some((e) => e.type === 'respawned' && e.fromDeath)) resetAfterDeath(ctx);
 
     state.tick += 1;
     if (this.assertFinite) assertFiniteState(state, tick);

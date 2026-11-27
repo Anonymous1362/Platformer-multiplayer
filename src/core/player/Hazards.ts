@@ -1,6 +1,7 @@
 import { GameConfig, Ticks } from '../GameConfig';
 import { HAZARD_FLAGS, TileFlag, type Level } from '../level/LevelTypes';
 import { overlapsSolid, tileFlags, type CollisionWorld, type Support } from '../Collision';
+import type { DifficultyId } from '../Ids';
 import type { HazardCause, PlayerState, SimulationEvent } from '../SimulationTypes';
 
 /**
@@ -114,6 +115,11 @@ function respawnPoint(player: PlayerState, world: CollisionWorld, tick: number):
   return world.level.spawn;
 }
 
+/** Damage taken, scaled by the difficulty's integer percentage (spec 3.4) and rounded. */
+export function scaledDamage(amount: number, difficulty: DifficultyId): number {
+  return Math.round((amount * GameConfig.difficulty[difficulty].damageTakenPct) / 100);
+}
+
 /** Shield first, then HP (spec 4.3). Returns the damage actually dealt. */
 export function applyDamage(player: PlayerState, amount: number): number {
   if (amount <= 0 || player.invulnTicks > 0 || player.iframeTicks > 0) return 0;
@@ -137,22 +143,63 @@ function freeze(player: PlayerState): void {
   player.modeTicks = 0;
 }
 
+function die(player: PlayerState, events: SimulationEvent[], tick: number): void {
+  freeze(player);
+  player.mode = 'dead';
+  events.push({ type: 'died', playerId: player.id, tick });
+}
+
 /** Hazard contact or a crush: damage (unless invulnerable), then the fade-and-respawn sequence or death. */
 export function hitHazard(
   player: PlayerState,
   cause: HazardCause,
+  difficulty: DifficultyId,
   events: SimulationEvent[],
   tick: number,
 ): void {
-  const damage = applyDamage(player, GameConfig.hazard.damage);
+  const damage = applyDamage(player, scaledDamage(GameConfig.hazard.damage, difficulty));
   events.push({ type: 'hazardHit', playerId: player.id, tick, cause, damage });
-  freeze(player);
   if (player.hp <= 0) {
-    player.mode = 'dead';
-    events.push({ type: 'died', playerId: player.id, tick });
-  } else {
-    player.mode = 'hazardRespawn';
+    die(player, events, tick);
+    return;
   }
+  freeze(player);
+  player.mode = 'hazardRespawn';
+}
+
+/**
+ * An enemy hit (spec 4.3): difficulty-scaled damage, shield first, then knockback away from the
+ * source (280 u/s, vy -320) with a short control lock. Ignored while invulnerable or in dash frames.
+ * Returns whether damage landed.
+ */
+export function hurtPlayer(
+  player: PlayerState,
+  amount: number,
+  sourceX: number,
+  difficulty: DifficultyId,
+  events: SimulationEvent[],
+  tick: number,
+): boolean {
+  const dealt = applyDamage(player, scaledDamage(amount, difficulty));
+  if (dealt === 0) return false;
+  events.push({ type: 'playerHurt', playerId: player.id, tick, damage: dealt, sourceX });
+  if (player.hp <= 0) {
+    die(player, events, tick);
+    return true;
+  }
+  const away: 1 | -1 = player.x > sourceX ? 1 : player.x < sourceX ? -1 : player.facing === 1 ? -1 : 1;
+  const k = GameConfig.combat.knockback;
+  player.vx = away * k.vxUps;
+  player.vy = k.vyUps;
+  player.grounded = false;
+  player.groundPlatform = -1;
+  player.coyoteAvailable = false;
+  player.jetpacking = false;
+  player.jumpCutAvailable = false;
+  player.controlLockTicks = Math.max(player.controlLockTicks, Ticks.knockbackLock);
+  if (player.mode === 'dash' || player.mode === 'ground' || player.mode === 'wallSlide') player.mode = 'air';
+  player.modeTicks = 0;
+  return true;
 }
 
 function placeOnGround(player: PlayerState, x: number, y: number): void {
@@ -170,16 +217,16 @@ function placeOnGround(player: PlayerState, x: number, y: number): void {
 
 /**
  * Advances `hazardRespawn` and `dead`. Hazard respawn: fade out, move to safe ground at the midpoint,
- * fade in, control returns at the end. Death: the sequence, then a full restore at the level spawn
- * (checkpoints replace the spawn in Pass 1E).
+ * fade in, control returns at the end. Death: the sequence, then a full restore at `checkpoint` (the
+ * active checkpoint, or the level spawn); the world-level reset follows the `respawned` event.
  */
 export function stepTimedRespawn(
   player: PlayerState,
   world: CollisionWorld,
+  checkpoint: { readonly x: number; readonly y: number },
   events: SimulationEvent[],
   tick: number,
 ): void {
-  const level = world.level;
   player.modeTicks += 1;
   if (player.mode === 'hazardRespawn') {
     if (player.modeTicks === Math.ceil(Ticks.hazardRespawn / 2)) {
@@ -189,20 +236,23 @@ export function stepTimedRespawn(
     if (player.modeTicks >= Ticks.hazardRespawn) {
       player.mode = 'ground';
       player.modeTicks = 0;
-      events.push({ type: 'respawned', playerId: player.id, tick });
+      events.push({ type: 'respawned', playerId: player.id, tick, fromDeath: false });
     }
   } else if (player.mode === 'dead' && player.modeTicks >= Ticks.deathSequence) {
-    placeOnGround(player, level.spawn.x, level.spawn.y);
+    placeOnGround(player, checkpoint.x, checkpoint.y);
     player.hp = H.baseHp;
     player.shield = H.baseShield;
     player.fuelS = GameConfig.player.jetpack.baseFuelS;
+    player.heat = 0;
+    player.ventTicks = 0;
+    player.fireCooldownTicks = 0;
     player.invulnTicks = Ticks.hurtInvuln;
-    player.safeX = level.spawn.x;
-    player.safeY = level.spawn.y;
+    player.safeX = checkpoint.x;
+    player.safeY = checkpoint.y;
     player.pendingSafeTick = -1;
     player.mode = 'ground';
     player.modeTicks = 0;
-    events.push({ type: 'respawned', playerId: player.id, tick });
+    events.push({ type: 'respawned', playerId: player.id, tick, fromDeath: true });
   }
 }
 

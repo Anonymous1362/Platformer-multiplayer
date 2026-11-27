@@ -83,7 +83,7 @@ describe('deterministic simulation', () => {
       { moveX: 1e9, moveY: -1e9, held: 0xffff, aimMrad: 1e9 },
     ];
     for (let tick = 0; tick < 120; tick += 1) sim.step(world, garbage, tick);
-    expect(world.players[1]?.held).toBe(0b111111);
+    expect(world.players[1]?.held).toBe(0b1111111);
     expect(world.players.every((p) => Number.isFinite(p.x) && Number.isFinite(p.y))).toBe(true);
   });
 

@@ -1,13 +1,13 @@
 {
   "format": "cosmic-drift-replay",
   "version": 2,
-  "configHash": "d58a78a3",
+  "configHash": "f2f060ea",
   "setup": {
     "seed": 987654,
     "difficulty": "hard",
     "playerCount": 4,
     "levelId": "test_arena",
-    "levelHash": "249e6d58"
+    "levelHash": "5a6fab4b"
   },
   "ticks": 1200,
   "inputs": [
@@ -728,5 +728,5 @@
       [15, 64, 0, 1, -1627]
     ]
   ],
-  "finalHash": "85b04bbc"
+  "finalHash": "4ce01679"
 }

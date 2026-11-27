@@ -3,7 +3,8 @@ import type { EntityId } from '../EntityIds';
 import { DT, GameConfig, Ticks } from '../GameConfig';
 import { Button, type InputFrame } from '../InputTypes';
 import { platformVelocity } from '../MovingPlatforms';
-import type { PlayerState, SimulationEvent } from '../SimulationTypes';
+import type { SimContext } from '../SimContext';
+import type { PlayerState } from '../SimulationTypes';
 import { stepTimedRespawn } from './Hazards';
 
 /**
@@ -16,17 +17,8 @@ import { stepTimedRespawn } from './Hazards';
 const P = GameConfig.player;
 const FUEL_EPS = 1e-9;
 
-export interface PlanetPhysics {
-  readonly gravity: number;
-  readonly airDecelFactor: number;
-}
-
-export interface PlayerContext {
-  readonly world: CollisionWorld;
-  readonly planet: PlanetPhysics;
-  readonly events: SimulationEvent[];
-  readonly tick: number;
-}
+/** Players only need part of the tick context. */
+export type PlayerContext = Pick<SimContext, 'world' | 'planet' | 'events' | 'tick' | 'state'>;
 
 export function createPlayer(id: EntityId, slot: number, world: CollisionWorld): PlayerState {
   const { x, y } = world.level.spawn;
@@ -50,7 +42,10 @@ export function createPlayer(id: EntityId, slot: number, world: CollisionWorld):
     jumpBufferTicks: 0,
     jumpTicks: 0,
     jumpCutAvailable: false,
-    wallJumpLockTicks: 0,
+    controlLockTicks: 0,
+    fireCooldownTicks: 0,
+    heat: 0,
+    ventTicks: 0,
     wallSide: 0,
     fuelS: P.jetpack.baseFuelS,
     jetpacking: false,
@@ -82,7 +77,7 @@ export function applyIntents(player: PlayerState, frame: InputFrame): void {
   if (player.dashCooldownTicks > 0) player.dashCooldownTicks -= 1;
   if (player.iframeTicks > 0) player.iframeTicks -= 1;
   if (player.invulnTicks > 0) player.invulnTicks -= 1;
-  if (player.wallJumpLockTicks > 0) player.wallJumpLockTicks -= 1;
+  if (player.controlLockTicks > 0) player.controlLockTicks -= 1;
   if (player.dropGraceTicks > 0) player.dropGraceTicks -= 1;
   if (isPressed(player, Button.Jump)) player.jumpBufferTicks = Ticks.jumpBuffer;
   else if (player.jumpBufferTicks > 0) player.jumpBufferTicks -= 1;
@@ -142,7 +137,7 @@ function wallJump(player: PlayerState, side: -1 | 1, ctx: PlayerContext): void {
   // Scaled like the jump so wall-jump height matches on every planet (DECISIONS).
   player.vy = P.wallJump.vyUps * Math.sqrt(ctx.planet.gravity);
   player.facing = side === 1 ? -1 : 1;
-  player.wallJumpLockTicks = Ticks.wallJumpLock;
+  player.controlLockTicks = Ticks.wallJumpLock;
   player.jumpBufferTicks = 0;
   player.jumpTicks = 0;
   player.jumpCutAvailable = true;
@@ -209,7 +204,7 @@ function horizontalControl(
   support: Support | null,
   ctx: PlayerContext,
 ): void {
-  if (player.wallJumpLockTicks > 0) return; // horizontal input ignored after a wall jump (spec 4.1)
+  if (player.controlLockTicks > 0) return; // horizontal input ignored after a wall jump or knockback
   const target = frame.moveX * P.maxRunSpeedUps;
   const speedingUp =
     frame.moveX !== 0 &&
@@ -238,7 +233,8 @@ export function approach(value: number, target: number, maxDelta: number): numbe
 /** Step 3 of the tick order: the state machine, then X, then Y. */
 export function movePlayer(player: PlayerState, frame: InputFrame, ctx: PlayerContext): void {
   if (player.mode === 'hazardRespawn' || player.mode === 'dead') {
-    stepTimedRespawn(player, ctx.world, ctx.events, ctx.tick);
+    const run = ctx.state.run;
+    stepTimedRespawn(player, ctx.world, { x: run.respawnX, y: run.respawnY }, ctx.events, ctx.tick);
     return;
   }
 

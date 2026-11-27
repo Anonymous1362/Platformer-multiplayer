@@ -42,6 +42,47 @@
       "y": 19
     },
     {
+      "id": "stack_shards",
+      "type": "shard_line",
+      "x": 5,
+      "y": 13,
+      "count": 4,
+      "spacing": 1,
+      "dir": "h"
+    },
+    {
+      "id": "crawler_start",
+      "type": "enemy",
+      "x": 19,
+      "y": 19,
+      "archetype": "crawler",
+      "patrol": [16, 21],
+      "facing": -1
+    },
+    {
+      "id": "shaft_shards",
+      "type": "shard_line",
+      "x": 24,
+      "y": 8,
+      "count": 3,
+      "spacing": 3,
+      "dir": "v"
+    },
+    {
+      "id": "cp_ledge",
+      "type": "checkpoint",
+      "x": 30,
+      "y": 5
+    },
+    {
+      "id": "crawler_mid",
+      "type": "enemy",
+      "x": 32,
+      "y": 19,
+      "archetype": "crawler",
+      "patrol": [28, 34]
+    },
+    {
       "id": "lava_lift",
       "type": "moving_platform",
       "x": 36,
@@ -55,6 +96,45 @@
       "oneWay": true,
       "w": 3,
       "h": 0.5
+    },
+    {
+      "id": "lava_shards",
+      "type": "shard_line",
+      "x": 38,
+      "y": 16,
+      "count": 4,
+      "spacing": 2,
+      "dir": "h"
+    },
+    {
+      "id": "cp_far_shore",
+      "type": "checkpoint",
+      "x": 49,
+      "y": 19
+    },
+    {
+      "id": "gap_shards",
+      "type": "shard_line",
+      "x": 50,
+      "y": 17,
+      "count": 4,
+      "spacing": 1,
+      "dir": "h"
+    },
+    {
+      "id": "crawler_ice",
+      "type": "enemy",
+      "x": 57,
+      "y": 19,
+      "archetype": "crawler",
+      "patrol": [55, 59],
+      "facing": -1
+    },
+    {
+      "id": "exit",
+      "type": "exit",
+      "x": 61,
+      "y": 17
     }
   ],
   "zones": [

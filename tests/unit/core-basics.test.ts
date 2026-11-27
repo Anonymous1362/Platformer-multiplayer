@@ -48,6 +48,13 @@ describe('GameConfig (N9)', () => {
       dashIframes: 8,
       dropThroughGrace: 9,
       hurtInvuln: 48,
+      knockbackLock: 12,
+      vent: 72,
+      blasterInterval: 12,
+      enemyAlert: 24,
+      loseInterest: 120,
+      crawlerWindup: 21,
+      crawlerRecover: 36,
       shieldDelay: 180,
       deathSequence: 72,
       hazardRespawn: 30,
@@ -200,7 +207,7 @@ describe('input sanitizing at the simulation boundary (N11)', () => {
     expect(sanitizeInputFrame({ moveX: 0, moveY: 0, held: 0xff, aimMrad: 99999 })).toEqual({
       moveX: 0,
       moveY: 0,
-      held: 0b111111,
+      held: 0b1111111, // six buttons plus the AimManual flag
       aimMrad: 3142,
     });
     expect(sanitizeInputFrame({ moveX: 0, moveY: 0, held: 2.5, aimMrad: -0.2 }).held).toBe(0);

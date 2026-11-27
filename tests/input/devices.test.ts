@@ -82,7 +82,7 @@ describe('keyboard and mouse (spec 8.9, 14.4)', () => {
     kb.pointerDown(0, 0);
     kb.pointerDown(2, 0);
     const frame = router.nextFrame();
-    expect(frame.held).toBe(Button.Shoot | Button.Parry);
+    expect(frame.held).toBe(Button.Shoot | Button.Parry | Button.AimManual);
     expect(frame.aimMrad).toBe(1571);
     expect(kb.keyDown('KeyQ', false, 0)).toBe(false);
   });
@@ -122,7 +122,9 @@ describe('gamepad, standard mapping (spec 8.9, 14.4)', () => {
     const gp = new GamepadControls();
     const router = new InputRouter([gp]);
     gp.poll([pad({ axes: [0, 0, 0, 1] })], 0);
-    expect(router.nextFrame().aimMrad).toBe(1571);
+    const frame = router.nextFrame();
+    expect(frame.aimMrad).toBe(1571);
+    expect(frame.held & Button.AimManual).toBe(Button.AimManual);
   });
 
   it('after a release-all, a button still held does not fire until it is released and pressed again', () => {

@@ -1,4 +1,4 @@
-import type { PlanetId } from '../../src/core/Ids';
+import type { DifficultyId, PlanetId } from '../../src/core/Ids';
 import { NEUTRAL_INPUT } from '../../src/core/InputSanitize';
 import type { InputFrame } from '../../src/core/InputTypes';
 import { parseLevel } from '../../src/core/level/AsciiParser';
@@ -55,9 +55,9 @@ export class Harness {
   readonly sim: WorldSimulation;
   readonly events: SimulationEvent[] = [];
 
-  constructor(level: Level, playerCount = 1, seed = 1) {
+  constructor(level: Level, playerCount = 1, seed = 1, difficulty: DifficultyId = 'normal') {
     this.level = level;
-    this.world = createWorld(setupFor(level, { seed, difficulty: 'normal', playerCount }), level);
+    this.world = createWorld(setupFor(level, { seed, difficulty, playerCount }), level);
     this.sim = new WorldSimulation(level, { assertFinite: true });
   }
 

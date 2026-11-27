@@ -1,6 +1,6 @@
 # Handoff
 
-State: Pass 1D (keyboard, controller, multi-touch, playable test arena) implemented and verified locally; owner device checks pending. Auto mode continues with Pass 1E. Releases: the owner starts them from Actions → Release → Run workflow (`0.0.1` is published).
+State: Pass 1E-1 (gameplay core) implemented and verified locally; 1E-2 (presentation) is next, then 1E-3 (audio). Owner device checks for 1D (build 0.0.2) are still pending. Releases: the owner starts them from Actions → Release → Run workflow (`0.0.1` is published).
 
 What 1C added (all in `src/core`, Node-only):
 
@@ -24,6 +24,16 @@ Gotchas learned:
 - The N11 assertion used to build a path string per element and dominated test time; it now builds the path only on a hit.
 - Changing `GameConfig`, the simulation, or `test_arena.json` changes golden hashes on purpose: `npm run golden:record`, review, commit.
 
+What 1E-1 added (src/core, Node-only):
+
+- `combat/Raycast.ts` (tile grid walk, segment vs box, line of sight), `combat/Weapons.ts` (Pulse Blaster, heat and vent, auto and manual aim), `combat/Projectiles.ts` (swept bolts).
+- `enemies/Enemies.ts` (spawn with difficulty HP, sleep and wake, damage, defeat with drops, section resets; behavior table per archetype), `enemies/EnemyCommon.ts` (helpers kept apart to avoid an import cycle), `enemies/Crawler.ts`.
+- `pickups/Pickups.ts` (level shards, drops, magnet, collection), `Progress.ts` (run state, checkpoints, exit, death reset), `SimContext.ts` (per-tick context, ID allocation, sorted insert).
+- `player/Hazards.ts` gained `hurtPlayer` (knockback, control lock), difficulty-scaled damage, and checkpoint respawns; `PlayerState.wallJumpLockTicks` became `controlLockTicks`.
+- Tick order now runs phases 1–7 (players fire after moving; enemies; projectiles; hazards, pickups, triggers; death reset).
+- The arena has 3 Crawlers, 15 level shards, 2 checkpoints, and an exit. `LevelView` draws them with plain shapes; `LevelScene` shows a level-complete banner.
+- `InputFrame.held` bit 6 is `AimManual`; the router sets it when the mouse or right stick aims.
+
 What 1D added:
 
 - `src/input/`: `TouchLayout` (Classic preset, 12 px hit slop, nearest-center split, floating or fixed stick), `TouchControls` (finger ownership; pure logic + `attachTouchListeners`), `KeyboardMouseControls` (both 8.9 columns, repeat ignored, modified keys ignored, mouse aim through a scene resolver), `GamepadControls` (standard mapping, D-pad, right-stick aim, refocus suppression, hot-plug), `InputRouter` (latching merge, `releaseAll`, `installInputCleanup`).
@@ -40,4 +50,4 @@ Gotchas learned:
 
 Owner device checks still open (spec 8.13 records): 2–3 fingers on a real phone, a controller inside the Android app, the iPhone PWA.
 
-Next: Pass 1E (spec 23): Crawler enemy, Pulse Blaster, shards, checkpoint, exit, minimal HUD, pause and restart, procedural Neo-Celestial art, SoundEngine with synthesized SFX, juice, reduced motion.
+Next: Pass 1E-2 (presentation): HUD (HP and shield pill, fuel, shards, heat ring on Shoot), pause menu with Restart, procedural Neo-Celestial art (slabs with side faces, five parallax layers, contact shadows), event-driven effects consumed once per tick, render-only hit-stop, reduced motion, WebGL disposal and context loss (N13). Then 1E-3: SoundEngine (buses, limiter, polyphony caps, synthesized SFX).

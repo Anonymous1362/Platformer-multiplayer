@@ -57,6 +57,26 @@ export interface PlatformDef {
   readonly oneWay: boolean;
 }
 
+export const ENEMY_ARCHETYPES = ['crawler'] as const;
+export type EnemyArchetype = (typeof ENEMY_ARCHETYPES)[number];
+
+/** Enemy spawn: feet position, facing, and optional patrol bounds for its center x (world units). */
+export interface EnemySpawn {
+  readonly id: string;
+  readonly archetype: EnemyArchetype;
+  readonly x: number;
+  readonly y: number;
+  readonly facing: 1 | -1;
+  readonly patrol: { readonly minX: number; readonly maxX: number } | null;
+}
+
+/** A point object: checkpoints and exits are bottom-anchored (feet); shards are centered. */
+export interface LevelPoint {
+  readonly id: string;
+  readonly x: number;
+  readonly y: number;
+}
+
 export interface Level {
   readonly id: string;
   readonly planet: PlanetId;
@@ -72,6 +92,11 @@ export interface Level {
   /** Player spawn, feet position in world units. */
   readonly spawn: { readonly x: number; readonly y: number };
   readonly platforms: readonly PlatformDef[];
+  readonly enemies: readonly EnemySpawn[];
+  /** Every shard in the level (shard lines expanded), centers in world units. */
+  readonly shards: readonly LevelPoint[];
+  readonly checkpoints: readonly LevelPoint[];
+  readonly exits: readonly LevelPoint[];
   readonly zones: readonly LevelZone[];
   /** FNV-1a over the canonical JSON of the validated source; goes into replays. */
   readonly hash: string;
@@ -83,4 +108,7 @@ export const LEVEL_LIMITS = {
   maxHeightTiles: 200,
   maxPlatforms: 64,
   maxZones: 256,
+  maxEnemies: 256,
+  maxShards: 1024,
+  maxCheckpoints: 64,
 } as const;

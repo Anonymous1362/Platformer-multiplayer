@@ -2,7 +2,8 @@ import { moveX, moveY, overlapsSolid, PLAYER_SIZE, type CollisionWorld } from '.
 import { DT } from './GameConfig';
 import type { Level, PlatformDef } from './level/LevelTypes';
 import { hitHazard } from './player/Hazards';
-import type { PlatformState, PlayerState, SimulationEvent } from './SimulationTypes';
+import type { SimContext } from './SimContext';
+import type { PlatformState, PlayerState } from './SimulationTypes';
 
 /**
  * Kinematic moving platforms (spec sections 4.1 and 13.5). Each tick, before players integrate, a
@@ -144,14 +145,10 @@ function pushBody(
 }
 
 /** Step 2 of the tick order (spec 13.4): move kinematics and carry their riders. */
-export function stepPlatforms(
-  world: CollisionWorld,
-  platforms: PlatformState[],
-  players: PlayerState[],
-  events: SimulationEvent[],
-  tick: number,
-): void {
-  platforms.forEach((p, i) => {
+export function stepPlatforms(ctx: SimContext): void {
+  const { world, events, tick } = ctx;
+  const players = ctx.state.players;
+  ctx.state.platforms.forEach((p, i) => {
     const def = world.level.platforms[i];
     if (!def) return;
     advancePlatform(p, def);
@@ -162,7 +159,8 @@ export function stepPlatforms(
       if (player.grounded && player.groundPlatform === i) ok = carryRider(world, player, i, p, def);
       else if (!def.oneWay && overlapsPlatform(player, p, def)) ok = pushBody(world, player, i, p, def);
       else continue;
-      if (!ok || overlapsSolid(world, player.x, player.y)) hitHazard(player, 'crush', events, tick);
+      if (!ok || overlapsSolid(world, player.x, player.y))
+        hitHazard(player, 'crush', ctx.difficulty, events, tick);
     }
   });
 }

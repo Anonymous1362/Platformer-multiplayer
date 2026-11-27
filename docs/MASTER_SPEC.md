@@ -1452,8 +1452,8 @@ One typed `as const` object in `src/core/GameConfig.ts` holds every gameplay con
 export interface InputFrame {            // (contract) one per player per tick
   readonly moveX: number;                // −1..1 after deadzone/curve
   readonly moveY: number;                // −1..1, +1 = down (screen space)
-  readonly held: number;                 // bitmask: 0 jump, 1 dash, 2 shoot, 3 parry, 4 gadget, 5 interact
-  readonly aimMrad: number;              // aim angle in milliradians, Int16 range
+  readonly held: number;                 // bitmask: 0 jump, 1 dash, 2 shoot, 3 parry, 4 gadget, 5 interact, 6 aimManual (flag)
+  readonly aimMrad: number;              // aim angle in milliradians, Int16 range, world space (+y down); used when aimManual is set
 }
 
 export interface SimulationStepResult {

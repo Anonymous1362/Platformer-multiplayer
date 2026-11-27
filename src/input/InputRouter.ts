@@ -1,4 +1,4 @@
-import type { InputFrame } from '../core/InputTypes';
+import { Button, type InputFrame } from '../core/InputTypes';
 
 /** What every input adapter (touch, keyboard and mouse, gamepad) reports. */
 export interface SourceSample {
@@ -58,6 +58,9 @@ export class InputRouter {
       if (aim === null && s.aimMrad !== null) aim = s.aimMrad;
       source.consumeLatched();
     }
+    // A device aiming on purpose (mouse shooting, right stick) sets AimManual; otherwise the
+    // simulation auto-aims (spec 4.2).
+    if (aim !== null) held |= Button.AimManual;
     const aimMrad =
       aim === null ? this.last.aimMrad : Math.max(-AIM_LIMIT_MRAD, Math.min(AIM_LIMIT_MRAD, aim));
     this.last = { moveX, moveY, held, aimMrad };

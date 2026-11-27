@@ -8,6 +8,7 @@ import { expect, test, type Page } from '@playwright/test';
 interface Probe {
   tick: number;
   paused: boolean;
+  counts: { enemies: number; projectiles: number; pickups: number };
   lastFrame: { moveX: number; moveY: number; held: number; aimMrad: number };
   players: { x: number; y: number; vx: number; vy: number; mode: string; grounded: boolean }[];
 }
@@ -55,6 +56,19 @@ test('keyboard: run, jump, pause and resume', async ({ page }) => {
   await expect(page.locator('[data-role="pause-overlay"]')).toBeVisible();
   await page.keyboard.press('Escape');
   await expect.poll(async () => (await probe(page)).tick, { timeout: 10_000 }).toBeGreaterThan(pausedTick);
+  expect(errors).toEqual([]);
+});
+
+test('the arena has enemies and shards; X fires the blaster and builds heat', async ({ page }) => {
+  const errors = await boot(page);
+  const start = await probe(page);
+  expect(start.counts.enemies).toBe(3);
+  expect(start.counts.pickups).toBeGreaterThan(10);
+  await page.keyboard.down('KeyX');
+  await expect
+    .poll(async () => (await probe(page)).counts.projectiles, { timeout: 10_000 })
+    .toBeGreaterThan(0);
+  await page.keyboard.up('KeyX');
   expect(errors).toEqual([]);
 });
 

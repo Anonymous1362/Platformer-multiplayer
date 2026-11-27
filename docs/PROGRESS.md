@@ -8,8 +8,17 @@
 | 1B | DONE, approved (CI run 45607110857). |
 | 1C | DONE and green in CI (run 45620958633: verify, perf:bench, Chromium and WebKit browser tests, Android debug build). |
 | 1D | DONE locally; device checks (2–3 fingers on a real phone, controller in the Android app) pending with the owner. |
-| 1E | NEXT (auto mode). |
+| 1E | IN PROGRESS: 1E-1 gameplay core done locally; 1E-2 presentation and 1E-3 audio next. |
 | 1F onward | Not started |
+
+## Pass 1E-1 evidence (2026-11-27)
+
+- `npm run verify`: passes (269 unit, input, property, and simulation tests; 5 golden replays re-recorded for the new arena and config; `levels:lint`; build). Layer rules: no violations, no cycles.
+- Combat (tests/sim/combat.test.ts): 5 shots per second while held; 750 u/s bolts; heat +4 per shot, -12/s firing, -40/s idle; vent at 100 for exactly 72 ticks, then firing resumes; continuous fire overheats after about 12.5 s; bolts stop at walls and vanish after 1200 u; manual aim; auto aim picks the nearest enemy in the 30° cone with line of sight and fires straight otherwise (outside the cone, beyond 900 u, behind a wall); property test: no bolt ever crosses a wall at any angle.
+- Crawler (tests/sim/enemies.test.ts): patrols at 120 u/s inside its bounds; turns at ledges and walls; sleeps beyond 1400 u, wakes inside it, sleeps again beyond 2200 u; 0.4 s alert, then the 21-tick telegraph, then a 260 u/s charge; the charge deals 15 damage shield-first with knockback, once per invulnerability window; jumping over the charge avoids it; three blaster hits defeat it and its 3 drops land and can be collected; difficulty scales HP (Easy 24, Hard 35), damage (Easy 8), and telegraphs (Hard 19 ticks, never under 18).
+- Progress (tests/sim/progress.test.ts): magnet and pickup radii; shard lines; checkpoint banks shards, restores health, moves the respawn; death loses carried shards, returns them to the level, removes drops, resets enemies (fresh IDs), respawns at the checkpoint; with sections only the respawn section resets; the exit completes once and banks shards; parser rejects elites and `requires` until they exist.
+- `npm run test:e2e` (Chrome, local): play tests 6 of 6, including X firing the blaster in the arena.
+- `perf:bench` (4 players, 3 Crawlers, shards, moving platform, bolts): 0.009 ms mean per tick (budget 2 ms).
 
 ## Pass 1D evidence (2026-11-26)
 

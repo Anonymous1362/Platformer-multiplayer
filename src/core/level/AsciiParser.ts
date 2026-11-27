@@ -2,11 +2,15 @@ import { GameConfig, msToTicks } from '../GameConfig';
 import { canonicalJson, fnv1aHex } from '../Hash';
 import { isPlanetId, type PlanetId } from '../Ids';
 import {
+  ENEMY_ARCHETYPES,
   LEVEL_LIMITS,
   TILE_LEGEND,
   TileFlag,
   ZONE_TYPES,
+  type EnemyArchetype,
+  type EnemySpawn,
   type Level,
+  type LevelPoint,
   type LevelZone,
   type PlatformDef,
   type ZoneType,
@@ -133,12 +137,64 @@ function parseRows(raw: unknown, w: number, h: number, errors: Errors): Uint8Arr
   return tiles;
 }
 
-const SPAWN_KEYS = new Set(['id', 'type', 'x', 'y']);
+const POINT_KEYS = new Set(['id', 'type', 'x', 'y']);
 const PLATFORM_KEYS = new Set(['id', 'type', 'x', 'y', 'path', 'speedUps', 'waitMs', 'oneWay', 'w', 'h']);
+const SHARD_LINE_KEYS = new Set(['id', 'type', 'x', 'y', 'count', 'spacing', 'dir']);
+const ENEMY_KEYS = new Set(['id', 'type', 'x', 'y', 'archetype', 'patrol', 'facing']);
 
 interface ObjectsOut {
   spawn: { x: number; y: number } | null;
   platforms: PlatformDef[];
+  enemies: EnemySpawn[];
+  shards: LevelPoint[];
+  checkpoints: LevelPoint[];
+  exits: LevelPoint[];
+}
+
+/** Bottom-anchored objects stand on the bottom edge of their cell, centered (DECISIONS). */
+function feet(o: { x: number; y: number }): { x: number; y: number } {
+  return { x: (o.x + 0.5) * TILE, y: (o.y + 1) * TILE };
+}
+
+/** Floating collectibles sit in the middle of their cell. */
+function cellCenter(x: number, y: number): { x: number; y: number } {
+  return { x: (x + 0.5) * TILE, y: (y + 0.5) * TILE };
+}
+
+function parseEnemy(
+  o: Raw,
+  id: string,
+  where: string,
+  level: { w: number; h: number },
+  errors: Errors,
+): EnemySpawn | null {
+  checkKeys(o, ENEMY_KEYS, where, errors);
+  const archetype = o['archetype'];
+  if (typeof archetype !== 'string' || !(ENEMY_ARCHETYPES as readonly string[]).includes(archetype)) {
+    errors.add(`${where}: enemy archetype "${String(archetype)}" is not supported yet`);
+    return null;
+  }
+  const facing = o['facing'] === undefined ? 1 : o['facing'];
+  if (facing !== 1 && facing !== -1) {
+    errors.add(`${where}: facing must be 1 or -1`);
+    return null;
+  }
+  let patrol: EnemySpawn['patrol'] = null;
+  const raw = o['patrol'];
+  if (raw !== undefined) {
+    if (!Array.isArray(raw) || raw.length !== 2 || !isFiniteNumber(raw[0]) || !isFiniteNumber(raw[1])) {
+      errors.add(`${where}: patrol must be [fromX, toX] in tiles`);
+      return null;
+    }
+    const [a, b] = raw as [number, number];
+    if (a >= b || a < 0 || b >= level.w) {
+      errors.add(`${where}: patrol must satisfy 0 <= fromX < toX < level width`);
+      return null;
+    }
+    patrol = { minX: (a + 0.5) * TILE, maxX: (b + 0.5) * TILE };
+  }
+  const p = feet({ x: o['x'] as number, y: o['y'] as number });
+  return { id, archetype: archetype as EnemyArchetype, x: p.x, y: p.y, facing, patrol };
 }
 
 function parsePlatform(
@@ -221,7 +277,7 @@ function parseObjects(
   ids: Set<string>,
   errors: Errors,
 ): ObjectsOut {
-  const out: ObjectsOut = { spawn: null, platforms: [] };
+  const out: ObjectsOut = { spawn: null, platforms: [], enemies: [], shards: [], checkpoints: [], exits: [] };
   if (!Array.isArray(raw)) {
     errors.add('objects: must be an array');
     return out;
@@ -245,13 +301,64 @@ function parseObjects(
       errors.add(`${where}: position is outside the level`);
       return;
     }
+    if (o['requires'] !== undefined) {
+      errors.add(`${where}: "requires" is not supported yet`);
+      return;
+    }
+    const objectId = isNonEmptyString(id) ? id : `#${String(i)}`;
+    const pos = { x: o['x'], y: o['y'] };
     switch (o['type']) {
       case 'player_spawn':
-        checkKeys(o, SPAWN_KEYS, where, errors);
+        checkKeys(o, POINT_KEYS, where, errors);
         spawns += 1;
-        // Bottom-anchored objects stand on the bottom edge of their tile cell, centered (DECISIONS).
-        out.spawn = { x: (o['x'] + 0.5) * TILE, y: (o['y'] + 1) * TILE };
+        out.spawn = feet(pos);
         break;
+      case 'checkpoint':
+        checkKeys(o, POINT_KEYS, where, errors);
+        if (out.checkpoints.length >= LEVEL_LIMITS.maxCheckpoints)
+          errors.add(`${where}: too many checkpoints`);
+        else out.checkpoints.push({ id: objectId, ...feet(pos) });
+        break;
+      case 'exit':
+        checkKeys(o, POINT_KEYS, where, errors);
+        out.exits.push({ id: objectId, ...feet(pos) });
+        break;
+      case 'shard':
+        checkKeys(o, POINT_KEYS, where, errors);
+        out.shards.push({ id: objectId, ...cellCenter(pos.x, pos.y) });
+        break;
+      case 'shard_line': {
+        checkKeys(o, SHARD_LINE_KEYS, where, errors);
+        const { count, spacing, dir } = o;
+        if (
+          !isInt(count, 1, 64) ||
+          !isFiniteNumber(spacing) ||
+          spacing <= 0 ||
+          (dir !== 'h' && dir !== 'v')
+        ) {
+          errors.add(`${where}: shard_line needs count 1–64, spacing > 0 (tiles), and dir "h" or "v"`);
+          break;
+        }
+        for (let k = 0; k < count; k += 1) {
+          const sx = dir === 'h' ? pos.x + k * spacing : pos.x;
+          const sy = dir === 'v' ? pos.y + k * spacing : pos.y;
+          if (sx >= level.w || sy >= level.h) {
+            errors.add(`${where}: shard ${String(k)} of the line is outside the level`);
+            break;
+          }
+          out.shards.push({ id: `${objectId}.${String(k)}`, ...cellCenter(sx, sy) });
+        }
+        break;
+      }
+      case 'enemy': {
+        if (out.enemies.length >= LEVEL_LIMITS.maxEnemies) {
+          errors.add(`${where}: too many enemies`);
+          break;
+        }
+        const enemy = parseEnemy(o, objectId, where, level, errors);
+        if (enemy) out.enemies.push(enemy);
+        break;
+      }
       case 'moving_platform': {
         if (out.platforms.length >= LEVEL_LIMITS.maxPlatforms) {
           errors.add(`${where}: more than ${String(LEVEL_LIMITS.maxPlatforms)} moving platforms`);
@@ -266,6 +373,8 @@ function parseObjects(
     }
   });
   if (spawns !== 1) errors.add(`objects: expected exactly one player_spawn, found ${String(spawns)}`);
+  if (out.shards.length > LEVEL_LIMITS.maxShards)
+    errors.add(`objects: more than ${String(LEVEL_LIMITS.maxShards)} shards`);
   return out;
 }
 
@@ -395,6 +504,10 @@ export function parseLevel(raw: unknown): LevelParseResult {
     tiles,
     spawn: objects.spawn,
     platforms: objects.platforms,
+    enemies: objects.enemies,
+    shards: objects.shards,
+    checkpoints: objects.checkpoints,
+    exits: objects.exits,
     zones,
     hash: fnv1aHex(canonicalJson(raw)),
   };

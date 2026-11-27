@@ -8,12 +8,10 @@ import { parseLevel } from '../core/level/AsciiParser';
 import type { Level } from '../core/level/LevelTypes';
 import type { WorldState } from '../core/SimulationTypes';
 import { createWorld, setupFor, WorldSimulation } from '../core/WorldSimulation';
-import { LevelView, type RenderPose } from '../render/world/LevelView';
+import { capturePoses, LevelView, type PrevPoses } from '../render/world/LevelView';
 import { Palette, UiTokens } from '../theme/ThemePalette';
 
 const TILE = GameConfig.world.tileSizeU;
-/** A body that moved farther than this in one tick teleported (respawn): draw it there, no smear. */
-const SNAP_DISTANCE_U = 200;
 const BACKGROUND = ['bg_starfield'] as const;
 
 interface Run {
@@ -22,18 +20,9 @@ interface Run {
   readonly sim: WorldSimulation;
   readonly loop: FixedLoop;
   readonly view: LevelView;
-  prevPlayers: RenderPose[];
-  prevPlatforms: RenderPose[];
+  prev: PrevPoses;
   /** Camera follow target (interpolated player center). */
   readonly follow: { x: number; y: number };
-}
-
-function lerpPoses(prev: readonly RenderPose[], next: readonly RenderPose[], alpha: number): RenderPose[] {
-  return next.map((n, i) => {
-    const p = prev[i] ?? n;
-    if (Math.hypot(n.x - p.x, n.y - p.y) > SNAP_DISTANCE_U) return n;
-    return { x: p.x + (n.x - p.x) * alpha, y: p.y + (n.y - p.y) * alpha };
-  });
 }
 
 /**
@@ -83,8 +72,7 @@ export class LevelScene extends Phaser.Scene {
       sim,
       loop: new FixedLoop(),
       view,
-      prevPlayers: world.players.map((p) => ({ x: p.x, y: p.y })),
-      prevPlatforms: world.platforms.map((p) => ({ x: p.x, y: p.y })),
+      prev: capturePoses(world),
       follow,
     };
     this.run = run;
@@ -177,9 +165,9 @@ export class LevelScene extends Phaser.Scene {
     let alpha = 1;
     if (!this.paused) {
       const result = run.loop.advance(deltaMs / 1000, () => {
-        run.prevPlayers = run.world.players.map((p) => ({ x: p.x, y: p.y }));
-        run.prevPlatforms = run.world.platforms.map((p) => ({ x: p.x, y: p.y }));
-        run.sim.step(run.world, [input.router.nextFrame()], run.world.tick);
+        run.prev = capturePoses(run.world);
+        const { events } = run.sim.step(run.world, [input.router.nextFrame()], run.world.tick);
+        for (const e of events) if (e.type === 'levelComplete') this.showBanner(run);
       });
       alpha = result.renderAlpha;
     }
@@ -187,14 +175,36 @@ export class LevelScene extends Phaser.Scene {
   }
 
   private draw(run: Run, alpha: number): void {
-    const players = lerpPoses(run.prevPlayers, run.world.players, alpha);
-    const platforms = lerpPoses(run.prevPlatforms, run.world.platforms, alpha);
-    run.view.update(run.world, platforms, players);
-    const focus = players[0];
+    const focus = run.view.update(run.world, run.prev, alpha);
     if (focus) {
       run.follow.x = focus.x;
       run.follow.y = focus.y - GameConfig.player.colliderU.height / 2;
     }
+  }
+
+  /** Level complete: a short banner (the results screen arrives with the scene flow, Pass 2D). */
+  private showBanner(run: Run): void {
+    const el = document.createElement('div');
+    el.dataset['role'] = 'level-complete';
+    const shards = run.world.run.shardsBanked;
+    el.textContent = `Level complete · ${String(shards)} shard${shards === 1 ? '' : 's'}`;
+    Object.assign(el.style, {
+      position: 'absolute',
+      left: '50%',
+      top: '30%',
+      transform: 'translateX(-50%)',
+      padding: '14px 24px',
+      borderRadius: `${String(UiTokens.radius.pill)}px`,
+      background: UiTokens.bgPanel,
+      color: UiTokens.textPrimary,
+      font: '700 20px system-ui, sans-serif',
+      pointerEvents: 'none',
+      whiteSpace: 'nowrap',
+    });
+    this.game.canvas.parentElement?.append(el);
+    this.time.delayedCall(4000, () => {
+      el.remove();
+    });
   }
 
   private probe(): SimProbe {
@@ -204,6 +214,13 @@ export class LevelScene extends Phaser.Scene {
       tick: run?.world.tick ?? 0,
       paused: this.paused,
       lastFrame: this.services.input.router.lastFrame,
+      counts: {
+        enemies: run?.world.enemies.length ?? 0,
+        projectiles: run?.world.projectiles.length ?? 0,
+        pickups: run?.world.pickups.length ?? 0,
+      },
+      shards: { banked: run?.world.run.shardsBanked ?? 0, carried: run?.world.run.shardsCarried ?? 0 },
+      complete: (run?.world.run.completeTick ?? -1) >= 0,
       players: (run?.world.players ?? []).map((p) => ({
         x: p.x,
         y: p.y,
@@ -213,6 +230,7 @@ export class LevelScene extends Phaser.Scene {
         grounded: p.grounded,
         hp: p.hp,
         shield: p.shield,
+        heat: p.heat,
       })),
     };
   }

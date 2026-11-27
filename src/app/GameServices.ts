@@ -10,6 +10,9 @@ export interface SimProbe {
   readonly tick: number;
   readonly paused: boolean;
   readonly lastFrame: InputFrame;
+  readonly counts: { readonly enemies: number; readonly projectiles: number; readonly pickups: number };
+  readonly shards: { readonly banked: number; readonly carried: number };
+  readonly complete: boolean;
   readonly players: readonly {
     readonly x: number;
     readonly y: number;
@@ -19,6 +22,7 @@ export interface SimProbe {
     readonly grounded: boolean;
     readonly hp: number;
     readonly shield: number;
+    readonly heat: number;
   }[];
 }
 

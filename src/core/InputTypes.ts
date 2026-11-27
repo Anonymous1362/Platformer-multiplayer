@@ -17,6 +17,11 @@ export const Button = {
   Parry: 1 << 3,
   Gadget: 1 << 4,
   Interact: 1 << 5,
+  /**
+   * Not a button: set while the device aims on purpose (mouse shooting, right stick, Manual touch aim).
+   * Without it the simulation auto-aims (spec 4.2).
+   */
+  AimManual: 1 << 6,
 } as const;
 
 /** Thumbstick output after deadzone, saturation, and response curve. */

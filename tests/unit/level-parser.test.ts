@@ -91,8 +91,8 @@ describe('level parser (spec section 5.2)', () => {
     ],
     [
       'unsupported object',
-      (r) => ({ ...r, objects: [...(r['objects'] as unknown[]), { id: 'e1', type: 'enemy', x: 2, y: 2 }] }),
-      /"enemy" is not supported yet/,
+      (r) => ({ ...r, objects: [...(r['objects'] as unknown[]), { id: 't1', type: 'turret', x: 2, y: 2 }] }),
+      /"turret" is not supported yet/,
     ],
     [
       'duplicate id',
