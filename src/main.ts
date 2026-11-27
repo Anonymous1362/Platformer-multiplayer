@@ -94,6 +94,7 @@ function applyStageSize(element: HTMLElement): StageSize {
 }
 
 const PERF_KEY = 'cd.perf';
+const NOTICE_KEY = 'cd.photoNotice';
 
 function start(gameRoot: HTMLElement): void {
   const store = storage();
@@ -157,6 +158,18 @@ function start(gameRoot: HTMLElement): void {
       safeMode: boot.safeMode,
       diagnostics,
       perf,
+      flow: {
+        skipToLevel: testMode && params.get('flow') !== '1',
+        noticeSeen: () => store?.getItem(NOTICE_KEY) === '1',
+        markNoticeSeen: () => {
+          try {
+            store?.setItem(NOTICE_KEY, '1');
+          } catch {
+            // storage blocked: the notice shows again next launch
+          }
+        },
+        version: __APP_VERSION__,
+      },
     });
   } catch (error: unknown) {
     log.error('boot', error instanceof Error ? error.message : 'startup failed');
@@ -298,4 +311,13 @@ function start(gameRoot: HTMLElement): void {
 
 const root = document.getElementById('game-root');
 if (!root) throw new Error('Missing #game-root element');
-start(root);
+if (debug && params.get('gallery') === '1') {
+  // Dev-only component gallery (spec 22: 2A): no game, just the DOM layer.
+  root.style.display = 'none';
+  void import('./ui/gallery/Gallery').then(({ mountGallery }) => {
+    mountGallery(document.body);
+    document.body.dataset['gallery'] = 'ready';
+  });
+} else {
+  start(root);
+}

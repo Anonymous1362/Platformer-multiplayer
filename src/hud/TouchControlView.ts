@@ -81,6 +81,11 @@ export class TouchControlView {
     this.root.style.display = 'block';
   }
 
+  /** Hides the controls without losing their state (menus and the title screen have no use for them). */
+  setSuppressed(suppressed: boolean): void {
+    this.root.style.visibility = suppressed ? 'hidden' : 'visible';
+  }
+
   private rebuildButtons(): void {
     const layout = this.controls.currentLayout;
     const key = `${String(layout.width)}x${String(layout.height)}`;

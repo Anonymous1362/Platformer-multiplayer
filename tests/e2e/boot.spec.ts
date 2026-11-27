@@ -166,7 +166,16 @@ test('viewport guards block browser zoom gestures', async ({ page }) => {
       zoomKey: zoomKey.defaultPrevented,
       plainWheel: plainWheel.defaultPrevented,
       touchAction: getComputedStyle(document.body).touchAction,
+      canvasTouchAction: getComputedStyle(document.querySelector('canvas') as HTMLCanvasElement).touchAction,
     };
   });
-  expect(result).toEqual({ wheel: true, dbl: true, zoomKey: true, plainWheel: false, touchAction: 'none' });
+  // Pass 2A: touch-action is scoped to the canvas so menus can scroll; the page keeps double-tap zoom off.
+  expect(result).toEqual({
+    wheel: true,
+    dbl: true,
+    zoomKey: true,
+    plainWheel: false,
+    touchAction: 'manipulation',
+    canvasTouchAction: 'none',
+  });
 });
