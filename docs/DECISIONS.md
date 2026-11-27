@@ -22,6 +22,9 @@
 - 2026-11-25: `CONFIG_HASH` is computed at module load (same value the build-time version in spec 21.2 would produce); `BuildInfo.ts` arrives with Pass 7.
 - 2026-11-25: Pass 1B uses a flat test floor (`setup.floorY`) so movement can be tested before tile collision (Pass 1C replaces it). World coordinates stay non-negative, as the snapshot packet requires.
 - 2026-11-25: Fixed `.dependency-cruiser.cjs`: `exclude` no longer drops node_modules (it hid package imports from all rules); added `core-no-packages`; added a canary test.
+- 2026-11-27 (Pass 1E-3): SFX are synthesized from data recipes (tone and filtered-noise layers) until recorded files exist; keys added beyond the 10.3 examples: `sfx_level_complete`, `sfx_heartbeat` (8.7). Default bus levels until Settings (2B): master 0.8, music 0.7, sfx 0.8, ui 0.6, voice 1, ambience 0.6.
+- 2026-11-27 (Pass 1E-3): The AudioContext is created inside the first user gesture (not at boot), so no browser warns about autoplay and iOS unlocks reliably. Haptics wait for 7B (Capacitor Haptics, a new dependency then).
+- 2026-11-27 (Pass 1E): Parry and slam move to 3A as the 1E row allows; 3A builds them complete with the perfect window.
 - 2026-11-27 (Pass 1E-2): The HUD and pause menu are DOM layers over the canvas (values written only on change, fills animated with `transform`); full-screen animated feedback (vignette, low-HP pulse) is drawn in Phaser, per spec 8.4's performance rule. The full Preact UI replaces the pause menu in 2A.
 - 2026-11-27 (Pass 1E-2): The camera follow moved from Phaser's `startFollow` to `CameraRig` (same 0.14 lerp, now frame-rate independent) so shake and hit-stop kicks add on top without drifting.
 - 2026-11-27 (Pass 1E-2): Software WebGL (SwiftShader, llvmpipe) renders the Battery look (parallax layers 1, 4, 5; 300 particles) until adaptive quality lands in 1F. Foreground motes are 10 sprites rather than a full-screen layer.

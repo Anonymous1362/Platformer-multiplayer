@@ -1,4 +1,5 @@
 import type { AssetRegistry } from '../assets/AssetRegistry';
+import type { SoundEngine } from '../audio/SoundEngine';
 import type { InputFrame } from '../core/InputTypes';
 import type { PlayerMode } from '../core/SimulationTypes';
 import type { Capabilities } from './Capabilities';
@@ -38,6 +39,8 @@ export interface GameServices {
   readonly capabilities: Capabilities;
   readonly warn: (message: string) => void;
   readonly input: GameInput;
+  /** The single audio engine (one AudioContext for the whole game). */
+  readonly audio: SoundEngine;
   /** The running level scene publishes a probe here; nothing else writes it. */
   readonly probe: { current: (() => SimProbe) | null };
 }

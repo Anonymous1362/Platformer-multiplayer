@@ -1,6 +1,6 @@
 # Handoff
 
-State: Pass 1E-2 (presentation) implemented and verified locally; 1E-3 (audio) is next. Auto mode is on (owner, 2026-11-27). Owner device checks for 1D (build 0.0.2, published on the Releases page) are still pending. Releases: the owner starts them from Actions → Release → Run workflow.
+State: Pass 1E (gameplay loop, art, audio, feel) is done locally: 1E-1 and 1E-2 are green in CI; 1E-3 (audio) awaits its CI run. Next is Pass 1F (hardening and acceptance). Auto mode is on (owner, 2026-11-27). Owner device checks for builds 0.0.2+ are still pending. Releases: the owner starts them from Actions → Release → Run workflow; the APK appears on the Releases page.
 
 What 1C added (all in `src/core`, Node-only):
 
@@ -69,4 +69,16 @@ Gotchas learned:
 
 Deferred on purpose: "Restart from checkpoint" and the rest of the Pause screen (Settings, Controls, Quit) come with the UI layer in 2A; light shafts and filters (bloom, haze) wait for quality tiers; a mouse-clickable pause button waits for 2A.
 
-Next: Pass 1E-3 (audio): `SoundEngine` with buses master → {music, sfx, ui, voice, ambience}, limiter (−3 dB, ratio 20, 3 ms attack, 250 ms release), polyphony caps (sfx 24, ui 6, ambience 4, voice 2), 40 ms minimum repeat, oldest/quietest stealing, synthesized SFX for every event above, unlock on the first gesture, suspend on interruption. Then 1F.
+What 1E-3 added:
+
+- `src/audio/`: `SoundEngine` (one context created on the first gesture; buses master → {music, sfx, ui, voice, ambience}; master limiter −3 dB / 20:1 / 3 ms / 250 ms; voice caps sfx 24, ui 6, ambience 4, voice 2 through `VoicePool`; 40 ms repeat guard; quietest-then-oldest stealing; ±3–5% pitch variation from a render-side generator; pan and off-screen attenuation from `Spatial`; music ducking; `stopLoops`), `SynthRecipes` (every SFX key as data: tone and filtered-noise layers), `GameAudio` (events → sounds once per tick, jetpack loop, low-HP heartbeat, shard pitch chain), `AudioTypes`, `StressTest` (test-only offline render, loaded on demand).
+- `src/app/AudioUnlock.ts`: unlock on the first pointer, touch, or key gesture; suspend when hidden, resume on return (every gesture also resumes, for iOS). Phaser audio stays disabled.
+- `src/render/fx/FallTracker.ts`: fall heights per landing, shared by effects and audio (the simulation has no fall field).
+- Test hooks: `__CD_TEST__.audio.{stats, limiter, stress}`.
+- `tests/sim/arena-run.test.ts`: the arena autopilot (acceptance for "plays start to finish").
+
+Deferred on purpose: haptics come with Capacitor Haptics in 7B (a new dependency then); music tracks and ambience loops arrive with content (the music bus and ducking exist); real recorded SFX replace synth recipes through the asset pipeline (`audio:build`, spec 10.5) when they exist.
+
+Previous next-step note (kept for reference): Pass 1E-3 (audio): `SoundEngine` with buses master → {music, sfx, ui, voice, ambience}, limiter (−3 dB, ratio 20, 3 ms attack, 250 ms release), polyphony caps (sfx 24, ui 6, ambience 4, voice 2), 40 ms minimum repeat, oldest/quietest stealing, synthesized SFX for every event above, unlock on the first gesture, suspend on interruption. Then 1F.
+
+Next: Pass 1F (hardening and acceptance): replay export/import (dev), the 50-restart leak test with pool/listener/timer/texture/audio-node counters (M8, O5), error handlers and Safe Mode (§19), memory counters, basic adaptive quality (O6; replaces the software-renderer rule), state-hash tooling, the device record, and the Pass 1 checklist.

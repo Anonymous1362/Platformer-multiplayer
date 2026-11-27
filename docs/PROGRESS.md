@@ -8,8 +8,18 @@
 | 1B | DONE, approved (CI run 45607110857). |
 | 1C | DONE and green in CI (run 45620958633: verify, perf:bench, Chromium and WebKit browser tests, Android debug build). |
 | 1D | DONE and green in CI (run 45951307716). Released as `0.0.2` (release run 2, signed APK 3.68 MB). Device checks (2–3 fingers on a real phone, controller in the Android app) pending with the owner. |
-| 1E | IN PROGRESS: 1E-1 gameplay core green in CI (run 45953613318); 1E-2 presentation done locally; 1E-3 audio next. |
+| 1E | DONE locally (1E-1 green in CI run 45953613318, 1E-2 green in CI run 45958847738, 1E-3 audio verified locally). Parry and slam are deferred to 3A, where the spec schedules them in full. |
 | 1F onward | Not started |
+
+## Pass 1E-3 evidence and 1E acceptance (2026-11-27)
+
+- `npm run verify`: passes (307 unit, input, property, and simulation tests; 5 golden replays unchanged; `levels:lint`; build).
+- "The arena plays start to finish" (tests/sim/arena-run.test.ts): a closed-loop autopilot using only normal inputs finishes `test_arena` on Normal in 1691 ticks (28.2 s) with both checkpoints, all 3 Crawlers defeated, 13 shards banked, and no deaths; it also finishes on Hard; repeated runs are identical.
+- "Restarts cleanly": ten restarts from the pause menu leave one HUD, no menus, and the same sprite count (browser test).
+- "Audio never clips" (tests/e2e/audio.spec.ts): an offline render through the real engine graph of 198 sound starts in 0.5 s (every SFX at once, eleven times) peaks at 0.61 of full scale (−4.3 dBFS); the 24-voice SFX cap held and 174 voices were stolen. The limiter is built with threshold −3 dB, ratio 20, attack 3 ms, release 250 ms. The engine stays "locked" until the first key press, then runs; game events play sounds.
+- "Reduced motion is respected": camera shake never above 25% (browser test); steady outlines instead of blinks and pulses; opacity-only pause menu; no floating damage numbers.
+- Unit tests: voice pool (40 ms repeat guard, quietest-then-oldest stealing, pruning), stereo space (±0.6 pan, −6 dB per screen width off screen), shard pitch chain (semitone steps up to an octave, reset after 1.2 s), synth recipes (layer gains ≤ 0.35, ≤ 2 s, voice-limited buses, variation ≤ 5%), event → sound mapping (keys, positions, ducking on alerts, quiet small landings, jetpack loop start/stop, heartbeat every 900 ms at low HP, pause stops loops).
+- `npm run test:e2e` (Chrome, local): 29 of 29.
 
 ## Pass 1E-2 evidence (2026-11-27)
 

@@ -48,9 +48,9 @@ export class Effects implements EntityFx {
   private readonly flashUntil = new Map<number, number>();
   private readonly squashStart = new Map<number, number>();
   private readonly recoilStart = new Map<number, number>();
-  private readonly peakY = new Map<number, number>();
   private readonly dashTick = new Map<number, number>();
   private readonly numbers: FloatingText[] = [];
+  private landings: ReadonlyMap<number, number> = new Map();
 
   constructor(
     scene: Phaser.Scene,
@@ -122,7 +122,9 @@ export class Effects implements EntityFx {
 
   // ---- Simulation events (once per tick) ----------------------------------------------------
 
-  onTick(events: readonly SimulationEvent[], world: WorldState): void {
+  /** `landings`: fall height per player that landed this tick (from the scene's `FallTracker`). */
+  onTick(events: readonly SimulationEvent[], world: WorldState, landings: ReadonlyMap<number, number>): void {
+    this.landings = landings;
     for (const e of events) this.handle(e, world);
     for (const p of world.players) {
       const start = this.dashTick.get(p.id);
@@ -131,8 +133,6 @@ export class Effects implements EntityFx {
         if (AFTERIMAGE_TICKS.includes(age)) this.afterimage(p);
         if (age >= AFTERIMAGE_LAST_TICK) this.dashTick.delete(p.id);
       }
-      if (p.grounded || p.mode === 'dead' || p.mode === 'hazardRespawn') this.peakY.delete(p.id);
-      else this.peakY.set(p.id, Math.min(this.peakY.get(p.id) ?? p.y, p.y));
     }
   }
 
@@ -154,8 +154,7 @@ export class Effects implements EntityFx {
       }
       case 'landed': {
         const p = this.player(world, e.playerId);
-        const peak = this.peakY.get(e.playerId);
-        if (p && peak !== undefined && p.y - peak > BIG_LANDING_U) {
+        if (p && (this.landings.get(e.playerId) ?? 0) > BIG_LANDING_U) {
           this.dust(p.x, p.y, 8, 1);
           this.squashStart.set(p.id, this.now);
         }

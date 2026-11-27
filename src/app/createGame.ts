@@ -3,6 +3,7 @@ import { AssetRegistry, type TextureStore } from '../assets/AssetRegistry';
 import type { AssetPolicy } from '../assets/AssetTypes';
 import { ASSET_TIMEOUT_MS } from '../assets/loadScope';
 import { makeProceduralTexture } from '../assets/ProceduralTextures';
+import { SoundEngine } from '../audio/SoundEngine';
 import { BootScene } from '../scenes/BootScene';
 import { LevelScene } from '../scenes/LevelScene';
 import { Palette, cssHex } from '../theme/ThemePalette';
@@ -54,7 +55,10 @@ export function createGame(
     maxTextureSize: capabilities.maxTextureSize,
     policy,
   });
-  const services: GameServices = { assets, capabilities, warn, input, probe: { current: null } };
+  const audio = new SoundEngine(() =>
+    capabilities.webAudio ? new AudioContext({ latencyHint: 'interactive' }) : null,
+  );
+  const services: GameServices = { assets, capabilities, warn, input, audio, probe: { current: null } };
 
   gameRef = new Phaser.Game({
     type: Phaser.WEBGL,

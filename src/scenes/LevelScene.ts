@@ -8,11 +8,13 @@ import { parseLevel } from '../core/level/AsciiParser';
 import type { Level } from '../core/level/LevelTypes';
 import type { WorldState } from '../core/SimulationTypes';
 import { createWorld, setupFor, WorldSimulation } from '../core/WorldSimulation';
+import { GameAudio } from '../audio/GameAudio';
 import { hudState } from '../hud/HudModel';
 import { HudView } from '../hud/HudView';
 import { PauseMenu, type PauseAction } from '../hud/PauseMenu';
 import { CameraRig } from '../render/fx/CameraRig';
 import { Effects } from '../render/fx/Effects';
+import { FallTracker } from '../render/fx/FallTracker';
 import { PARTICLE_CAPS, type QualityTier } from '../render/fx/FxMath';
 import { Particles } from '../render/fx/Particles';
 import { ScreenFx } from '../render/fx/ScreenFx';
@@ -36,6 +38,8 @@ interface Run {
   readonly effects: Effects;
   readonly screen: ScreenFx;
   readonly hud: HudView | null;
+  readonly audio: GameAudio;
+  readonly falls: FallTracker;
   prev: PrevPoses;
   /** Effect clock: advances only while the game runs, so effects freeze with the pause. */
   fxTimeMs: number;
@@ -118,6 +122,8 @@ export class LevelScene extends Phaser.Scene {
       effects,
       screen,
       hud,
+      audio: new GameAudio(this.services.audio, level),
+      falls: new FallTracker(),
       prev: capturePoses(world),
       fxTimeMs: 0,
     };
@@ -155,6 +161,7 @@ export class LevelScene extends Phaser.Scene {
       this.scale.off(Phaser.Scale.Events.RESIZE, onResize);
       renderer.off(Phaser.Renderer.Events.LOSE_WEBGL, onLost);
       renderer.off(Phaser.Renderer.Events.RESTORE_WEBGL, onRestored);
+      this.run?.audio.pause();
       this.menu?.destroy();
       this.menu = null;
       hud?.destroy();
@@ -190,6 +197,8 @@ export class LevelScene extends Phaser.Scene {
     this.run?.loop.reset();
     this.menu?.destroy();
     this.menu = null;
+    if (paused) this.run?.audio.pause();
+    this.services.audio.play(paused ? 'sfx_ui_tap' : 'sfx_ui_back');
     const parent = this.game.canvas.parentElement;
     if (paused && parent) {
       this.menu = new PauseMenu(
@@ -249,7 +258,9 @@ export class LevelScene extends Phaser.Scene {
         run.prev = capturePoses(run.world);
         const { events } = run.sim.step(run.world, [input.router.nextFrame()], run.world.tick);
         // Spec 13.7 step 5: each tick's events are consumed exactly once.
-        run.effects.onTick(events, run.world);
+        const landings = run.falls.onTick(events, run.world);
+        run.effects.onTick(events, run.world, landings);
+        run.audio.onTick(events, run.world, landings);
         for (const e of events) if (e.type === 'levelComplete') this.showBanner(run);
       });
       alpha = result.renderAlpha;
@@ -268,6 +279,7 @@ export class LevelScene extends Phaser.Scene {
     const state = hudState(run.world.players[0], run.world.run);
     run.screen.update(camera, dtMs, state.lowHp);
     run.hud?.update(state);
+    run.audio.frame(run.world, run.rig.centerX, camera.width / camera.zoom, state.lowHp, dtMs);
     this.services.input.touchView?.setRings(state.heatPct, state.venting, state.dashCooldownPct);
   }
 

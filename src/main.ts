@@ -5,7 +5,10 @@ import { browserEnv, detectCapabilities, type Capabilities } from './app/Capabil
 import { createGame, type CreatedGame } from './app/createGame';
 import { GameInput } from './app/GameInput';
 import type { SimProbe } from './app/GameServices';
+import { installAudioLifecycle } from './app/AudioUnlock';
 import { attachPerfBadge } from './app/PerfBadge';
+import type { EngineStats } from './audio/SoundEngine';
+import type { StressResult } from './audio/StressTest';
 import { computeStageSize, type StageSize } from './app/Viewport';
 import { installViewportGuards } from './app/ViewportGuards';
 import { showWebGLRequiredScreen } from './app/WebGLRequiredScreen';
@@ -19,6 +22,12 @@ declare global {
       /** The running level, or null before it starts. */
       readonly sim: () => SimProbe | null;
       readonly gamepads: () => readonly string[];
+      readonly audio: {
+        readonly stats: () => EngineStats;
+        readonly limiter: () => { threshold: number; ratio: number; attack: number; release: number } | null;
+        /** Renders a worst-case burst offline and returns the peak sample. */
+        readonly stress: () => Promise<StressResult>;
+      };
     };
   }
 }
@@ -86,6 +95,7 @@ function start(gameRoot: HTMLElement): void {
     }, 0);
   });
 
+  installAudioLifecycle(window, services.audio);
   if (debug) attachPerfBadge(game, document.body);
   if (testMode) {
     window.__CD_TEST__ = {
@@ -93,6 +103,11 @@ function start(gameRoot: HTMLElement): void {
       assets: () => assets.snapshot(),
       sim: () => services.probe.current?.() ?? null,
       gamepads: () => input.gamepad.connectedIds,
+      audio: {
+        stats: () => services.audio.stats(),
+        limiter: () => services.audio.describeLimiter(),
+        stress: async () => (await import('./audio/StressTest')).runAudioStress(),
+      },
     };
   }
 }
