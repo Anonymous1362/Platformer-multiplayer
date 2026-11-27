@@ -13,6 +13,10 @@ export interface SfxPlayer {
 }
 
 const HEARTBEAT_MS = 900;
+/** Footsteps: one per stride at nominal run speed, faster when running faster (render-side only). */
+const STEP_MS = 290;
+const STEP_SPEED_U = 420;
+const STEP_MIN_SPEED_U = 60;
 /** Landings quieter than this fall height (u) make no sound. */
 const MIN_LANDING_U = 40;
 const BIG_LANDING_U = 128;
@@ -27,6 +31,7 @@ export class GameAudio {
   private readonly level: Level;
   private readonly shards = new PitchChain();
   private readonly jetpackVoice = new Map<number, number>();
+  private readonly stepMs = new Map<number, number>();
   private heartbeatMs = 0;
   private clockMs = 0;
 
@@ -119,6 +124,19 @@ export class GameAudio {
     this.engine.setListener(listenerX, viewWidthU);
     if (dtMs <= 0) return;
     for (const p of world.players) {
+      const speed = Math.abs(p.vx);
+      if (p.mode === 'ground' && p.grounded && speed > STEP_MIN_SPEED_U) {
+        const left = (this.stepMs.get(p.id) ?? 0) - dtMs;
+        if (left <= 0) {
+          this.engine.play('sfx_footstep', { x: p.x, gain: 0.7 });
+          const interval = STEP_MS * Math.min(1.5, Math.max(0.7, STEP_SPEED_U / speed));
+          this.stepMs.set(p.id, interval);
+        } else {
+          this.stepMs.set(p.id, left);
+        }
+      } else {
+        this.stepMs.set(p.id, 0);
+      }
       const voice = this.jetpackVoice.get(p.id);
       const on = p.jetpacking && p.mode !== 'dead';
       if (on && voice === undefined) {

@@ -1,6 +1,6 @@
 {
   "name": "cosmic-drift",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "private": true,
   "type": "module",
   "description": "Cosmic Drift: 2.5D sci-fi platformer with cross-play co-op",
@@ -61,6 +61,8 @@
     "verify": "npm run format:check && npm run lint && npm run typecheck && npm run deps:check && npm run stub:scan && npm run test && npm run test:golden && npm run levels:lint && npm run build",
     "replay:run": "tsx tools/replay-run/main.ts",
     "golden:record": "tsx tools/replay-run/record-golden.ts",
-    "perf:bench": "tsx tools/perf-bench/main.ts"
+    "perf:bench": "tsx tools/perf-bench/main.ts",
+    "art:bake": "python3 -I tools/blender/bake.py",
+    "audio:build": "python3 -I tools/audio-build/build.py"
   }
 }

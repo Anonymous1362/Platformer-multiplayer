@@ -1,6 +1,8 @@
 # Handoff
 
-State: Pass 1 (1A–1F) is done; only the owner's phone checks remain (docs/DEVICES.md). Next is Pass 2A (UI foundation), after the owner approves. Manual mode. The owner is collecting free assets with the Art Hunting Brief; integrating them is its own step when they arrive.
+State: Pass 1 (1A–1F) and the owner-requested Art & sound A step are done; only the owner's phone checks remain (docs/DEVICES.md). Next is Pass 2A (UI foundation), after the owner approves. Manual mode. Version 0.0.4 is ready for the owner's Release run.
+
+Art & sound A: `npm run art:bake` (Blender `bpy` + Pillow, dev machine only) renders tools/blender/{hero,crawler,shard,terrain,backdrop}.py into public/assets/global/ and refreshes the manifest hashes. Frame sheets are described in `src/render/world/SpriteSheets.ts` (`SHEETS`, `HERO_ANIMS`, `heroFrame`, `sheetScale`); frames are added when a baked file is swapped in (`createGame` texture store) and by the painters' grid fallbacks. `PlayerSprite` draws rim + body + slot-tinted accent. `TerrainView` front faces are tileSprites of `terrain_front`. `npm run audio:build` (ffmpeg) turns pinned Kenney CC0 packs (`npm run assets:fetch` first) into public/assets/audio/*.webm|*.m4a and the manifest's `audio` entries; `SoundEngine.setSamples` decodes them (Opus first where supported, then AAC) and falls back to synth recipes per key.
 
 What 1C added (all in `src/core`, Node-only):
 

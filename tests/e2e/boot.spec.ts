@@ -1,13 +1,12 @@
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 
-const MANIFEST_KEYS = (
+const TEXTURE_ENTRIES = (
   JSON.parse(readFileSync(new URL('../../public/assets/ASSET_MANIFEST.json', import.meta.url), 'utf8')) as {
-    entries: { key: string }[];
+    entries: { key: string; kind: string; source: string }[];
   }
-).entries
-  .map((e) => e.key)
-  .sort();
+).entries.filter((e) => e.kind === 'image');
+const MANIFEST_KEYS = TEXTURE_ENTRIES.map((e) => e.key).sort();
 
 type AssetSnapshot = Record<string, { status: string; source: string; reason: string | null }>;
 
@@ -44,10 +43,11 @@ for (const vp of [
 
     const snap = await snapshot(page);
     expect(snap['bg_starfield']).toEqual({ status: 'loaded', source: 'custom', reason: null });
-    // Every other shipped texture is drawn procedurally (Neo-Celestial art, Pass 1E-2).
+    // Baked files load; every other texture is drawn procedurally. Sounds are not textures.
     expect(Object.keys(snap).sort()).toEqual(MANIFEST_KEYS);
-    for (const [key, item] of Object.entries(snap).filter(([k]) => k !== 'bg_starfield')) {
-      expect(item, key).toEqual({ status: 'procedural', source: 'procedural', reason: null });
+    for (const e of TEXTURE_ENTRIES) {
+      const status = e.source === 'custom' ? 'loaded' : 'procedural';
+      expect(snap[e.key], e.key).toEqual({ status, source: e.source, reason: null });
     }
     expect(seen.failures).toEqual([]);
     expect(seen.errors).toEqual([]);

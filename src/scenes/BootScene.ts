@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { assetXhrSettings, ASSETS_BASE, loadScope } from '../assets/loadScope';
 import { validateManifest } from '../assets/ManifestValidation';
+import { sampleSources } from '../audio/SampleManifest';
 import type { GameServices } from '../app/GameServices';
 
 const MANIFEST_CACHE_KEY = 'cd_asset_manifest';
@@ -33,6 +34,12 @@ export class BootScene extends Phaser.Scene {
       );
     }
     this.services.assets.register(entries);
+    const opus = document.createElement('audio').canPlayType('audio/webm; codecs="opus"') !== '';
+    this.services.audio.setSamples(sampleSources(entries, ASSETS_BASE), opus, (url) =>
+      fetch(url).then((r) =>
+        r.ok ? r.arrayBuffer() : Promise.reject(new Error(`${url}: ${String(r.status)}`)),
+      ),
+    );
 
     void loadScope(this, this.services.assets, 'global').then(() => {
       this.scene.start('LevelScene');

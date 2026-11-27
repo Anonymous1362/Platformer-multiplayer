@@ -13,8 +13,9 @@ export const PARALLAX_TEXTURES = [
 export const LEVEL_TEXTURES = [
   'terrain_side',
   'terrain_top',
-  'char_player_suit',
-  'char_player_detail',
+  'terrain_front',
+  'char_hero',
+  'char_hero_accent',
   'enemy_crawler',
   'pickup_shard',
   'fx_bolt',

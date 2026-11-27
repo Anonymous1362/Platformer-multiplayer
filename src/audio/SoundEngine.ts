@@ -23,6 +23,20 @@ export interface EngineStats {
   readonly skippedRepeats: number;
 }
 
+/** One recorded variation of a sound: the same audio in up to two codecs (spec 10.5). */
+export interface SampleVariant {
+  readonly opus?: string;
+  readonly aac?: string;
+}
+
+export interface SampleSource {
+  readonly key: SfxKey;
+  readonly variants: readonly SampleVariant[];
+}
+
+/** Loads a file's bytes (fetch in the browser; injectable for tests). */
+export type FetchBytes = (url: string) => Promise<ArrayBuffer>;
+
 interface LiveVoice {
   readonly id: number;
   readonly bus: Exclude<Bus, 'music'>;
@@ -55,6 +69,12 @@ export class SoundEngine {
   private readonly pools = new Map<Exclude<Bus, 'music'>, VoicePool>();
   private readonly live = new Map<number, LiveVoice>();
   private noise: AudioBuffer | null = null;
+  /** Decoded recordings per key; keys without any keep their synth recipe (spec 10.5 fallback). */
+  private readonly samples = new Map<SfxKey, AudioBuffer[]>();
+  private sampleSources: readonly SampleSource[] = [];
+  private preferOpus = true;
+  private fetchBytes: FetchBytes | null = null;
+  private samplesRequested = false;
   private readonly rng = new Random(0x50d);
   private nextId = 1;
   private available: boolean;
@@ -124,6 +144,55 @@ export class SoundEngine {
     const rng = new Random(0x0a15e);
     for (let i = 0; i < length; i += 1) data[i] = rng.nextFloat() * 2 - 1;
     this.noise = buffer;
+    this.loadSamples();
+  }
+
+  /**
+   * Registers recorded sounds. They are fetched and decoded once a context exists; until a key's
+   * buffers are ready (or if every codec fails to decode) that key keeps playing its synth recipe.
+   */
+  setSamples(sources: readonly SampleSource[], preferOpus: boolean, fetchBytes: FetchBytes): void {
+    this.sampleSources = sources;
+    this.preferOpus = preferOpus;
+    this.fetchBytes = fetchBytes;
+    this.loadSamples();
+  }
+
+  /** Keys with decoded recordings (for tests and diagnostics). */
+  sampledKeys(): SfxKey[] {
+    return [...this.samples.keys()];
+  }
+
+  private loadSamples(): void {
+    const ctx = this.ctx;
+    const fetchBytes = this.fetchBytes;
+    if (!ctx || !fetchBytes || this.samplesRequested || this.sampleSources.length === 0) return;
+    this.samplesRequested = true;
+    for (const source of this.sampleSources) {
+      void Promise.all(source.variants.map((v) => this.decodeVariant(ctx, fetchBytes, v))).then((buffers) => {
+        const ok = buffers.filter((b): b is AudioBuffer => b !== null);
+        if (ok.length > 0) this.samples.set(source.key, ok);
+      });
+    }
+  }
+
+  private async decodeVariant(
+    ctx: BaseAudioContext,
+    fetchBytes: FetchBytes,
+    v: SampleVariant,
+  ): Promise<AudioBuffer | null> {
+    const urls = (this.preferOpus ? [v.opus, v.aac] : [v.aac, v.opus]).filter(
+      (u): u is string => u !== undefined,
+    );
+    for (const url of urls) {
+      try {
+        const bytes = await fetchBytes(url);
+        return await ctx.decodeAudioData(bytes);
+      } catch {
+        // This codec is not supported here or the file failed: try the other one.
+      }
+    }
+    return null;
   }
 
   suspend(): void {
@@ -193,11 +262,24 @@ export class SoundEngine {
     tail.connect(bus);
 
     const sources: AudioScheduledSourceNode[] = [];
-    for (const layer of recipe.layers)
-      sources.push(this.layer(ctx, noise, layer, out, now, pitch, recipe.loop === true));
+    const recorded = recipe.loop ? undefined : this.samples.get(key);
+    let endS: number;
+    if (recorded && recorded.length > 0) {
+      const buffer = recorded[recorded.length > 1 ? this.rng.nextInt(recorded.length) : 0] ?? recorded[0];
+      const src = ctx.createBufferSource();
+      src.buffer = buffer ?? null;
+      src.playbackRate.value = pitch;
+      src.connect(out);
+      src.start(now);
+      sources.push(src);
+      endS = now + (buffer ? buffer.duration / pitch : 0) + 0.05;
+    } else {
+      for (const layer of recipe.layers)
+        sources.push(this.layer(ctx, noise, layer, out, now, pitch, recipe.loop === true));
+      endS = recipe.loop ? Number.POSITIVE_INFINITY : now + recipeDuration(recipe) + 0.05;
+    }
     const id = this.nextId;
     this.nextId += 1;
-    const endS = recipe.loop ? Number.POSITIVE_INFINITY : now + recipeDuration(recipe) + 0.05;
     pool.add({ id, key, startS: now, endS, level });
     this.live.set(id, { id, bus: recipe.bus, out, sources, recipe });
     let running = sources.length;

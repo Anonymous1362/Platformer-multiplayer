@@ -200,6 +200,11 @@ export const RECIPES = {
     bus: 'sfx',
     layers: [tone('sine', 62, 45, 0.3, 0.005, 0.12), tone('sine', 58, 42, 0.22, 0.005, 0.12, 0.18)],
   },
+  sfx_footstep: {
+    bus: 'sfx',
+    vary: 0.05,
+    layers: [noise('lowpass', 900, 300, 0.08, 0.002, 0.07)],
+  },
   sfx_ui_tap: { bus: 'ui', layers: [tone('triangle', 1000, undefined, 0.08, 0.002, 0.05)] },
   sfx_ui_back: { bus: 'ui', layers: [tone('triangle', 700, 500, 0.08, 0.002, 0.07)] },
 } as const satisfies Readonly<Record<string, Recipe>>;

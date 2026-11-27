@@ -5,16 +5,18 @@ import { Palette, slotColor } from '../../theme/ThemePalette';
 import type { EntityFx } from '../fx/EntityFx';
 import { Depth } from './Depth';
 import type { RenderPose } from './Poses';
+import { heroFrame, sheetScale } from './SpriteSheets';
 
 /**
- * One astronaut: a rim-light layer tinted by the planet (spec 9.3), the slot-tinted suit, untinted
- * details, and a jetpack flame. Hit flash, hit-stop freeze, landing squash, and recoil come from the
+ * One astronaut from the hero frame sheet: a rim-light layer tinted by the planet (spec 9.3), the body,
+ * the slot-colored accent layer (shoulder pads, chest band, knees), and a jetpack flame. Hit flash, hit-stop freeze, landing squash, and recoil come from the
  * effects; invulnerability blinks, or shows a steady outline under reduced motion.
  */
 export class PlayerSprite {
   private readonly rim: Phaser.GameObjects.Image;
   private readonly suit: Phaser.GameObjects.Image;
   private readonly detail: Phaser.GameObjects.Image;
+  private readonly scale: number;
   private readonly flame: Phaser.GameObjects.Image;
   private readonly color: number;
   private readonly rimColor: number;
@@ -32,12 +34,13 @@ export class PlayerSprite {
       .setBlendMode(Phaser.BlendModes.ADD)
       .setVisible(false);
     this.rim = scene.add
-      .image(0, 0, 'char_player_suit')
+      .image(0, 0, 'char_hero', '0')
       .setOrigin(0.5, 1)
       .setDepth(Depth.Players - 0.1);
-    this.suit = scene.add.image(0, 0, 'char_player_suit').setOrigin(0.5, 1).setDepth(Depth.Players);
+    this.suit = scene.add.image(0, 0, 'char_hero', '0').setOrigin(0.5, 1).setDepth(Depth.Players);
+    this.scale = sheetScale(scene.textures, 'char_hero');
     this.detail = scene.add
-      .image(0, 0, 'char_player_detail')
+      .image(0, 0, 'char_hero_accent', '0')
       .setOrigin(0.5, 1)
       .setDepth(Depth.Players + 0.1);
   }
@@ -48,7 +51,7 @@ export class PlayerSprite {
 
   update(pose: RenderPose, p: PlayerState, fx: EntityFx, timeMs: number): void {
     if (!fx.frozen(p.id)) this.pose = pose; // hit-stop holds the last drawn pose
-    const flip = p.facing < 0;
+    const facingLeft = p.facing < 0;
     const x = this.pose.x - p.facing * fx.recoil(p.id);
     const { sx, sy } = fx.squash(p.id);
     const flash = fx.flashing(p.id);
@@ -61,15 +64,24 @@ export class PlayerSprite {
       alpha = Math.min(1, Math.abs(p.modeTicks - half) / half);
     } else if (invuln && !this.reducedMotion) alpha = Math.floor(p.invulnTicks / 4) % 2 === 0 ? 0.45 : 1;
 
+    // Wall slides face the wall; everything else faces the way the player is going.
+    const flip = p.mode === 'wallSlide' && p.wallSide !== 0 ? p.wallSide < 0 : facingLeft;
+    const frame = heroFrame(p, timeMs);
+    const k = this.scale;
+    for (const img of [this.suit, this.detail, this.rim]) img.setFrame(frame);
     for (const img of [this.suit, this.detail]) {
-      img.setPosition(x, this.pose.y).setScale(sx, sy).setFlipX(flip).setAlpha(alpha);
+      img
+        .setPosition(x, this.pose.y)
+        .setScale(sx * k, sy * k)
+        .setFlipX(flip)
+        .setAlpha(alpha);
     }
     if (flash) {
       this.suit.setTint(0xffffff).setTintMode(Phaser.TintModes.FILL);
       this.detail.setTint(0xffffff).setTintMode(Phaser.TintModes.FILL);
     } else {
-      this.suit.setTint(this.color).setTintMode(Phaser.TintModes.MULTIPLY);
-      this.detail.clearTint();
+      this.suit.clearTint();
+      this.detail.setTint(this.color).setTintMode(Phaser.TintModes.MULTIPLY);
     }
 
     // Rim light: a slightly larger silhouette behind the suit, nudged toward the back. Under reduced
@@ -77,7 +89,7 @@ export class PlayerSprite {
     const outline = invuln && this.reducedMotion;
     this.rim
       .setPosition(x + (flip ? 1.5 : -1.5), this.pose.y + 1)
-      .setScale(sx * (outline ? 1.1 : 1.05), sy * (outline ? 1.06 : 1.03))
+      .setScale(sx * k * (outline ? 1.1 : 1.05), sy * k * (outline ? 1.06 : 1.03))
       .setFlipX(flip)
       .setTint(outline ? 0xffffff : this.rimColor)
       .setTintMode(Phaser.TintModes.FILL)
@@ -87,7 +99,7 @@ export class PlayerSprite {
     this.flame.setVisible(flameOn);
     if (flameOn) {
       const flicker = this.reducedMotion ? 0.42 : 0.36 + 0.08 * Math.sin(timeMs * 0.06);
-      this.flame.setPosition(x - p.facing * 22, this.pose.y - 30).setScale(flicker, flicker * 1.5);
+      this.flame.setPosition(x - (flip ? -1 : 1) * 16, this.pose.y - 34).setScale(flicker, flicker * 1.5);
     }
   }
 }
