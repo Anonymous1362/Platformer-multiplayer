@@ -1,6 +1,6 @@
 # Handoff
 
-State: Pass 2A (UI foundation) is done locally and waits for CI on its pull request, then the owner's OK. Next is 2B (Settings & accessibility). Manual mode. Owner phone checks still open: docs/DEVICES.md, plus the 2A "no long tasks on a Mid device" check.
+State: Pass 2A (UI foundation) is done, green in CI (run 46045057262), and merged as #4. Waiting for the owner's OK to start 2B. Next is 2B (Settings & accessibility). Manual mode. Owner phone checks still open: docs/DEVICES.md, plus the 2A "no long tasks on a Mid device" check.
 
 What 2A added (`src/ui`, Preact, DOM over the canvas inside `#game-root`):
 
