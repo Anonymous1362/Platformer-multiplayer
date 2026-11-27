@@ -9,6 +9,7 @@ import { Depth } from './Depth';
 import { PlayerSprite } from './PlayerSprite';
 import { lerpPose, type PrevPoses, type RenderPose } from './Poses';
 import { SpritePool } from './SpritePool';
+import { sheetScale } from './SpriteSheets';
 import { TerrainView } from './TerrainView';
 
 const PK = GameConfig.pickups;
@@ -17,6 +18,9 @@ const CRAWLER = GameConfig.enemies.crawler.colliderU;
 /** Contact shadows fade out by this height above the ground (spec 9.3). */
 const SHADOW_RANGE_U = 320;
 const SHARD_FRAMES = 24;
+const CRAWLER_FRAMES = 8;
+/** Crawler walk cycle rate (frames per second) while it moves. */
+const CRAWLER_FPS = 12;
 
 /**
  * Draws a level and its bodies in the Neo-Celestial style (spec 9). Static geometry is built once;
@@ -35,6 +39,8 @@ export class LevelView {
   private readonly alerts: Phaser.GameObjects.Graphics;
   private readonly players: PlayerSprite[] = [];
   private readonly reducedMotion: boolean;
+  private readonly crawlerScale: number;
+  private readonly shardScale: number;
   private markerKey = '';
   private shadowId = 0;
 
@@ -56,6 +62,8 @@ export class LevelView {
       this.platforms.push(g);
     });
 
+    this.crawlerScale = sheetScale(scene.textures, 'enemy_crawler');
+    this.shardScale = sheetScale(scene.textures, 'pickup_shard');
     this.shadows = new SpritePool(scene, 'fx_shadow', 40, (img) => img.setDepth(Depth.Shadows));
     this.shards = new SpritePool(scene, 'pickup_shard', 24, (img) => img.setDepth(Depth.Pickups));
     this.enemies = new SpritePool(scene, 'enemy_crawler', 4, (img) =>
@@ -77,7 +85,14 @@ export class LevelView {
   snapshot(id: number): SpriteSnapshot | null {
     const img = this.enemies.peek(id);
     if (!img?.visible) return null;
-    return { texture: 'enemy_crawler', x: img.x, y: img.y, flipX: img.flipX };
+    return {
+      texture: 'enemy_crawler',
+      frame: img.frame.name,
+      scale: this.crawlerScale,
+      x: img.x,
+      y: img.y,
+      flipX: img.flipX,
+    };
   }
 
   get liveSprites(): number {
@@ -147,7 +162,7 @@ export class LevelView {
       const frame = String(Math.floor((timeMs / 1000) * spin + s.id * 7) % SHARD_FRAMES);
       if (image.texture.has(frame)) image.setFrame(frame);
       const bob = s.floating && !this.reducedMotion ? Math.sin(timeMs / 320 + s.id) * 3 : 0;
-      image.setPosition(pose.x, pose.y + bob);
+      image.setPosition(pose.x, pose.y + bob).setScale(this.shardScale);
       this.shadow(pose.x, pose.y + PK.shardSizeU / 2, 6, 0.35, world);
     }
     this.shards.end();
@@ -161,7 +176,12 @@ export class LevelView {
         image.setPosition(pose.x, pose.y);
       }
       const windup = e.mode === 'windup';
-      image.setFlipX(e.facing < 0).setScale(windup ? 1.06 : 1, windup ? 0.85 : 1);
+      const k = this.crawlerScale;
+      const walking = Math.abs(e.vx) > 1 && !e.asleep;
+      const step = walking && !this.reducedMotion ? Math.floor((timeMs / 1000) * CRAWLER_FPS + e.id * 3) : 0;
+      const frame = String(step % CRAWLER_FRAMES);
+      if (image.texture.has(frame)) image.setFrame(frame);
+      image.setFlipX(e.facing < 0).setScale(k * (windup ? 1.06 : 1), k * (windup ? 0.85 : 1));
       if (fx.flashing(e.id)) {
         image.setTint(0xffffff).setTintMode(Phaser.TintModes.FILL);
       } else if (windup || e.mode === 'attack') {

@@ -14,8 +14,13 @@ export interface PainterSpec {
   readonly width: number;
   readonly height: number;
   readonly paint: Painter;
-  /** A horizontal strip of equal frames, named "0", "1", ... (spinners and flipbooks). */
-  readonly frames?: { readonly width: number; readonly height: number; readonly count: number };
+  /** Equal frames named "0", "1", ..., row-major in `columns` columns (default: one row). */
+  readonly frames?: {
+    readonly width: number;
+    readonly height: number;
+    readonly count: number;
+    readonly columns?: number;
+  };
 }
 
 function rgba(hex: number, alpha: number): string {
@@ -303,6 +308,43 @@ const terrainTop: Painter = (ctx, w, h) => {
   ctx.fillRect(0, 0, w, h);
 };
 
+/** Slab front face, one tile: a plate with a seam and two rivets (fallback for the baked panel). */
+const terrainFront: Painter = (ctx, w, h) => {
+  ctx.fillStyle = cssHex(Palette.slateHull);
+  ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = cssHex(Palette.titaniumGunmetal);
+  ctx.fillRect(3, 3, w - 6, h / 2 - 5);
+  ctx.fillRect(3, h / 2 + 2, w / 2 - 5, h / 2 - 5);
+  ctx.fillRect(w / 2 + 2, h / 2 + 2, w / 2 - 5, h / 2 - 5);
+  ctx.fillStyle = cssHex(Palette.coolSteel);
+  ctx.fillRect(6, 6, 3, 3);
+  ctx.fillRect(w - 9, 6, 3, 3);
+};
+
+/** Repeats one painter in every cell of a grid (procedural fallback for frame sheets). */
+function grid(paint: Painter, cw: number, ch: number, count: number, columns: number): Painter {
+  return (ctx, _w, _h, rng) => {
+    for (let i = 0; i < count; i += 1) {
+      ctx.save();
+      ctx.translate((i % columns) * cw, Math.floor(i / columns) * ch);
+      ctx.beginPath();
+      ctx.rect(0, 0, cw, ch);
+      ctx.clip();
+      paint(ctx, cw, ch, rng);
+      ctx.restore();
+    }
+  };
+}
+
+const HERO_FRAMES = 28;
+const HERO_COLUMNS = 8;
+const CRAWLER_FRAMES = 8;
+
+const heroBody: Painter = (ctx, w, h, rng) => {
+  playerSuit(ctx, w, h, rng);
+  playerDetail(ctx, w, h, rng);
+};
+
 /** A thin ring for shockwaves, checkpoints, and the exit portal. */
 const ring: Painter = (ctx, w, h) => {
   ctx.clearRect(0, 0, w, h);
@@ -346,9 +388,24 @@ export const NEO_CELESTIAL_PAINTERS: Readonly<Record<string, PainterSpec>> = {
   bg_nebula: { width: 1024, height: 1024, paint: nebula },
   bg_dust: { width: 1024, height: 1024, paint: dust },
   bg_megastructure: { width: 1024, height: 512, paint: megastructure },
-  char_player_suit: { width: 64, height: 104, paint: playerSuit },
-  char_player_detail: { width: 64, height: 104, paint: playerDetail },
-  enemy_crawler: { width: 72, height: 52, paint: crawler },
+  char_hero: {
+    width: 64 * HERO_COLUMNS,
+    height: 104 * Math.ceil(HERO_FRAMES / HERO_COLUMNS),
+    paint: grid(heroBody, 64, 104, HERO_FRAMES, HERO_COLUMNS),
+    frames: { width: 64, height: 104, count: HERO_FRAMES, columns: HERO_COLUMNS },
+  },
+  char_hero_accent: {
+    width: 64 * HERO_COLUMNS,
+    height: 104 * Math.ceil(HERO_FRAMES / HERO_COLUMNS),
+    paint: grid(playerSuit, 64, 104, HERO_FRAMES, HERO_COLUMNS),
+    frames: { width: 64, height: 104, count: HERO_FRAMES, columns: HERO_COLUMNS },
+  },
+  enemy_crawler: {
+    width: 72 * CRAWLER_FRAMES,
+    height: 52,
+    paint: grid(crawler, 72, 52, CRAWLER_FRAMES, CRAWLER_FRAMES),
+    frames: { width: 72, height: 52, count: CRAWLER_FRAMES },
+  },
   pickup_shard: {
     width: 32 * SHARD_FRAMES,
     height: 32,
@@ -363,4 +420,5 @@ export const NEO_CELESTIAL_PAINTERS: Readonly<Record<string, PainterSpec>> = {
   fx_vignette: { width: 256, height: 256, paint: vignette },
   terrain_side: { width: 24, height: 64, paint: terrainSide },
   terrain_top: { width: 64, height: 16, paint: terrainTop },
+  terrain_front: { width: 64, height: 64, paint: terrainFront },
 };

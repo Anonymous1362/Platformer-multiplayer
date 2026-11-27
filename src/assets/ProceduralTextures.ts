@@ -91,8 +91,11 @@ export function makeProceduralTexture(
   const texture = textures.addCanvas(entry.key, canvas);
   const frames = spec?.frames;
   if (texture && frames) {
+    const columns = frames.columns ?? frames.count;
     for (let i = 0; i < frames.count; i += 1) {
-      texture.add(String(i), 0, i * frames.width, 0, frames.width, frames.height);
+      const x = (i % columns) * frames.width;
+      const y = Math.floor(i / columns) * frames.height;
+      texture.add(String(i), 0, x, y, frames.width, frames.height);
     }
   }
 }

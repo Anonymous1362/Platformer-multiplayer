@@ -4,6 +4,7 @@ import type { AssetPolicy } from '../assets/AssetTypes';
 import { ASSET_TIMEOUT_MS } from '../assets/loadScope';
 import { makeProceduralTexture } from '../assets/ProceduralTextures';
 import { SoundEngine } from '../audio/SoundEngine';
+import { addSheetFrames } from '../render/world/SpriteSheets';
 import { BootScene } from '../scenes/BootScene';
 import { LevelScene } from '../scenes/LevelScene';
 import { Palette, cssHex } from '../theme/ThemePalette';
@@ -36,7 +37,11 @@ function phaserTextureStore(textures: () => Phaser.Textures.TextureManager): Tex
     remove: (key) => {
       if (textures().exists(key)) textures().remove(key);
     },
-    rename: (fromKey, toKey) => textures().renameTexture(fromKey, toKey),
+    rename: (fromKey, toKey) => {
+      const ok = textures().renameTexture(fromKey, toKey);
+      addSheetFrames(textures(), toKey);
+      return ok;
+    },
     size: (key) => {
       if (!textures().exists(key)) return null;
       const source = textures().get(key).source[0];

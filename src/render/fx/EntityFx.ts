@@ -12,4 +12,7 @@ export interface SpriteSnapshot {
   readonly x: number;
   readonly y: number;
   readonly flipX: boolean;
+  readonly frame?: string;
+  /** Display scale of the source sprite (frame sheets are drawn scaled to world size). */
+  readonly scale?: number;
 }

@@ -5,6 +5,7 @@ import { Random } from '../../core/Random';
 import type { PlayerState, SimulationEvent, WorldState } from '../../core/SimulationTypes';
 import { Palette, slotColor } from '../../theme/ThemePalette';
 import { Depth } from '../world/Depth';
+import { HERO_ANIMS, sheetScale } from '../world/SpriteSheets';
 import type { CameraRig } from './CameraRig';
 import type { EntityFx, SpriteSnapshot } from './EntityFx';
 import { BIG_LANDING_U, HIT_FLASH_MS, HIT_STOP_MS, progress } from './FxMath';
@@ -42,6 +43,7 @@ export class Effects implements EntityFx {
   private readonly level: Level;
   private readonly reducedMotion: boolean;
   private readonly snapshot: (id: number) => SpriteSnapshot | null;
+  private readonly heroScale: number;
   private readonly rng = new Random(0x0c0ffee);
   private now = 0;
   private readonly freezeUntil = new Map<number, number>();
@@ -69,6 +71,7 @@ export class Effects implements EntityFx {
     this.level = options.level;
     this.reducedMotion = options.reducedMotion;
     this.snapshot = options.snapshot;
+    this.heroScale = sheetScale(scene.textures, 'char_hero');
     for (let i = 0; i < NUMBER_POOL; i += 1) {
       const text = scene.add
         .text(0, 0, '', {
@@ -378,7 +381,10 @@ export class Effects implements EntityFx {
 
   private afterimage(p: PlayerState): void {
     this.spawn({
-      texture: 'char_player_suit',
+      texture: 'char_hero',
+      frame: String(HERO_ANIMS.dash.start),
+      scale0: this.heroScale,
+      scale1: this.heroScale,
       x: p.x,
       y: p.y,
       originY: 1,
@@ -399,6 +405,7 @@ export class Effects implements EntityFx {
     if (shot) {
       this.spawn({
         texture: shot.texture,
+        ...(shot.frame !== undefined ? { frame: shot.frame } : {}),
         x: shot.x,
         y: shot.y,
         originY: 1,
@@ -406,8 +413,8 @@ export class Effects implements EntityFx {
         vy: -30,
         lifeMs: 380,
         delayMs: HIT_STOP_MS,
-        scale0: 1,
-        scale1: 0.6,
+        scale0: shot.scale ?? 1,
+        scale1: (shot.scale ?? 1) * 0.6,
         alpha0: 0.9,
         tint: Palette.starlightGold,
         additive: true,

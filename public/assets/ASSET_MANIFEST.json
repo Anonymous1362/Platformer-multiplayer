@@ -44,41 +44,56 @@
       "key": "bg_megastructure",
       "scope": "global",
       "kind": "image",
-      "source": "procedural",
+      "source": "custom",
       "required": true,
-      "files": []
-    },
-    {
-      "key": "char_player_suit",
-      "scope": "global",
-      "kind": "image",
-      "source": "procedural",
-      "required": true,
-      "files": []
-    },
-    {
-      "key": "char_player_detail",
-      "scope": "global",
-      "kind": "image",
-      "source": "procedural",
-      "required": true,
-      "files": []
+      "files": [
+        {
+          "path": "global/bg_megastructure.png",
+          "sha256": "aed909c31515767b818bed1488755d24c365cd39f52d70cce99ae8badd71bd63",
+          "width": 1024,
+          "height": 512
+        }
+      ]
     },
     {
       "key": "enemy_crawler",
       "scope": "global",
       "kind": "image",
-      "source": "procedural",
+      "source": "custom",
       "required": true,
-      "files": []
+      "files": [
+        {
+          "path": "global/enemy_crawler.png",
+          "sha256": "c0f8b515a555bd268949ba2cb027c57379d35a08249c6a1f915f22b42f3764e0",
+          "width": 1152,
+          "height": 104
+        }
+      ],
+      "frames": {
+        "count": 8,
+        "fps": 12,
+        "loop": true
+      }
     },
     {
       "key": "pickup_shard",
       "scope": "global",
       "kind": "image",
-      "source": "procedural",
+      "source": "custom",
       "required": true,
-      "files": []
+      "files": [
+        {
+          "path": "global/pickup_shard.png",
+          "sha256": "b5ee116fae28c2939b11546ffbb917e519db16960268233d6b97765746cedf2a",
+          "width": 1536,
+          "height": 64
+        }
+      ],
+      "frames": {
+        "count": 24,
+        "fps": 24,
+        "loop": true
+      }
     },
     {
       "key": "fx_bolt",
@@ -143,6 +158,581 @@
       "source": "procedural",
       "required": true,
       "files": []
+    },
+    {
+      "key": "char_hero",
+      "scope": "global",
+      "kind": "image",
+      "source": "custom",
+      "required": true,
+      "files": [
+        {
+          "path": "global/char_hero.png",
+          "sha256": "ea6384d740023ffa768c8023b262ab785812c6baa1a815c4ab2968d814cc4adc",
+          "width": 1024,
+          "height": 832
+        }
+      ],
+      "frames": {
+        "count": 28,
+        "fps": 10,
+        "loop": true
+      }
+    },
+    {
+      "key": "char_hero_accent",
+      "scope": "global",
+      "kind": "image",
+      "source": "custom",
+      "required": true,
+      "files": [
+        {
+          "path": "global/char_hero_accent.png",
+          "sha256": "74777211f6f228ec20634ff2a3f279914f8de0ca4c59466abecafa77e071c8e2",
+          "width": 1024,
+          "height": 832
+        }
+      ],
+      "frames": {
+        "count": 28,
+        "fps": 10,
+        "loop": true
+      }
+    },
+    {
+      "key": "terrain_front",
+      "scope": "global",
+      "kind": "image",
+      "source": "custom",
+      "required": true,
+      "files": [
+        {
+          "path": "global/terrain_front.png",
+          "sha256": "a48118f8bb1b1c4efe12456cb0ce22af0db2f04d6a6897312455fa31efe07b3d",
+          "width": 128,
+          "height": 128
+        }
+      ]
+    },
+    {
+      "key": "sfx_jump",
+      "scope": "global",
+      "kind": "audio",
+      "source": "custom",
+      "required": false,
+      "files": [
+        {
+          "path": "audio/sfx_jump_0.webm",
+          "sha256": "5049fe7eb8a5fb718d7cde46b5c7cf3635ecd6c8ddc93f65728379143791383e",
+          "codec": "opus"
+        },
+        {
+          "path": "audio/sfx_jump_0.m4a",
+          "sha256": "8de89b24c9b20fbaee4b2c2727c6af4b8d15087afd05e758c83fd0e1b9621235",
+          "codec": "aac"
+        },
+        {
+          "path": "audio/sfx_jump_1.webm",
+          "sha256": "05ea403ab77f6973271d1e00ff6b76a2451256e1a61d18f638c7a6a8bb387445",
+          "codec": "opus"
+        },
+        {
+          "path": "audio/sfx_jump_1.m4a",
+          "sha256": "99232d323bc4d5e390f245d4ad0efcfce3c56065da9032ad7b5aa3807463675a",
+          "codec": "aac"
+        },
+        {
+          "path": "audio/sfx_jump_2.webm",
+          "sha256": "d34db33ee430bac667ecaeeedd2846ffb5190bc5fc8e247112a0a703216d9329",
+          "codec": "opus"
+        },
+        {
+          "path": "audio/sfx_jump_2.m4a",
+          "sha256": "5646192fff2a65b7ee2732b4f85d8a3e1fd38a895c1936e9035ecd06a9584324",
+          "codec": "aac"
+        }
+      ],
+      "bus": "sfx"
+    },
+    {
+      "key": "sfx_land",
+      "scope": "global",
+      "kind": "audio",
+      "source": "custom",
+      "required": false,
+      "files": [
+        {
+          "path": "audio/sfx_land_0.webm",
+          "sha256": "fffef514ddf77258d46cb399021063058bb12c8f70c0baf4f853932a1bf21d7e",
+          "codec": "opus"
+        },
+        {
+          "path": "audio/sfx_land_0.m4a",
+          "sha256": "1766e0b3ea7236ff2298acf96c09de22588c1e4de22eedd27a1206fbaa937aa1",
+          "codec": "aac"
+        },
+        {
+          "path": "audio/sfx_land_1.webm",
+          "sha256": "212d8710d65b6c7162ab863cde65de3b6ef9fb9a91b6ac8fe046589bb9e55b05",
+          "codec": "opus"
+        },
+        {
+          "path": "audio/sfx_land_1.m4a",
+          "sha256": "15a3e22ce0d9bf09de5ce855860ebd1d1aee5d689d6ae800d198b29fdbf04ee4",
+          "codec": "aac"
+        },
+        {
+          "path": "audio/sfx_land_2.webm",
+          "sha256": "91942c66c42832f8b88bde7d3ea886baee3d2c4c0fac74c46a3337c396e09fc8",
+          "codec": "opus"
+        },
+        {
+          "path": "audio/sfx_land_2.m4a",
+          "sha256": "7a495e905db43f4ed9a89a524898a55c671d42fe5ebbf653e6b4cee8076d986c",
+          "codec": "aac"
+        }
+      ],
+      "bus": "sfx"
+    },
+    {
+      "key": "sfx_footstep",
+      "scope": "global",
+      "kind": "audio",
+      "source": "custom",
+      "required": false,
+      "files": [
+        {
+          "path": "audio/sfx_footstep_0.webm",
+          "sha256": "9a14b6a6e6c7de027236a8cc04315378d3221639299f5038c48ea83a6d1be4a6",
+          "codec": "opus"
+        },
+        {
+          "path": "audio/sfx_footstep_0.m4a",
+          "sha256": "cb60247ec2985c1d4c25b1c76b2001366a3d29b3a7ea524c9b691daaf9a2f665",
+          "codec": "aac"
+        },
+        {
+          "path": "audio/sfx_footstep_1.webm",
+          "sha256": "f3cfe10fbd044dab251d5f81e6e9e5945ba0027330665b4c98b3c5c9160c6626",
+          "codec": "opus"
+        },
+        {
+          "path": "audio/sfx_footstep_1.m4a",
+          "sha256": "71cc47ee7caa6fe855d1e86bf2ee1ab371af9dc16757aab1b3d49e66812344a7",
+          "codec": "aac"
+        },
+        {
+          "path": "audio/sfx_footstep_2.webm",
+          "sha256": "9fcc3bc881de618260f4b1e0b37ac4ecde15774e0a90eebead56db1950610037",
+          "codec": "opus"
+        },
+        {
+          "path": "audio/sfx_footstep_2.m4a",
+          "sha256": "6b99973348678ddead52d1819266ba0f82be8e460f288d6ee1fb6fa051675b5b",
+          "codec": "aac"
+        },
+        {
+          "path": "audio/sfx_footstep_3.webm",
+          "sha256": "90e2fc7ae13867b0a7fee2ff440e01f85cf863e0a1588ed25ff3987d12194d55",
+          "codec": "opus"
+        },
+        {
+          "path": "audio/sfx_footstep_3.m4a",
+          "sha256": "e1c77ff313d81f4c989f2b95b33c4119c094da00b966c3e3ec1add071eddb8e5",
+          "codec": "aac"
+        },
+        {
+          "path": "audio/sfx_footstep_4.webm",
+          "sha256": "54edfdd70b28167fd35501812fd8e29ca8b6bef16a0e8cfc04a45575cb8906d2",
+          "codec": "opus"
+        },
+        {
+          "path": "audio/sfx_footstep_4.m4a",
+          "sha256": "5490361dc239f8d6e6d5b84397cccaa41fb67734a8df8ff27d8cb0b2b232e17f",
+          "codec": "aac"
+        }
+      ],
+      "bus": "sfx"
+    },
+    {
+      "key": "sfx_dash",
+      "scope": "global",
+      "kind": "audio",
+      "source": "custom",
+      "required": false,
+      "files": [
+        {
+          "path": "audio/sfx_dash_0.webm",
+          "sha256": "c98f8bf6cee1766cba2720a75cb27d7d18106c9792ff7efab15b8fdfc24904db",
+          "codec": "opus"
+        },
+        {
+          "path": "audio/sfx_dash_0.m4a",
+          "sha256": "b89bf637f4db08d134b978b932dd1f8881cf109a1148258ebab28588407f5aca",
+          "codec": "aac"
+        },
+        {
+          "path": "audio/sfx_dash_1.webm",
+          "sha256": "eee951d270aa01b4d0d746dea4d7c6ceb3bde5253a3f16df0cad458ad8e28cc8",
+          "codec": "opus"
+        },
+        {
+          "path": "audio/sfx_dash_1.m4a",
+          "sha256": "a0071597bb900ee0684a162f192fbeab46ab722a84da9ac51550582fb6a9f0d5",
+          "codec": "aac"
+        }
+      ],
+      "bus": "sfx"
+    },
+    {
+      "key": "sfx_shoot_pulse_blaster",
+      "scope": "global",
+      "kind": "audio",
+      "source": "custom",
+      "required": false,
+      "files": [
+        {
+          "path": "audio/sfx_shoot_pulse_blaster_0.webm",
+          "sha256": "efe1633b6f4eafc48a780ed630d2c0c325b538a74444e30443eb5cd1e58fa29b",
+          "codec": "opus"
+        },
+        {
+          "path": "audio/sfx_shoot_pulse_blaster_0.m4a",
+          "sha256": "e681f3ca65994ca15e97a7cd2a2b118fb3fb36575d6a230d454b6c8ad7139e1a",
+          "codec": "aac"
+        },
+        {
+          "path": "audio/sfx_shoot_pulse_blaster_1.webm",
+          "sha256": "6ab4a167646ea5de3216df1462cc591b242ee7de0bbfdac1a3b95d86d13fd6b4",
+          "codec": "opus"
+        },
+        {
+          "path": "audio/sfx_shoot_pulse_blaster_1.m4a",
+          "sha256": "5d176d389f20ba5db48f49a91761dc409e665f938272e3dde7a7ec1932b9cb17",
+          "codec": "aac"
+        },
+        {
+          "path": "audio/sfx_shoot_pulse_blaster_2.webm",
+          "sha256": "350870a7a62f37865ac738c907b5785fed4af61eecc90b407bc49e01143c383b",
+          "codec": "opus"
+        },
+        {
+          "path": "audio/sfx_shoot_pulse_blaster_2.m4a",
+          "sha256": "b5e29fedc0c303d51769882bd877b85ec3f7ae9d83bbcf2c65e05e58ef75e96a",
+          "codec": "aac"
+        }
+      ],
+      "bus": "sfx"
+    },
+    {
+      "key": "sfx_impact_metal",
+      "scope": "global",
+      "kind": "audio",
+      "source": "custom",
+      "required": false,
+      "files": [
+        {
+          "path": "audio/sfx_impact_metal_0.webm",
+          "sha256": "915fda59df0dbf0155b43d8a2f9ba258306a9b7750f25e543de71f175572f16c",
+          "codec": "opus"
+        },
+        {
+          "path": "audio/sfx_impact_metal_0.m4a",
+          "sha256": "4490ee52b3780dc82b51a7f2477d52ac459223970c1c7c695829f84eee207a5d",
+          "codec": "aac"
+        },
+        {
+          "path": "audio/sfx_impact_metal_1.webm",
+          "sha256": "3578155dd6f249f3df331acb23763f78fa3d74ee342713d5b300c8d63c9b3262",
+          "codec": "opus"
+        },
+        {
+          "path": "audio/sfx_impact_metal_1.m4a",
+          "sha256": "b163e959a1faa3c1c20884b3e4053a9eb7825a21f7667796ed3c3c0d4288a47e",
+          "codec": "aac"
+        },
+        {
+          "path": "audio/sfx_impact_metal_2.webm",
+          "sha256": "44c5e31ea671358283debec5a23e820703c4f0f82403a5a620e94c7f4b6167e2",
+          "codec": "opus"
+        },
+        {
+          "path": "audio/sfx_impact_metal_2.m4a",
+          "sha256": "30396fa7d09b1a4fe8a17c6a6a77d8b85678a05f5b95ee48c30131951bf0002e",
+          "codec": "aac"
+        }
+      ],
+      "bus": "sfx"
+    },
+    {
+      "key": "sfx_crawler_alert",
+      "scope": "global",
+      "kind": "audio",
+      "source": "custom",
+      "required": false,
+      "files": [
+        {
+          "path": "audio/sfx_crawler_alert_0.webm",
+          "sha256": "0c8134e4eb641d6a492228a12e5f348d0e5edabe8d7fdccc6299ee450b63d15e",
+          "codec": "opus"
+        },
+        {
+          "path": "audio/sfx_crawler_alert_0.m4a",
+          "sha256": "735debd675deb8e5b104cb23df4256267ce8c013fe628a04323594bd0c0fc989",
+          "codec": "aac"
+        }
+      ],
+      "bus": "sfx"
+    },
+    {
+      "key": "sfx_crawler_windup",
+      "scope": "global",
+      "kind": "audio",
+      "source": "custom",
+      "required": false,
+      "files": [
+        {
+          "path": "audio/sfx_crawler_windup_0.webm",
+          "sha256": "70e6eb14fba44219ff6dea54f4a836f0642df1cd845b6faec4891b01b5d991ed",
+          "codec": "opus"
+        },
+        {
+          "path": "audio/sfx_crawler_windup_0.m4a",
+          "sha256": "b2e61fc0756bdf43a43c06d50d4b7075252da79ab431ba875e4e8fe3c7ebd5b0",
+          "codec": "aac"
+        }
+      ],
+      "bus": "sfx"
+    },
+    {
+      "key": "sfx_crawler_hurt",
+      "scope": "global",
+      "kind": "audio",
+      "source": "custom",
+      "required": false,
+      "files": [
+        {
+          "path": "audio/sfx_crawler_hurt_0.webm",
+          "sha256": "02cad8c2fb81485546ba663dc67aea62716cec7c80814b54a56e81491a95b712",
+          "codec": "opus"
+        },
+        {
+          "path": "audio/sfx_crawler_hurt_0.m4a",
+          "sha256": "d8abcf5a4b5a40d77546fb6e627311d58c0dc33bfa13b80f2892b601e547d321",
+          "codec": "aac"
+        },
+        {
+          "path": "audio/sfx_crawler_hurt_1.webm",
+          "sha256": "4ecca2244b3234c549d53c9765893281c200b0344dabf1c7be29d47fe7a39565",
+          "codec": "opus"
+        },
+        {
+          "path": "audio/sfx_crawler_hurt_1.m4a",
+          "sha256": "4f3162053cc11ab486468d7a6a8cd1a04a8dd89ab86bed04dc00c1eebd634507",
+          "codec": "aac"
+        }
+      ],
+      "bus": "sfx"
+    },
+    {
+      "key": "sfx_crawler_death",
+      "scope": "global",
+      "kind": "audio",
+      "source": "custom",
+      "required": false,
+      "files": [
+        {
+          "path": "audio/sfx_crawler_death_0.webm",
+          "sha256": "c11ad4a8c799d00e0f766197d18eb2cbb36d56b1733bd61f60a8aae4b9db6f9a",
+          "codec": "opus"
+        },
+        {
+          "path": "audio/sfx_crawler_death_0.m4a",
+          "sha256": "8de09e5e39fada29ae808bdf19db81a91dca0464292b6bfb7e7e31506072d40f",
+          "codec": "aac"
+        },
+        {
+          "path": "audio/sfx_crawler_death_1.webm",
+          "sha256": "ff5562bc5b5e537eee17cf3b7d066cc98a92bb9220e4f1068f8028a1c8a3979f",
+          "codec": "opus"
+        },
+        {
+          "path": "audio/sfx_crawler_death_1.m4a",
+          "sha256": "e905383f47b737ccf54ed3d3cff803f3a1af3e2298a7728281f22a3337ead281",
+          "codec": "aac"
+        }
+      ],
+      "bus": "sfx"
+    },
+    {
+      "key": "sfx_hurt",
+      "scope": "global",
+      "kind": "audio",
+      "source": "custom",
+      "required": false,
+      "files": [
+        {
+          "path": "audio/sfx_hurt_0.webm",
+          "sha256": "34b9ebb5dc7ac7be6e3101dfb8a1056a4fe42ae7341b3d13d628e0d04d3af6a7",
+          "codec": "opus"
+        },
+        {
+          "path": "audio/sfx_hurt_0.m4a",
+          "sha256": "6718216664c1d17e1ab91572de0e8d5ebf03e557e848bd2eb7430948932fb4cc",
+          "codec": "aac"
+        },
+        {
+          "path": "audio/sfx_hurt_1.webm",
+          "sha256": "3d257cfc79cc093abb6d17c871af29f8530042f70517e3b184a1491af5c5801a",
+          "codec": "opus"
+        },
+        {
+          "path": "audio/sfx_hurt_1.m4a",
+          "sha256": "f377351afb05024b2c725ec0ae45524e9a9ae6cc65dfcdcf81a0f573db7fb7bd",
+          "codec": "aac"
+        }
+      ],
+      "bus": "sfx"
+    },
+    {
+      "key": "sfx_death",
+      "scope": "global",
+      "kind": "audio",
+      "source": "custom",
+      "required": false,
+      "files": [
+        {
+          "path": "audio/sfx_death_0.webm",
+          "sha256": "d765369574cf8af2967ef2ccd29424313a57025516895df0a8c52b7d7bcbb84d",
+          "codec": "opus"
+        },
+        {
+          "path": "audio/sfx_death_0.m4a",
+          "sha256": "ee42d9c49869066f33aec5fbc4840bb8bf7e4057783f9e7b09763be354a51406",
+          "codec": "aac"
+        }
+      ],
+      "bus": "sfx"
+    },
+    {
+      "key": "sfx_revive",
+      "scope": "global",
+      "kind": "audio",
+      "source": "custom",
+      "required": false,
+      "files": [
+        {
+          "path": "audio/sfx_revive_0.webm",
+          "sha256": "4c03648ddbed31df86f24e6fc9bc1e456f97bb9e2a08f501b2a5eb8f7938834c",
+          "codec": "opus"
+        },
+        {
+          "path": "audio/sfx_revive_0.m4a",
+          "sha256": "ddc59af4543bf65221fd0c59ba762e0d09035882ff9ecbbd82f32b052b0d54d1",
+          "codec": "aac"
+        }
+      ],
+      "bus": "sfx"
+    },
+    {
+      "key": "sfx_shard_pickup",
+      "scope": "global",
+      "kind": "audio",
+      "source": "custom",
+      "required": false,
+      "files": [
+        {
+          "path": "audio/sfx_shard_pickup_0.webm",
+          "sha256": "cc1df393744e16bdfcdb9f376bff9c5aedce153187d2c4b76f22fef981c98457",
+          "codec": "opus"
+        },
+        {
+          "path": "audio/sfx_shard_pickup_0.m4a",
+          "sha256": "89d9d582f639fd12861bbbbd2534d6faebd3799931f00b3bd81e148bd202cee8",
+          "codec": "aac"
+        }
+      ],
+      "bus": "sfx"
+    },
+    {
+      "key": "sfx_checkpoint",
+      "scope": "global",
+      "kind": "audio",
+      "source": "custom",
+      "required": false,
+      "files": [
+        {
+          "path": "audio/sfx_checkpoint_0.webm",
+          "sha256": "ae6c7ca4683f98ddddc99b598297d6191e1330ddf3d0f241f7fc1c41fcc26fff",
+          "codec": "opus"
+        },
+        {
+          "path": "audio/sfx_checkpoint_0.m4a",
+          "sha256": "3d32242fd23ed5200848920f657d7b6032eedb80a094e9a87f4a4865ad4add52",
+          "codec": "aac"
+        }
+      ],
+      "bus": "sfx"
+    },
+    {
+      "key": "sfx_level_complete",
+      "scope": "global",
+      "kind": "audio",
+      "source": "custom",
+      "required": false,
+      "files": [
+        {
+          "path": "audio/sfx_level_complete_0.webm",
+          "sha256": "aee59c231e47cef4f7bbe459a2b3f9875a856191b52c30709fffccc91600bea4",
+          "codec": "opus"
+        },
+        {
+          "path": "audio/sfx_level_complete_0.m4a",
+          "sha256": "f7f04b199a9df4ea56229fa08c05c3ea01a0999c0abd5b5698de1c0545b2f236",
+          "codec": "aac"
+        }
+      ],
+      "bus": "sfx"
+    },
+    {
+      "key": "sfx_ui_tap",
+      "scope": "global",
+      "kind": "audio",
+      "source": "custom",
+      "required": false,
+      "files": [
+        {
+          "path": "audio/sfx_ui_tap_0.webm",
+          "sha256": "4108f6edaaf0354d41ed0b1b44f5fa8b75119e9f7e4557a109377c7559921888",
+          "codec": "opus"
+        },
+        {
+          "path": "audio/sfx_ui_tap_0.m4a",
+          "sha256": "e603920f685f989d3485d0ea508ede27057b8d9fb6ecdc5f4177ada204523890",
+          "codec": "aac"
+        }
+      ],
+      "bus": "ui"
+    },
+    {
+      "key": "sfx_ui_back",
+      "scope": "global",
+      "kind": "audio",
+      "source": "custom",
+      "required": false,
+      "files": [
+        {
+          "path": "audio/sfx_ui_back_0.webm",
+          "sha256": "68268f87346ee674a568b2a4b3b7dbb90a19acc00266edbd3fcc2e7e1a1b3999",
+          "codec": "opus"
+        },
+        {
+          "path": "audio/sfx_ui_back_0.m4a",
+          "sha256": "8ad7e60174a49cf5da7fdd3f53b79ed464c3093a7194e09e9ef3376329e59281",
+          "codec": "aac"
+        }
+      ],
+      "bus": "ui"
     }
   ]
 }

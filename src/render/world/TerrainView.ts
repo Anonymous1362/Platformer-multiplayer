@@ -10,7 +10,6 @@ const BACK_FACE_U = 14;
 /** Side faces: width = clamp((edgeX - cameraCenterX) * 0.035, -24, 24) (spec 9.3). */
 const SIDE_FACTOR = 0.035;
 const SIDE_MAX_U = 24;
-const SEAM_EVERY_TILES = 2;
 
 interface SideFace {
   readonly image: Phaser.GameObjects.Image;
@@ -83,15 +82,18 @@ export class TerrainView {
         s1 += 1;
       const x = s0 * TILE;
       const w = (s1 - s0 + 1) * TILE;
-      front
-        .fillStyle(ice ? 0x1e3a5f : exposed ? Palette.titaniumGunmetal : Palette.slateHull, 1)
-        .fillRect(x, y, w, TILE);
+      // Panel texture, one 64 u tile per repeat whatever the texture's density; ice is tinted.
+      const face = scene.add
+        .tileSprite(x, y, w, TILE, 'terrain_front')
+        .setOrigin(0, 0)
+        .setDepth(Depth.TerrainFront - 0.01);
+      const texW = face.texture.getSourceImage().width;
+      if (texW > 0) face.setTileScale(TILE / texW);
+      if (ice) face.setTint(0x8ec5ff);
+      else if (!exposed) face.setTint(0xaab4c4); // interior rows a little darker
       if (exposed) {
         front.fillStyle(ice ? 0x7dd3fc : Palette.coolSteel, 0.85).fillRect(x, y + 3, w, 3); // lit lip
         front.fillStyle(ice ? 0xbae6fd : rim, 0.95).fillRect(x, y, w, 3); // planet rim
-        for (let c = s0 + SEAM_EVERY_TILES; c <= s1; c += SEAM_EVERY_TILES) {
-          front.fillStyle(Palette.deepCosmos, 0.35).fillRect(c * TILE, y + 8, 2, TILE - 8);
-        }
       }
       s0 = s1 + 1;
     }
