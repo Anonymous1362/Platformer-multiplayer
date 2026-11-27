@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef } from 'preact/hooks';
+import { useLayoutEffect, useRef } from 'preact/hooks';
 import { useReducedMotion, useUi } from './context';
 import { play, type MotionKind, type MotionParams } from './motion';
 import { NAV_SELECTOR } from './nav';
@@ -33,7 +33,8 @@ export function useNavScope(ref: ElementRef<HTMLElement>, options: NavScopeOptio
   const { nav } = useUi();
   const latest = useRef<(() => void) | undefined>(undefined);
   latest.current = options.onBack;
-  useEffect(() => {
+  // A layout effect: the scope exists and takes focus before the browser handles any further input.
+  useLayoutEffect(() => {
     const root = ref.current;
     if (!root) return undefined;
     const previous = root.ownerDocument.activeElement;
@@ -84,7 +85,8 @@ export function useNavScope(ref: ElementRef<HTMLElement>, options: NavScopeOptio
     root.addEventListener('focusout', onFocusOut);
     root.addEventListener('pointermove', onMove);
     root.addEventListener('keydown', onKey);
-    if (options.autofocus !== false) {
+    // Never take focus back from something the player already focused inside the scope.
+    if (options.autofocus !== false && !root.contains(root.ownerDocument.activeElement)) {
       const first =
         root.querySelector<HTMLElement>('[data-autofocus]') ?? root.querySelector<HTMLElement>(NAV_SELECTOR);
       first?.focus({ preventScroll: true });
