@@ -2,6 +2,7 @@ import { GamepadControls, type GamepadLike } from '../input/GamepadControls';
 import { installInputCleanup, InputRouter } from '../input/InputRouter';
 import { attachKeyboardMouse, KeyboardMouseControls } from '../input/KeyboardMouseControls';
 import { attachTouchListeners, TouchControls } from '../input/TouchControls';
+import type { MenuIntent } from '../input/MenuNav';
 import { classicLayout } from '../input/TouchLayout';
 import { TouchControlView } from '../hud/TouchControlView';
 
@@ -61,6 +62,16 @@ export class GameInput {
       this.gamepad.poll(pads, this.win.performance.now());
     }
     this.view?.update();
+  }
+
+  /** Menu intents from the keyboard and every gamepad since the last call (drain once per frame). */
+  takeMenuIntents(): MenuIntent[] {
+    return [...this.keyboard.menu.take(), ...this.gamepad.menu.take()];
+  }
+
+  /** The on-screen touch controls, for HUD rings on their buttons (null before `attach`). */
+  get touchView(): TouchControlView | null {
+    return this.view;
   }
 
   /** Scenes subscribe to pause and reset their loop when the page is interrupted. */

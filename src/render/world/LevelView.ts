@@ -1,116 +1,87 @@
-import type Phaser from 'phaser';
-import { GameConfig, Ticks } from '../../core/GameConfig';
-import { TileFlag, type Level } from '../../core/level/LevelTypes';
-import type { PlayerState, WorldState } from '../../core/SimulationTypes';
+import Phaser from 'phaser';
+import { GameConfig } from '../../core/GameConfig';
+import { groundDistance } from '../../core/Ground';
+import type { Level } from '../../core/level/LevelTypes';
+import type { WorldState } from '../../core/SimulationTypes';
 import { Palette, PlanetRim } from '../../theme/ThemePalette';
+import type { EntityFx, SpriteSnapshot } from '../fx/EntityFx';
+import { Depth } from './Depth';
+import { PlayerSprite } from './PlayerSprite';
+import { lerpPose, type PrevPoses, type RenderPose } from './Poses';
+import { SpritePool } from './SpritePool';
+import { TerrainView } from './TerrainView';
 
-const TILE = GameConfig.world.tileSizeU;
-const COLLIDER = GameConfig.player.colliderU;
-const CRAWLER = GameConfig.enemies.crawler.colliderU;
 const PK = GameConfig.pickups;
-const SLOT_COLORS = [
-  Palette.electricCyan,
-  Palette.starlightGold,
-  Palette.nebulaViolet,
-  Palette.magmaAmber,
-] as const;
-/** A body that moved farther than this in one tick teleported (respawn): draw it there, no smear. */
-const SNAP_DISTANCE_U = 200;
-
-/** A position for one rendered frame. */
-export interface RenderPose {
-  readonly x: number;
-  readonly y: number;
-}
-
-/** Positions at the start of the latest tick, keyed by entity ID (platforms by index). */
-export interface PrevPoses {
-  readonly entities: ReadonlyMap<number, RenderPose>;
-  readonly platforms: readonly RenderPose[];
-}
-
-export function capturePoses(world: WorldState): PrevPoses {
-  const entities = new Map<number, RenderPose>();
-  for (const list of [world.players, world.enemies, world.projectiles, world.pickups]) {
-    for (const e of list) entities.set(e.id, { x: e.x, y: e.y });
-  }
-  return { entities, platforms: world.platforms.map((p) => ({ x: p.x, y: p.y })) };
-}
-
-function lerp(prev: RenderPose | undefined, next: RenderPose, alpha: number): RenderPose {
-  if (!prev || Math.hypot(next.x - prev.x, next.y - prev.y) > SNAP_DISTANCE_U) return next;
-  return { x: prev.x + (next.x - prev.x) * alpha, y: prev.y + (next.y - prev.y) * alpha };
-}
-
-function flags(level: Level, col: number, row: number): number {
-  if (col < 0 || col >= level.widthTiles || row < 0 || row >= level.heightTiles) return TileFlag.Solid;
-  return level.tiles[row * level.widthTiles + col] ?? 0;
-}
+const PLAYER = GameConfig.player.colliderU;
+const CRAWLER = GameConfig.enemies.crawler.colliderU;
+/** Contact shadows fade out by this height above the ground (spec 9.3). */
+const SHADOW_RANGE_U = 320;
+const SHARD_FRAMES = 24;
 
 /**
- * Draws a level and its bodies with plain shapes: the stand-in that keeps the game playable until the
- * Neo-Celestial art pass (Pass 1E-2) replaces it. Static tiles are drawn once; moving things are
- * redrawn each frame from interpolated positions (render alpha never touches the simulation).
+ * Draws a level and its bodies in the Neo-Celestial style (spec 9). Static geometry is built once;
+ * entities use pooled sprites keyed by entity ID; positions are interpolated with the render alpha,
+ * which never touches the simulation (spec 13.7).
  */
 export class LevelView {
   private readonly level: Level;
-  private readonly platforms: Phaser.GameObjects.Graphics[] = [];
-  private readonly players: Phaser.GameObjects.Graphics[] = [];
-  private readonly dynamic: Phaser.GameObjects.Graphics;
+  private readonly terrain: TerrainView;
   private readonly markers: Phaser.GameObjects.Graphics;
+  private readonly platforms: Phaser.GameObjects.Graphics[] = [];
+  private readonly shadows: SpritePool;
+  private readonly shards: SpritePool;
+  private readonly enemies: SpritePool;
+  private readonly bolts: SpritePool;
+  private readonly alerts: Phaser.GameObjects.Graphics;
+  private readonly players: PlayerSprite[] = [];
+  private readonly reducedMotion: boolean;
   private markerKey = '';
+  private shadowId = 0;
 
-  constructor(scene: Phaser.Scene, level: Level, world: WorldState) {
+  constructor(scene: Phaser.Scene, level: Level, world: WorldState, reducedMotion: boolean) {
     this.level = level;
+    this.reducedMotion = reducedMotion;
     const rim = PlanetRim[level.planet];
-    const g = scene.add.graphics();
-    for (let row = 0; row < level.heightTiles; row += 1) {
-      for (let col = 0; col < level.widthTiles; col += 1) {
-        const f = flags(level, col, row);
-        const x = col * TILE;
-        const y = row * TILE;
-        if ((f & TileFlag.Solid) !== 0) {
-          const ice = (f & TileFlag.Ice) !== 0;
-          g.fillStyle(ice ? 0x1e3a5f : Palette.slateHull, 1).fillRect(x, y, TILE, TILE);
-          if ((flags(level, col, row - 1) & TileFlag.Solid) === 0) {
-            g.fillStyle(ice ? 0x7dd3fc : rim, 0.9).fillRect(x, y, TILE, 5);
-          }
-        } else if ((f & TileFlag.OneWay) !== 0) {
-          g.fillStyle(Palette.titaniumGunmetal, 1).fillRect(x, y, TILE, 14);
-          g.fillStyle(rim, 0.75).fillRect(x, y, TILE, 3);
-        } else if ((f & TileFlag.Spikes) !== 0) {
-          g.fillStyle(Palette.neonCrimson, 0.95);
-          for (let i = 0; i < 4; i += 1)
-            g.fillTriangle(x + i * 16, y + TILE, x + i * 16 + 8, y + 26, x + i * 16 + 16, y + TILE);
-        } else if ((f & TileFlag.Lava) !== 0) {
-          g.fillStyle(Palette.magmaAmber, 0.92).fillRect(x, y + 12, TILE, TILE - 12);
-          g.fillStyle(Palette.starlightGold, 0.8).fillRect(x, y + 12, TILE, 4);
-        }
-      }
-    }
-
-    this.markers = scene.add.graphics();
+    this.terrain = new TerrainView(scene, level);
+    this.markers = scene.add.graphics().setDepth(Depth.Markers);
 
     level.platforms.forEach((def) => {
-      const p = scene.add.graphics();
-      p.fillStyle(Palette.titaniumGunmetal, 1).fillRoundedRect(0, 0, def.w, def.h, Math.min(10, def.h / 2));
-      p.fillStyle(def.oneWay ? rim : Palette.coolSteel, 0.9).fillRect(4, 0, def.w - 8, 4);
-      this.platforms.push(p);
+      const g = scene.add.graphics().setDepth(Depth.TerrainFront);
+      const r = Math.min(10, def.h / 2);
+      g.fillStyle(Palette.abyssalNavy, 0.9).fillRoundedRect(4, -10, def.w - 8, def.h, r); // back face
+      g.fillStyle(Palette.titaniumGunmetal, 1).fillRoundedRect(0, 0, def.w, def.h, r);
+      g.fillStyle(Palette.coolSteel, 0.9).fillRect(6, 3, def.w - 12, 3); // lit lip
+      g.fillStyle(def.oneWay ? rim : Palette.coolSteel, 0.95).fillRect(6, 0, def.w - 12, 3);
+      g.fillStyle(Palette.starlightGold, 0.8).fillCircle(def.w / 2, def.h / 2 + 2, 3); // drive light
+      this.platforms.push(g);
     });
 
-    this.dynamic = scene.add.graphics();
+    this.shadows = new SpritePool(scene, 'fx_shadow', 24, (img) => img.setDepth(Depth.Shadows));
+    this.shards = new SpritePool(scene, 'pickup_shard', 24, (img) => img.setDepth(Depth.Pickups));
+    this.enemies = new SpritePool(scene, 'enemy_crawler', 4, (img) =>
+      img.setOrigin(0.5, 1).setDepth(Depth.Enemies),
+    );
+    this.bolts = new SpritePool(scene, 'fx_bolt', 16, (img) =>
+      img.setOrigin(1, 0.5).setDepth(Depth.Projectiles).setBlendMode(Phaser.BlendModes.ADD),
+    );
+    this.alerts = scene.add.graphics().setDepth(Depth.Fx);
+    for (const p of world.players) this.players.push(new PlayerSprite(scene, p.slot, rim, reducedMotion));
+  }
 
-    world.players.forEach((player) => {
-      const body = scene.add.graphics();
-      const color = SLOT_COLORS[player.slot % SLOT_COLORS.length] ?? Palette.electricCyan;
-      const w = COLLIDER.width;
-      const h = COLLIDER.height;
-      body.fillStyle(Palette.abyssalNavy, 0.85).fillRoundedRect(-w / 2 - 3, -h - 3, w + 6, h + 6, 14);
-      body.fillStyle(color, 1).fillRoundedRect(-w / 2, -h, w, h, 12);
-      body.fillStyle(Palette.deepCosmos, 0.9).fillRoundedRect(-2, -h + 14, w / 2, 16, 6); // visor, faces +x
-      body.fillStyle(Palette.starlightGold, 0.9).fillRect(-w / 2 - 6, -h + 34, 8, 26); // jetpack
-      this.players.push(body);
-    });
+  /** Slab side faces follow the camera (spec 9.3). */
+  updateTerrain(cameraCenterX: number): void {
+    this.terrain.update(cameraCenterX);
+  }
+
+  /** What is drawn for enemy `id` right now (for the defeat dissolve). */
+  snapshot(id: number): SpriteSnapshot | null {
+    const img = this.enemies.peek(id);
+    if (!img?.visible) return null;
+    return { texture: 'enemy_crawler', x: img.x, y: img.y, flipX: img.flipX };
+  }
+
+  get liveSprites(): number {
+    return this.shadows.live + this.shards.live + this.enemies.live + this.bolts.live + this.players.length;
   }
 
   private drawMarkers(world: WorldState): void {
@@ -120,85 +91,122 @@ export class LevelView {
     const g = this.markers.clear();
     const flagH = PK.checkpointU.height;
     this.level.checkpoints.forEach((cp, i) => {
-      const reached = world.run.checkpointsReached[i] === 1;
-      g.fillStyle(Palette.titaniumGunmetal, 1).fillRect(cp.x - 4, cp.y - flagH, 8, flagH);
-      g.fillStyle(reached ? Palette.electricCyan : Palette.coolSteel, 1);
-      g.fillTriangle(cp.x + 4, cp.y - flagH, cp.x + 44, cp.y - flagH + 16, cp.x + 4, cp.y - flagH + 32);
+      const on = world.run.checkpointsReached[i] === 1;
+      const lamp = on ? Palette.electricCyan : Palette.coolSteel;
+      g.fillStyle(Palette.slateHull, 1).fillRoundedRect(cp.x - 18, cp.y - 10, 36, 10, 4); // base
+      g.fillStyle(Palette.titaniumGunmetal, 1).fillRoundedRect(cp.x - 6, cp.y - flagH, 12, flagH - 8, 5);
+      g.fillStyle(Palette.coolSteel, 0.8).fillRect(cp.x - 6, cp.y - flagH + 6, 3, flagH - 20); // lit edge
+      g.fillStyle(lamp, on ? 0.35 : 0.15).fillCircle(cp.x, cp.y - flagH + 6, 20);
+      g.fillStyle(lamp, 1).fillCircle(cp.x, cp.y - flagH + 6, 9);
     });
+    const done = world.run.completeTick >= 0;
     for (const exit of this.level.exits) {
       const w = PK.exitU.width;
       const h = PK.exitU.height;
-      g.fillStyle(Palette.nebulaViolet, 0.25).fillRoundedRect(exit.x - w / 2, exit.y - h, w, h, 24);
-      g.lineStyle(6, world.run.completeTick >= 0 ? Palette.starlightGold : Palette.nebulaViolet, 1);
-      g.strokeRoundedRect(exit.x - w / 2, exit.y - h, w, h, 24);
+      g.fillStyle(Palette.nebulaViolet, done ? 0.35 : 0.18).fillRoundedRect(
+        exit.x - w / 2,
+        exit.y - h,
+        w,
+        h,
+        w / 2,
+      );
+      g.lineStyle(10, Palette.abyssalNavy, 0.9).strokeRoundedRect(exit.x - w / 2, exit.y - h, w, h, w / 2);
+      g.lineStyle(5, done ? Palette.starlightGold : Palette.nebulaViolet, 1);
+      g.strokeRoundedRect(exit.x - w / 2, exit.y - h, w, h, w / 2);
     }
+  }
+
+  private shadow(x: number, bottomY: number, halfWidth: number, size: number, world: WorldState): void {
+    const d = groundDistance(this.level, world.platforms, x, bottomY, halfWidth, SHADOW_RANGE_U);
+    if (d === null) return;
+    const k = 1 - d / SHADOW_RANGE_U;
+    this.shadowId += 1;
+    const { image } = this.shadows.acquire(this.shadowId);
+    image
+      .setPosition(x, bottomY + d - 2)
+      .setScale(size * (0.55 + 0.45 * k), size * (0.55 + 0.45 * k))
+      .setAlpha(0.75 * k);
   }
 
   /** Draws one frame; returns the first player's pose for the camera. */
-  update(world: WorldState, prev: PrevPoses, alpha: number): RenderPose | null {
+  update(world: WorldState, prev: PrevPoses, alpha: number, fx: EntityFx, timeMs: number): RenderPose | null {
     this.drawMarkers(world);
     world.platforms.forEach((p, i) => {
-      const pose = lerp(prev.platforms[i], p, alpha);
+      const pose = lerpPose(prev.platforms[i], p, alpha);
       this.platforms[i]?.setPosition(pose.x, pose.y);
     });
 
-    const g = this.dynamic.clear();
-    for (const shard of world.pickups) {
-      const pose = lerp(prev.entities.get(shard.id), shard, alpha);
-      const r = PK.shardSizeU / 2 + 3;
-      g.fillStyle(Palette.starlightGold, 1);
-      g.fillTriangle(pose.x, pose.y - r, pose.x + r, pose.y, pose.x, pose.y + r);
-      g.fillTriangle(pose.x, pose.y - r, pose.x - r, pose.y, pose.x, pose.y + r);
+    this.shadowId = 0;
+    this.shadows.begin();
+
+    this.shards.begin();
+    const spin = this.reducedMotion ? 12 : 24; // frames per second
+    for (const s of world.pickups) {
+      const pose = lerpPose(prev.entities.get(s.id), s, alpha);
+      const { image } = this.shards.acquire(s.id);
+      const frame = String(Math.floor((timeMs / 1000) * spin + s.id * 7) % SHARD_FRAMES);
+      if (image.texture.has(frame)) image.setFrame(frame);
+      const bob = s.floating && !this.reducedMotion ? Math.sin(timeMs / 320 + s.id) * 3 : 0;
+      image.setPosition(pose.x, pose.y + bob);
+      this.shadow(pose.x, pose.y + PK.shardSizeU / 2, 6, 0.35, world);
     }
+    this.shards.end();
+
+    this.enemies.begin();
+    const g = this.alerts.clear();
     for (const e of world.enemies) {
-      const pose = lerp(prev.entities.get(e.id), e, alpha);
-      const w = CRAWLER.width;
-      const h = CRAWLER.height * (e.mode === 'windup' ? 0.8 : 1);
-      g.fillStyle(Palette.abyssalNavy, 0.9).fillRoundedRect(
-        pose.x - w / 2 - 3,
-        pose.y - h - 3,
-        w + 6,
-        h + 6,
-        14,
-      );
-      g.fillStyle(e.mode === 'attack' ? Palette.neonCrimson : Palette.nebulaViolet, 1);
-      g.fillRoundedRect(pose.x - w / 2, pose.y - h, w, h, 12);
-      const eye = e.mode === 'windup' || e.mode === 'attack' ? Palette.magmaAmber : Palette.electricCyan;
-      g.fillStyle(eye, 1).fillCircle(pose.x + e.facing * (w / 2 - 12), pose.y - h + 14, 6);
-      if (e.mode === 'alert') {
-        g.fillStyle(Palette.starlightGold, 1).fillRect(pose.x - 4, pose.y - h - 46, 8, 22);
-        g.fillRect(pose.x - 4, pose.y - h - 18, 8, 8);
+      const { image, fresh } = this.enemies.acquire(e.id);
+      if (fresh || !fx.frozen(e.id)) {
+        const pose = lerpPose(prev.entities.get(e.id), e, alpha);
+        image.setPosition(pose.x, pose.y);
       }
+      const windup = e.mode === 'windup';
+      image.setFlipX(e.facing < 0).setScale(windup ? 1.06 : 1, windup ? 0.85 : 1);
+      if (fx.flashing(e.id)) {
+        image.setTint(0xffffff).setTintMode(Phaser.TintModes.FILL);
+      } else if (windup || e.mode === 'attack') {
+        // Readable wind-up (spec O7): an amber glow that pulses (steady under reduced motion).
+        const pulse = this.reducedMotion || e.mode === 'attack' ? 1 : 0.55 + 0.45 * Math.sin(timeMs / 45);
+        const base = e.mode === 'attack' ? 0x90103c : 0x904010;
+        const r = Math.round(((base >> 16) & 0xff) * pulse);
+        const gg = Math.round(((base >> 8) & 0xff) * pulse);
+        const b = Math.round((base & 0xff) * pulse);
+        image.setTint((r << 16) | (gg << 8) | b).setTintMode(Phaser.TintModes.ADD);
+      } else {
+        image.clearTint();
+      }
+      if (e.mode === 'alert') {
+        g.fillStyle(Palette.starlightGold, 1).fillRoundedRect(
+          image.x - 4,
+          image.y - CRAWLER.height - 52,
+          8,
+          24,
+          3,
+        );
+        g.fillCircle(image.x, image.y - CRAWLER.height - 20, 5);
+      }
+      if (!e.asleep) this.shadow(image.x, image.y, CRAWLER.width / 2 - 8, 1, world);
     }
+    this.enemies.end();
+
+    this.bolts.begin();
     for (const b of world.projectiles) {
-      const pose = lerp(prev.entities.get(b.id), b, alpha);
-      const speed = Math.hypot(b.vx, b.vy) || 1;
-      const tx = (b.vx / speed) * 18;
-      const ty = (b.vy / speed) * 18;
-      g.lineStyle(8, Palette.electricCyan, 1).lineBetween(pose.x - tx, pose.y - ty, pose.x, pose.y);
+      const pose = lerpPose(prev.entities.get(b.id), b, alpha);
+      const { image } = this.bolts.acquire(b.id);
+      image.setPosition(pose.x, pose.y).setRotation(Math.atan2(b.vy, b.vx));
     }
+    this.bolts.end();
 
     let focus: RenderPose | null = null;
-    this.players.forEach((body, i) => {
-      const player = world.players[i];
-      if (!player) return;
-      const pose = lerp(prev.entities.get(player.id), player, alpha);
-      if (i === 0) focus = pose;
-      body.setPosition(pose.x, pose.y);
-      body.setScale(player.facing, 1);
-      body.setAlpha(playerAlpha(player));
+    this.players.forEach((sprite, i) => {
+      const p = world.players[i];
+      if (!p) return;
+      sprite.update(lerpPose(prev.entities.get(p.id), p, alpha), p, fx, timeMs);
+      if (i === 0) focus = sprite.current;
+      if (p.mode !== 'dead')
+        this.shadow(sprite.current.x, sprite.current.y, PLAYER.width / 2 - 6, 0.9, world);
     });
+    this.shadows.end();
     return focus;
   }
-}
-
-/** Fade for hazard respawn and death; a steady blink while invulnerable (reduced-motion variant: 1E-2). */
-function playerAlpha(p: PlayerState): number {
-  if (p.mode === 'dead') return 0.25;
-  if (p.mode === 'hazardRespawn') {
-    const half = Ticks.hazardRespawn / 2;
-    return Math.min(1, Math.abs(p.modeTicks - half) / half);
-  }
-  if (p.invulnTicks > 0) return Math.floor(p.invulnTicks / 4) % 2 === 0 ? 0.45 : 1;
-  return 1;
 }

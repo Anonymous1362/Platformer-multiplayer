@@ -7,9 +7,18 @@
 | 1A | DONE, approved. |
 | 1B | DONE, approved (CI run 45607110857). |
 | 1C | DONE and green in CI (run 45620958633: verify, perf:bench, Chromium and WebKit browser tests, Android debug build). |
-| 1D | DONE locally; device checks (2–3 fingers on a real phone, controller in the Android app) pending with the owner. |
-| 1E | IN PROGRESS: 1E-1 gameplay core done locally; 1E-2 presentation and 1E-3 audio next. |
+| 1D | DONE and green in CI (run 45951307716). Released as `0.0.2` (release run 2, signed APK 3.68 MB). Device checks (2–3 fingers on a real phone, controller in the Android app) pending with the owner. |
+| 1E | IN PROGRESS: 1E-1 gameplay core green in CI (run 45953613318); 1E-2 presentation done locally; 1E-3 audio next. |
 | 1F onward | Not started |
+
+## Pass 1E-2 evidence (2026-11-27)
+
+- `npm run verify`: passes (294 unit, input, property, and simulation tests; golden replays unchanged, since nothing in the simulation changed; `levels:lint`; build). Layer rules: no violations, no cycles.
+- New unit tests: menu intents from keys and pads (repeat rules, one step per press, stick hysteresis, held buttons ignored after a menu opens), menu selection, HUD model (percentages, low HP below 25%, heat, vent, dash cooldown, shards = banked + carried), FX math (trauma decay 1.6/s, shake = trauma², 25% cap under reduced motion, frame-rate independent follow, particle caps 300/600/1200), `groundDistance` (floor, pit, one-way, edge samples, moving platforms), procedural art vs. manifest (every painter and every drawn texture has a manifest key; 24-frame shard strip), software-renderer detection.
+- `npm run test:e2e` (Chrome, local, software WebGL): 27 of 27, including: HUD at 280 × 18 with full bars and 0 shards; pause menu with arrows + Enter restarting the arena (player back at spawn, one HUD); mouse Resume; ten restarts in a row with no leftover HUD, menu, touch layer, or sprites; `WEBGL_lose_context` lose → paused with a notice → restore → resumes with no page errors; reduced motion detected with camera shake never above 0.25.
+- Screenshots reviewed at 1280 × 720 and 844 × 390 (start, combat, pause menu, Battery look): slabs with rims and side faces, parallax, spinning shards, Crawler alert, HUD, pause panel.
+- Software WebGL (SwiftShader, 2 cores): 17 ticks/s at 1280 × 720 and 55 at 844 × 390 after merging terrain rectangles and replacing the full-screen mote layer with 10 sprites (was 10 and 33). GPUs are not limited this way; real-device numbers come with the owner's checks.
+- Bundle: 409 KB gzipped (budget 900 KB).
 
 ## Pass 1E-1 evidence (2026-11-27)
 

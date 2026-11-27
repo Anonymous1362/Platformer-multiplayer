@@ -15,6 +15,8 @@ export interface Capabilities {
   readonly standalone: boolean;
   readonly secureContext: boolean;
   readonly reducedMotion: boolean;
+  /** WebGL runs on a CPU rasterizer (blocklisted GPU, VM, CI): render the Battery look. */
+  readonly softwareRenderer: boolean;
   readonly devicePixelRatio: number;
   readonly cpuCores: number;
   readonly deviceMemoryGb: number | null;
@@ -23,7 +25,12 @@ export interface Capabilities {
 export interface WebGLProbe {
   readonly version: 0 | 1 | 2;
   readonly maxTextureSize: number;
+  /** Unmasked renderer name when the browser exposes it (WEBGL_debug_renderer_info). */
+  readonly renderer?: string;
 }
+
+/** Software rasterizers (no GPU): the game drops to its lightest look on these. */
+const SOFTWARE_RENDERER = /swiftshader|llvmpipe|softpipe|software|basic render/i;
 
 /** Everything detection reads, so tests can pass fakes. `browserEnv()` builds the real one. */
 export interface CapabilityEnv {
@@ -86,6 +93,7 @@ export function detectCapabilities(env: CapabilityEnv): Capabilities {
       ),
     secureContext: env.secureContext,
     reducedMotion: safe(() => env.matchMedia('(prefers-reduced-motion: reduce)')),
+    softwareRenderer: gl.version > 0 && SOFTWARE_RENDERER.test(gl.renderer ?? ''),
     devicePixelRatio: Math.min(dpr, 4),
     cpuCores:
       Number.isInteger(env.hardwareConcurrency) && env.hardwareConcurrency > 0 ? env.hardwareConcurrency : 1,
@@ -103,8 +111,16 @@ export function browserEnv(native: { readonly isNative: boolean; readonly platfo
       const gl = gl2 ?? canvas.getContext('webgl');
       if (!gl) return { version: 0, maxTextureSize: 0 };
       const size: unknown = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+      const info = gl.getExtension('WEBGL_debug_renderer_info');
+      const name: unknown = info
+        ? gl.getParameter(info.UNMASKED_RENDERER_WEBGL)
+        : gl.getParameter(gl.RENDERER);
       gl.getExtension('WEBGL_lose_context')?.loseContext();
-      return { version: gl2 ? 2 : 1, maxTextureSize: typeof size === 'number' ? size : 0 };
+      return {
+        version: gl2 ? 2 : 1,
+        maxTextureSize: typeof size === 'number' ? size : 0,
+        renderer: typeof name === 'string' ? name : '',
+      };
     },
     hasWebAudio: () => typeof window.AudioContext === 'function',
     hasIndexedDb: () => typeof window.indexedDB === 'object',

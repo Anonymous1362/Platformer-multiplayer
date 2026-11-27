@@ -23,6 +23,126 @@
       "source": "procedural",
       "required": true,
       "files": []
+    },
+    {
+      "key": "bg_nebula",
+      "scope": "global",
+      "kind": "image",
+      "source": "procedural",
+      "required": true,
+      "files": []
+    },
+    {
+      "key": "bg_dust",
+      "scope": "global",
+      "kind": "image",
+      "source": "procedural",
+      "required": true,
+      "files": []
+    },
+    {
+      "key": "bg_megastructure",
+      "scope": "global",
+      "kind": "image",
+      "source": "procedural",
+      "required": true,
+      "files": []
+    },
+    {
+      "key": "char_player_suit",
+      "scope": "global",
+      "kind": "image",
+      "source": "procedural",
+      "required": true,
+      "files": []
+    },
+    {
+      "key": "char_player_detail",
+      "scope": "global",
+      "kind": "image",
+      "source": "procedural",
+      "required": true,
+      "files": []
+    },
+    {
+      "key": "enemy_crawler",
+      "scope": "global",
+      "kind": "image",
+      "source": "procedural",
+      "required": true,
+      "files": []
+    },
+    {
+      "key": "pickup_shard",
+      "scope": "global",
+      "kind": "image",
+      "source": "procedural",
+      "required": true,
+      "files": []
+    },
+    {
+      "key": "fx_bolt",
+      "scope": "global",
+      "kind": "image",
+      "source": "procedural",
+      "required": true,
+      "files": []
+    },
+    {
+      "key": "fx_glow",
+      "scope": "global",
+      "kind": "image",
+      "source": "procedural",
+      "required": true,
+      "files": []
+    },
+    {
+      "key": "fx_shadow",
+      "scope": "global",
+      "kind": "image",
+      "source": "procedural",
+      "required": true,
+      "files": []
+    },
+    {
+      "key": "fx_ring",
+      "scope": "global",
+      "kind": "image",
+      "source": "procedural",
+      "required": true,
+      "files": []
+    },
+    {
+      "key": "terrain_side",
+      "scope": "global",
+      "kind": "image",
+      "source": "procedural",
+      "required": true,
+      "files": []
+    },
+    {
+      "key": "terrain_top",
+      "scope": "global",
+      "kind": "image",
+      "source": "procedural",
+      "required": true,
+      "files": []
+    },
+    {
+      "key": "fx_beam",
+      "scope": "global",
+      "kind": "image",
+      "source": "procedural",
+      "required": true,
+      "files": []
+    },
+    {
+      "key": "fx_vignette",
+      "scope": "global",
+      "kind": "image",
+      "source": "procedural",
+      "required": true,
+      "files": []
     }
   ]
 }

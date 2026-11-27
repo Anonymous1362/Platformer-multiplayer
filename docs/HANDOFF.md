@@ -1,6 +1,6 @@
 # Handoff
 
-State: Pass 1E-1 (gameplay core) implemented and verified locally; 1E-2 (presentation) is next, then 1E-3 (audio). Owner device checks for 1D (build 0.0.2) are still pending. Releases: the owner starts them from Actions → Release → Run workflow (`0.0.1` is published).
+State: Pass 1E-2 (presentation) implemented and verified locally; 1E-3 (audio) is next. Auto mode is on (owner, 2026-11-27). Owner device checks for 1D (build 0.0.2, published on the Releases page) are still pending. Releases: the owner starts them from Actions → Release → Run workflow.
 
 What 1C added (all in `src/core`, Node-only):
 
@@ -50,4 +50,23 @@ Gotchas learned:
 
 Owner device checks still open (spec 8.13 records): 2–3 fingers on a real phone, a controller inside the Android app, the iPhone PWA.
 
-Next: Pass 1E-2 (presentation): HUD (HP and shield pill, fuel, shards, heat ring on Shoot), pause menu with Restart, procedural Neo-Celestial art (slabs with side faces, five parallax layers, contact shadows), event-driven effects consumed once per tick, render-only hit-stop, reduced motion, WebGL disposal and context loss (N13). Then 1E-3: SoundEngine (buses, limiter, polyphony caps, synthesized SFX).
+What 1E-2 added (render, HUD, input; the simulation is unchanged):
+
+- Art (`src/assets/painters/NeoCelestial.ts`): procedural textures registered under manifest keys, so real art can replace any of them: nebula, dust, megastructure silhouettes, player suit and details, Crawler, a 24-frame shard spinner strip (frames named "0"–"23"), bolt, glow, shadow, ring, beam, vignette, slab side and top. `makeProceduralTexture` adds strip frames.
+- `src/render/world/`: `TerrainView` (slabs: merged front-face rectangles, lit lip and planet rim, 14 u recessed back faces, camera-driven side faces), `ParallaxView` (layers 0.05/0.12/0.25/0.45 as tile sprites; 1.15 motes as 10 sprites; the Battery tier keeps 1, 4, 5), `LevelView` (pooled sprites keyed by entity ID, contact shadows from `core/Ground.groundDistance`, Crawler wind-up glow), `PlayerSprite` (rim light tinted by the planet, slot-tinted suit, jetpack flame, blink or steady outline), `SpritePool`, `Poses`, `Depth`, `TextureKeys`.
+- `src/render/fx/`: `Effects` (consumes each tick's events once; hit flash 60 ms, hit-stop 45 ms on player hurt and enemy defeat, landing squash over 2 tiles, three dash afterimages, muzzle flash and recoil, sparks, shard sparkle, dissolve, checkpoint beam and "Saved", vent steam, damage numbers), `Particles` (pool with a hard cap; oldest slots reused), `CameraRig` (own follow + trauma shake + kick; 25% cap under reduced motion), `ScreenFx` (damage vignette, low-HP pulse or steady outline), `FxMath` (pure, tested).
+- `src/hud/`: `HudView` (DOM: HP pill 280 × 18 with shield strip, fuel gauge, shard counter with bump), `HudModel` (pure), `PauseMenu` + `MenuModel` (Resume, Restart level; touch, mouse, keyboard, gamepad), rings on the touch Shoot (heat) and Dash (cooldown) buttons.
+- `src/input/MenuNav.ts`: menu intents from keyboard (arrows/W/S, Enter/Space, Backspace) and pads (D-pad/stick, A, B); `GameInput.takeMenuIntents()`.
+- `LevelScene`: restart via `scene.restart()` (per-run fields reset in `create`), context loss pauses with a notice and resumes after `RESTORE_WEBGL`, shutdown removes every listener and DOM node it added, quality tier (software WebGL → Battery, else Balanced; adaptive quality is 1F). Probe gained `menuOpen`, `contextLost`, `fx`.
+- `Capabilities.softwareRenderer` (unmasked renderer name matches SwiftShader, llvmpipe, and similar).
+
+Gotchas learned:
+
+- Full-screen layers are the main cost on software WebGL; prefer sprites for sparse layers. Phaser `Graphics` redraws every command each frame, so merge static rectangles.
+- Scene objects survive `scene.restart()`: reset per-run fields in `create`, and remove DOM nodes and renderer listeners on shutdown (delayed calls die with the scene clock, so a banner must be removed there too).
+- Phaser 4 tint: `setTint(c).setTintMode(Phaser.TintModes.FILL)` (no `setTintFill`).
+- Importing anything that imports Phaser breaks Vitest (no `window`): keep lists and math in Phaser-free modules (`TextureKeys`, `FxMath`, `HudModel`, `MenuModel`).
+
+Deferred on purpose: "Restart from checkpoint" and the rest of the Pause screen (Settings, Controls, Quit) come with the UI layer in 2A; light shafts and filters (bloom, haze) wait for quality tiers; a mouse-clickable pause button waits for 2A.
+
+Next: Pass 1E-3 (audio): `SoundEngine` with buses master → {music, sfx, ui, voice, ambience}, limiter (−3 dB, ratio 20, 3 ms attack, 250 ms release), polyphony caps (sfx 24, ui 6, ambience 4, voice 2), 40 ms minimum repeat, oldest/quietest stealing, synthesized SFX for every event above, unlock on the first gesture, suspend on interruption. Then 1F.

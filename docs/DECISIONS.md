@@ -22,6 +22,10 @@
 - 2026-11-25: `CONFIG_HASH` is computed at module load (same value the build-time version in spec 21.2 would produce); `BuildInfo.ts` arrives with Pass 7.
 - 2026-11-25: Pass 1B uses a flat test floor (`setup.floorY`) so movement can be tested before tile collision (Pass 1C replaces it). World coordinates stay non-negative, as the snapshot packet requires.
 - 2026-11-25: Fixed `.dependency-cruiser.cjs`: `exclude` no longer drops node_modules (it hid package imports from all rules); added `core-no-packages`; added a canary test.
+- 2026-11-27 (Pass 1E-2): The HUD and pause menu are DOM layers over the canvas (values written only on change, fills animated with `transform`); full-screen animated feedback (vignette, low-HP pulse) is drawn in Phaser, per spec 8.4's performance rule. The full Preact UI replaces the pause menu in 2A.
+- 2026-11-27 (Pass 1E-2): The camera follow moved from Phaser's `startFollow` to `CameraRig` (same 0.14 lerp, now frame-rate independent) so shake and hit-stop kicks add on top without drifting.
+- 2026-11-27 (Pass 1E-2): Software WebGL (SwiftShader, llvmpipe) renders the Battery look (parallax layers 1, 4, 5; 300 particles) until adaptive quality lands in 1F. Foreground motes are 10 sprites rather than a full-screen layer.
+- 2026-11-27 (Pass 1E-2): Contact shadows read `core/Ground.groundDistance`, a pure read of the level and platforms, instead of new simulation state (no hash or replay change).
 - 2026-11-27 (later the same day): Owner switched back to auto mode; this entry is the current rule. AGENTS.md and spec 22.2 updated.
 - 2026-11-27: Owner switched the build back to manual mode: after each milestone or sub-step (1E-1, 1E-2, ...) the agent stops and waits for approval. AGENTS.md and spec 22.2 updated. (Replaces the 2026-11-25 entry below.)
 - 2026-11-25: Owner switched the build to auto mode: milestones run back to back (each one fully green locally and in CI, documented, and pushed before the next starts). The agent stops only for device checks, owner-only decisions, or stop-the-line rules. AGENTS.md and spec 22.2 updated.

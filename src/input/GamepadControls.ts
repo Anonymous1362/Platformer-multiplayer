@@ -1,6 +1,7 @@
 import { Button } from '../core/InputTypes';
 import { applyStick, DEFAULT_STICK_TUNING, type StickTuning } from './StickMath';
 import type { InputSource, SourceSample } from './InputRouter';
+import { MENU_STICK, MenuIntentQueue, type MenuIntent } from './MenuNav';
 
 /** The parts of the Gamepad API this adapter reads (lets tests pass plain objects). */
 export interface GamepadLike {
@@ -41,6 +42,14 @@ const BUTTON_BITS: readonly (readonly [number, number])[] = [
 ];
 const TRIGGER_THRESHOLD = 0.5;
 
+/** Menu intents per pad input: D-pad or left stick steps, A confirms, B goes back. */
+const MENU_BITS: readonly (readonly [number, MenuIntent])[] = [
+  [1, 'up'],
+  [2, 'down'],
+  [4, 'confirm'],
+  [8, 'back'],
+];
+
 function isDown(pad: GamepadLike, index: number): boolean {
   const b = pad.buttons[index];
   if (!b) return false;
@@ -57,6 +66,11 @@ function isDown(pad: GamepadLike, index: number): boolean {
  */
 export class GamepadControls implements InputSource {
   readonly kind = 'gamepad';
+  /** Menu intents from every pad; drained by whichever menu is open. */
+  readonly menu = new MenuIntentQueue();
+  private menuHeld = 0;
+  private stickUp = false;
+  private stickDown = false;
   private readonly tuning: StickTuning;
   private held = 0;
   private latched = 0;
@@ -83,10 +97,18 @@ export class GamepadControls implements InputSource {
     let pause = false;
     let best = { x: 0, y: 0, m: 0 };
     let aim: number | null = null;
+    let menuRaw = 0;
+    let stickY = 0;
     const ids: string[] = [];
     for (const pad of pads) {
       if (!pad?.connected) continue;
       ids.push(pad.id);
+      if (isDown(pad, PadButton.DpadUp)) menuRaw |= 1;
+      if (isDown(pad, PadButton.DpadDown)) menuRaw |= 2;
+      if (isDown(pad, PadButton.South)) menuRaw |= 4;
+      if (isDown(pad, PadButton.East)) menuRaw |= 8;
+      const y = pad.axes[1] ?? 0;
+      if (Math.abs(y) > Math.abs(stickY)) stickY = y;
       for (const [index, bit] of BUTTON_BITS) if (isDown(pad, index)) held |= bit;
       if (isDown(pad, PadButton.Start)) pause = true;
 
@@ -102,6 +124,7 @@ export class GamepadControls implements InputSource {
       if (right.active && aim === null) aim = Math.round(Math.atan2(right.y, right.x) * 1000);
     }
     this.ids = ids;
+    this.pollMenu(menuRaw, stickY);
 
     // Buttons held through a reset stay ignored until released.
     this.suppressed &= held;
@@ -117,7 +140,20 @@ export class GamepadControls implements InputSource {
     this.aimMrad = aim;
   }
 
+  /** Edge-triggered menu intents from the raw pad state (independent of gameplay suppression). */
+  private pollMenu(raw: number, stickY: number): void {
+    if (this.stickUp ? stickY > -MENU_STICK.release : stickY < -MENU_STICK.press)
+      this.stickUp = !this.stickUp;
+    if (this.stickDown ? stickY < MENU_STICK.release : stickY > MENU_STICK.press)
+      this.stickDown = !this.stickDown;
+    const bits = raw | (this.stickUp ? 1 : 0) | (this.stickDown ? 2 : 0);
+    const pressed = bits & ~this.menuHeld;
+    this.menuHeld = bits;
+    for (const [bit, intent] of MENU_BITS) if ((pressed & bit) !== 0) this.menu.push(intent);
+  }
+
   releaseAll(): void {
+    this.menu.clear();
     this.suppressed |= this.held;
     this.held = 0;
     this.latched = 0;

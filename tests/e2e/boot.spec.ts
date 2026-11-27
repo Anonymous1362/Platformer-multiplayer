@@ -1,4 +1,13 @@
+import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
+
+const MANIFEST_KEYS = (
+  JSON.parse(readFileSync(new URL('../../public/assets/ASSET_MANIFEST.json', import.meta.url), 'utf8')) as {
+    entries: { key: string }[];
+  }
+).entries
+  .map((e) => e.key)
+  .sort();
 
 type AssetSnapshot = Record<string, { status: string; source: string; reason: string | null }>;
 
@@ -33,10 +42,13 @@ for (const vp of [
     await page.goto('/?test=1');
     await page.waitForSelector('#game-root[data-ready="true"]');
 
-    expect(await snapshot(page)).toEqual({
-      bg_starfield: { status: 'loaded', source: 'custom', reason: null },
-      fx_soft_dot: { status: 'procedural', source: 'procedural', reason: null },
-    });
+    const snap = await snapshot(page);
+    expect(snap['bg_starfield']).toEqual({ status: 'loaded', source: 'custom', reason: null });
+    // Every other shipped texture is drawn procedurally (Neo-Celestial art, Pass 1E-2).
+    expect(Object.keys(snap).sort()).toEqual(MANIFEST_KEYS);
+    for (const [key, item] of Object.entries(snap).filter(([k]) => k !== 'bg_starfield')) {
+      expect(item, key).toEqual({ status: 'procedural', source: 'procedural', reason: null });
+    }
     expect(seen.failures).toEqual([]);
     expect(seen.errors).toEqual([]);
     expect(seen.warnings).toEqual([]);

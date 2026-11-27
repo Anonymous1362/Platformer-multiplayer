@@ -9,8 +9,14 @@ export interface SimProbe {
   readonly level: string;
   readonly tick: number;
   readonly paused: boolean;
+  /** The pause menu is on screen. */
+  readonly menuOpen: boolean;
+  /** The WebGL context is lost and the level is waiting for the restore (N13). */
+  readonly contextLost: boolean;
   readonly lastFrame: InputFrame;
   readonly counts: { readonly enemies: number; readonly projectiles: number; readonly pickups: number };
+  /** Render-side counters for the leak and budget checks; never read by the simulation. */
+  readonly fx: { readonly particles: number; readonly sprites: number; readonly shake: number };
   readonly shards: { readonly banked: number; readonly carried: number };
   readonly complete: boolean;
   readonly players: readonly {

@@ -2,14 +2,7 @@ import type Phaser from 'phaser';
 import { Random } from '../core/Random';
 import { Palette, cssHex } from '../theme/ThemePalette';
 import type { AssetManifestEntry } from './AssetTypes';
-
-type Painter = (ctx: CanvasRenderingContext2D, width: number, height: number, rng: Random) => void;
-
-interface PainterSpec {
-  readonly width: number;
-  readonly height: number;
-  readonly paint: Painter;
-}
+import { NEO_CELESTIAL_PAINTERS, type Painter, type PainterSpec } from './painters/NeoCelestial';
 
 const DEFAULT_SIZE = 64;
 
@@ -74,6 +67,7 @@ const paintGeneric: Painter = (ctx, width, height) => {
 const PAINTERS: Readonly<Record<string, PainterSpec>> = {
   bg_starfield: { width: 512, height: 512, paint: paintStarfield },
   fx_soft_dot: { width: 64, height: 64, paint: paintSoftDot },
+  ...NEO_CELESTIAL_PAINTERS,
 };
 
 /** Draws the procedural version of `entry` and adds it to Phaser under `entry.key`. */
@@ -94,5 +88,11 @@ export function makeProceduralTexture(
   (spec?.paint ?? paintGeneric)(ctx, width, height, new Random(hashKey(entry.key)));
 
   if (textures.exists(entry.key)) textures.remove(entry.key);
-  textures.addCanvas(entry.key, canvas);
+  const texture = textures.addCanvas(entry.key, canvas);
+  const frames = spec?.frames;
+  if (texture && frames) {
+    for (let i = 0; i < frames.count; i += 1) {
+      texture.add(String(i), 0, i * frames.width, 0, frames.width, frames.height);
+    }
+  }
 }

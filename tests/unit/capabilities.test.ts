@@ -49,6 +49,20 @@ describe('detectCapabilities', () => {
     expect(detectCapabilities(throwing).webgl).toBe(0);
   });
 
+  it('flags software WebGL renderers (SwiftShader, llvmpipe) and nothing else', () => {
+    const named = (renderer: string): boolean =>
+      detectCapabilities(env({ probeWebGL: () => ({ version: 2, maxTextureSize: 8192, renderer }) }))
+        .softwareRenderer;
+    expect(named('ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero)), SwiftShader driver)')).toBe(
+      true,
+    );
+    expect(named('llvmpipe (LLVM 15.0.7, 256 bits)')).toBe(true);
+    expect(named('Mali-G52 MC2')).toBe(false);
+    expect(named('Apple GPU')).toBe(false);
+    expect(named('')).toBe(false);
+    expect(detectCapabilities(env()).softwareRenderer).toBe(false);
+  });
+
   it('treats storage that throws as unavailable', () => {
     const c = detectCapabilities(
       env({

@@ -8,11 +8,22 @@ import { parseLevel } from '../core/level/AsciiParser';
 import type { Level } from '../core/level/LevelTypes';
 import type { WorldState } from '../core/SimulationTypes';
 import { createWorld, setupFor, WorldSimulation } from '../core/WorldSimulation';
-import { capturePoses, LevelView, type PrevPoses } from '../render/world/LevelView';
+import { hudState } from '../hud/HudModel';
+import { HudView } from '../hud/HudView';
+import { PauseMenu, type PauseAction } from '../hud/PauseMenu';
+import { CameraRig } from '../render/fx/CameraRig';
+import { Effects } from '../render/fx/Effects';
+import { PARTICLE_CAPS, type QualityTier } from '../render/fx/FxMath';
+import { Particles } from '../render/fx/Particles';
+import { ScreenFx } from '../render/fx/ScreenFx';
+import { LevelView } from '../render/world/LevelView';
+import { ParallaxView } from '../render/world/ParallaxView';
+import { capturePoses, type PrevPoses } from '../render/world/Poses';
+import { LEVEL_TEXTURES, PARALLAX_TEXTURES } from '../render/world/TextureKeys';
 import { Palette, UiTokens } from '../theme/ThemePalette';
 
 const TILE = GameConfig.world.tileSizeU;
-const BACKGROUND = ['bg_starfield'] as const;
+const PLAYER_H = GameConfig.player.colliderU.height;
 
 interface Run {
   readonly level: Level;
@@ -20,21 +31,30 @@ interface Run {
   readonly sim: WorldSimulation;
   readonly loop: FixedLoop;
   readonly view: LevelView;
+  readonly parallax: ParallaxView;
+  readonly rig: CameraRig;
+  readonly effects: Effects;
+  readonly screen: ScreenFx;
+  readonly hud: HudView | null;
   prev: PrevPoses;
-  /** Camera follow target (interpolated player center). */
-  readonly follow: { x: number; y: number };
+  /** Effect clock: advances only while the game runs, so effects freeze with the pause. */
+  fxTimeMs: number;
 }
 
 /**
  * Plays one level: a fixed 60 Hz loop feeding the deterministic simulation one merged `InputFrame` per
- * tick, with render interpolation that never feeds back into the simulation. Pass 1D runs the test
- * arena; level selection arrives with the scene flow in Pass 2D.
+ * tick; render interpolation, effects, camera feel, and the HUD never feed back into it (spec 13.7).
+ * Pause opens a menu with Resume and Restart; a lost WebGL context pauses until it is restored (N13).
+ * Level selection arrives with the scene flow in Pass 2D.
  */
 export class LevelScene extends Phaser.Scene {
   private readonly services: GameServices;
   private run: Run | null = null;
   private paused = false;
-  private overlay: HTMLDivElement | null = null;
+  private contextLost = false;
+  private restarting = false;
+  private menu: PauseMenu | null = null;
+  private readonly notices = new Map<string, HTMLElement>();
 
   constructor(services: GameServices) {
     super('LevelScene');
@@ -47,43 +67,63 @@ export class LevelScene extends Phaser.Scene {
   }
 
   create(): void {
+    // The scene object survives restarts: reset every per-run field.
+    this.paused = false;
+    this.contextLost = false;
+    this.restarting = false;
+    this.menu = null;
+
     const parsed = parseLevel(JSON.parse(arenaJson) as unknown);
     if (!parsed.ok) throw new Error(`test_arena failed validation: ${parsed.errors.join('; ')}`);
     const level = parsed.level;
     const world = createWorld(setupFor(level, { seed: 1, difficulty: 'normal', playerCount: 1 }), level);
     const sim = new WorldSimulation(level, { assertFinite: import.meta.env.DEV });
+    const reducedMotion = this.services.capabilities.reducedMotion;
+    // Adaptive quality arrives in 1F; until then software WebGL gets the Battery look, all else Balanced.
+    const tier: QualityTier = this.services.capabilities.softwareRenderer ? 'battery' : 'balanced';
 
-    this.services.assets.ensure(BACKGROUND);
+    this.services.assets.ensure([...PARALLAX_TEXTURES, ...LEVEL_TEXTURES]);
     const widthU = level.widthTiles * TILE;
     const heightU = level.heightTiles * TILE;
-    this.cameras.main.setBackgroundColor(Palette.deepCosmos);
-    this.add
-      .tileSprite(-1200, -800, widthU + 2400, heightU + 1600, 'bg_starfield')
-      .setOrigin(0)
-      .setScrollFactor(0.35)
-      .setAlpha(0.8);
+    const camera = this.cameras.main;
+    camera.setBackgroundColor(Palette.deepCosmos);
+    camera.setBounds(0, 0, widthU, heightU);
+    this.layout();
 
-    const view = new LevelView(this, level, world);
+    const parallax = new ParallaxView(this, heightU, tier);
+    const view = new LevelView(this, level, world, reducedMotion);
+    const rig = new CameraRig(camera, reducedMotion);
+    const screen = new ScreenFx(this, reducedMotion);
+    const effects = new Effects(this, {
+      particles: new Particles(this, PARTICLE_CAPS[tier]),
+      camera: rig,
+      screen,
+      level,
+      reducedMotion,
+      snapshot: (id) => view.snapshot(id),
+    });
+    const parent = this.game.canvas.parentElement;
+    const hud = parent ? new HudView(parent, reducedMotion) : null;
+
     const player = world.players[0];
-    const follow = { x: player?.x ?? 0, y: (player?.y ?? 0) - GameConfig.player.colliderU.height / 2 };
-    const run: Run = {
+    rig.snap(player?.x ?? 0, (player?.y ?? 0) - PLAYER_H / 2);
+    this.run = {
       level,
       world,
       sim,
       loop: new FixedLoop(),
       view,
+      parallax,
+      rig,
+      effects,
+      screen,
+      hud,
       prev: capturePoses(world),
-      follow,
+      fxTimeMs: 0,
     };
-    this.run = run;
-
-    const camera = this.cameras.main;
-    camera.setBounds(0, 0, widthU, heightU);
-    camera.startFollow(follow, false, 0.14, 0.14);
-    camera.centerOn(follow.x, follow.y);
-    this.layout();
 
     const input = this.services.input;
+    input.router.releaseAll();
     input.keyboard.setAimResolver((clientX, clientY) => this.aimAt(clientX, clientY));
     const offInterrupt = input.onInterrupted(() => {
       this.setPaused(true);
@@ -92,14 +132,34 @@ export class LevelScene extends Phaser.Scene {
       this.layout();
     };
     this.scale.on(Phaser.Scale.Events.RESIZE, onResize);
+
+    // N13: a lost WebGL context pauses the level; Phaser rebuilds its GPU resources on restore.
+    const renderer = this.game.renderer;
+    const onLost = (): void => {
+      this.contextLost = true;
+      this.setPaused(true);
+      this.showNotice('context-lost', 'Restoring graphics…', '42%');
+    };
+    const onRestored = (): void => {
+      this.contextLost = false;
+      this.removeNotice('context-lost');
+    };
+    renderer.on(Phaser.Renderer.Events.LOSE_WEBGL, onLost);
+    renderer.on(Phaser.Renderer.Events.RESTORE_WEBGL, onRestored);
+
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      // M6: a scene change releases every touch, key, and button.
+      // M6 and N13: a scene change releases all input and every listener and DOM node it added.
       input.router.releaseAll();
       input.keyboard.setAimResolver(null);
       offInterrupt();
       this.scale.off(Phaser.Scale.Events.RESIZE, onResize);
-      this.overlay?.remove();
-      this.overlay = null;
+      renderer.off(Phaser.Renderer.Events.LOSE_WEBGL, onLost);
+      renderer.off(Phaser.Renderer.Events.RESTORE_WEBGL, onRestored);
+      this.menu?.destroy();
+      this.menu = null;
+      hud?.destroy();
+      for (const node of this.notices.values()) node.remove();
+      this.notices.clear();
       this.services.probe.current = null;
       this.run = null;
     });
@@ -118,10 +178,7 @@ export class LevelScene extends Phaser.Scene {
     if (!player) return null;
     const rect = this.game.canvas.getBoundingClientRect();
     const point = this.cameras.main.getWorldPoint(clientX - rect.left, clientY - rect.top);
-    const angle = Math.atan2(
-      point.y - (player.y - GameConfig.player.colliderU.height / 2),
-      point.x - player.x,
-    );
+    const angle = Math.atan2(point.y - (player.y - PLAYER_H / 2), point.x - player.x);
     return Math.round(angle * 1000);
   }
 
@@ -131,67 +188,100 @@ export class LevelScene extends Phaser.Scene {
     // M6: pausing releases all input; resuming never simulates the paused time (spec 13.2).
     this.services.input.router.releaseAll();
     this.run?.loop.reset();
-    if (paused) {
-      const el = document.createElement('div');
-      el.dataset['role'] = 'pause-overlay';
-      el.textContent = 'Paused · Esc, P, Start, or the pause button to resume';
-      Object.assign(el.style, {
-        position: 'absolute',
-        left: '50%',
-        top: '18%',
-        transform: 'translateX(-50%)',
-        padding: '10px 18px',
-        borderRadius: `${String(UiTokens.radius.pill)}px`,
-        background: UiTokens.bgPanel,
-        color: UiTokens.textPrimary,
-        font: '600 15px system-ui, sans-serif',
-        pointerEvents: 'none',
-        whiteSpace: 'nowrap',
-      });
-      this.game.canvas.parentElement?.append(el);
-      this.overlay = el;
-    } else {
-      this.overlay?.remove();
-      this.overlay = null;
+    this.menu?.destroy();
+    this.menu = null;
+    const parent = this.game.canvas.parentElement;
+    if (paused && parent) {
+      this.menu = new PauseMenu(
+        parent,
+        (action) => {
+          this.onPauseAction(action);
+        },
+        this.services.capabilities.reducedMotion,
+      );
     }
+  }
+
+  private isRestarting(): boolean {
+    return this.restarting;
+  }
+
+  private onPauseAction(action: PauseAction): void {
+    if (action === 'restart') {
+      this.restartLevel();
+      return;
+    }
+    if (this.contextLost) {
+      // Nothing can draw until the context is back: stay paused with a fresh menu.
+      this.paused = false;
+      this.setPaused(true);
+      return;
+    }
+    this.setPaused(false);
+  }
+
+  /** Restart from the pause menu: a clean scene restart (the shutdown handler tears everything down). */
+  private restartLevel(): void {
+    if (this.restarting) return;
+    this.restarting = true;
+    this.menu?.destroy();
+    this.menu = null;
+    this.scene.restart();
   }
 
   override update(_time: number, deltaMs: number): void {
     const run = this.run;
-    if (!run) return;
+    if (!run || this.restarting) return;
     const input = this.services.input;
     input.frame();
-    if (input.router.takePause()) this.setPaused(!this.paused);
+    if (input.router.takePause()) {
+      if (this.paused && this.contextLost) this.onPauseAction('resume');
+      else this.setPaused(!this.paused);
+    }
+    const intents = input.takeMenuIntents();
+    this.menu?.handle(intents);
+    if (this.isRestarting()) return; // a menu action may have started a restart just now
+
     let alpha = 1;
-    if (!this.paused) {
+    const live = !this.paused && !this.contextLost;
+    if (live) {
       const result = run.loop.advance(deltaMs / 1000, () => {
         run.prev = capturePoses(run.world);
         const { events } = run.sim.step(run.world, [input.router.nextFrame()], run.world.tick);
+        // Spec 13.7 step 5: each tick's events are consumed exactly once.
+        run.effects.onTick(events, run.world);
         for (const e of events) if (e.type === 'levelComplete') this.showBanner(run);
       });
       alpha = result.renderAlpha;
     }
-    this.draw(run, alpha);
+    this.draw(run, alpha, live ? deltaMs : 0);
   }
 
-  private draw(run: Run, alpha: number): void {
-    const focus = run.view.update(run.world, run.prev, alpha);
-    if (focus) {
-      run.follow.x = focus.x;
-      run.follow.y = focus.y - GameConfig.player.colliderU.height / 2;
-    }
+  private draw(run: Run, alpha: number, dtMs: number): void {
+    run.fxTimeMs += dtMs;
+    const camera = this.cameras.main;
+    const focus = run.view.update(run.world, run.prev, alpha, run.effects, run.fxTimeMs);
+    if (focus) run.rig.update(focus.x, focus.y - PLAYER_H / 2, dtMs);
+    run.view.updateTerrain(run.rig.centerX);
+    run.parallax.update(camera);
+    run.effects.update(dtMs);
+    const state = hudState(run.world.players[0], run.world.run);
+    run.screen.update(camera, dtMs, state.lowHp);
+    run.hud?.update(state);
+    this.services.input.touchView?.setRings(state.heatPct, state.venting, state.dashCooldownPct);
   }
 
-  /** Level complete: a short banner (the results screen arrives with the scene flow, Pass 2D). */
-  private showBanner(run: Run): void {
+  private showNotice(role: string, text: string, top: string): HTMLElement | null {
+    const parent = this.game.canvas.parentElement;
+    if (!parent) return null;
+    this.removeNotice(role);
     const el = document.createElement('div');
-    el.dataset['role'] = 'level-complete';
-    const shards = run.world.run.shardsBanked;
-    el.textContent = `Level complete · ${String(shards)} shard${shards === 1 ? '' : 's'}`;
+    el.dataset['role'] = role;
+    el.textContent = text;
     Object.assign(el.style, {
       position: 'absolute',
       left: '50%',
-      top: '30%',
+      top,
       transform: 'translateX(-50%)',
       padding: '14px 24px',
       borderRadius: `${String(UiTokens.radius.pill)}px`,
@@ -200,10 +290,25 @@ export class LevelScene extends Phaser.Scene {
       font: '700 20px system-ui, sans-serif',
       pointerEvents: 'none',
       whiteSpace: 'nowrap',
+      zIndex: '11',
     });
-    this.game.canvas.parentElement?.append(el);
+    parent.append(el);
+    this.notices.set(role, el);
+    return el;
+  }
+
+  private removeNotice(role: string): void {
+    this.notices.get(role)?.remove();
+    this.notices.delete(role);
+  }
+
+  /** Level complete: a short banner (the results screen arrives with the scene flow, Pass 2D). */
+  private showBanner(run: Run): void {
+    const shards = run.world.run.shardsBanked;
+    const text = `Level complete · ${String(shards)} shard${shards === 1 ? '' : 's'}`;
+    if (!this.showNotice('level-complete', text, '30%')) return;
     this.time.delayedCall(4000, () => {
-      el.remove();
+      this.removeNotice('level-complete');
     });
   }
 
@@ -213,11 +318,18 @@ export class LevelScene extends Phaser.Scene {
       level: run?.level.id ?? '',
       tick: run?.world.tick ?? 0,
       paused: this.paused,
+      menuOpen: this.menu !== null,
+      contextLost: this.contextLost,
       lastFrame: this.services.input.router.lastFrame,
       counts: {
         enemies: run?.world.enemies.length ?? 0,
         projectiles: run?.world.projectiles.length ?? 0,
         pickups: run?.world.pickups.length ?? 0,
+      },
+      fx: {
+        particles: run?.effects.liveParticles ?? 0,
+        sprites: run?.view.liveSprites ?? 0,
+        shake: run?.rig.shake ?? 0,
       },
       shards: { banked: run?.world.run.shardsBanked ?? 0, carried: run?.world.run.shardsCarried ?? 0 },
       complete: (run?.world.run.completeTick ?? -1) >= 0,

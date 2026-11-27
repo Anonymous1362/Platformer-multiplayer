@@ -21,6 +21,18 @@ export const PlanetRim = {
   obsidian: 0xff2a85,
 } as const;
 
+const SLOT_COLORS = [
+  Palette.electricCyan,
+  Palette.starlightGold,
+  Palette.nebulaViolet,
+  Palette.magmaAmber,
+] as const;
+
+/** The color that identifies a player slot (suit tint, effects). */
+export function slotColor(slot: number): number {
+  return SLOT_COLORS[slot % SLOT_COLORS.length] ?? Palette.electricCyan;
+}
+
 /** Semantic UI tokens (spec section 8.2). The DOM uses these strings. */
 export const UiTokens = {
   bgDeep: '#080B1A',

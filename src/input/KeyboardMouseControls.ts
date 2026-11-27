@@ -1,5 +1,6 @@
 import { Button } from '../core/InputTypes';
 import type { InputSource, SourceSample } from './InputRouter';
+import { MenuIntentQueue, menuIntentForKey } from './MenuNav';
 
 /**
  * Keyboard and mouse (spec sections 8.9 and 14.4). Both keyboard columns work at the same time. Only
@@ -33,6 +34,8 @@ const MOUSE_BITS: Readonly<Record<number, number>> = { 0: Button.Shoot, 2: Butto
 
 export class KeyboardMouseControls implements InputSource {
   readonly kind = 'keyboard';
+  /** Menu intents from the keyboard; drained by whichever menu is open. */
+  readonly menu = new MenuIntentQueue();
   private readonly codeToAction = new Map<string, KeyAction>();
   private readonly down = new Set<string>();
   private readonly mouseDown = new Set<number>();
@@ -48,10 +51,12 @@ export class KeyboardMouseControls implements InputSource {
     }
   }
 
-  /** True when the key is bound (the caller then prevents the browser default). */
+  /** True when the key is bound or navigates menus (the caller then prevents the browser default). */
   keyDown(code: string, repeat: boolean, nowMs: number): boolean {
+    const intent = menuIntentForKey(code, repeat);
+    if (intent) this.menu.push(intent);
     const action = this.codeToAction.get(code);
-    if (!action) return false;
+    if (!action) return intent !== null;
     if (repeat || this.down.has(code)) return true;
     this.down.add(code);
     this.lastUseMs = nowMs;
@@ -91,6 +96,7 @@ export class KeyboardMouseControls implements InputSource {
     this.down.clear();
     this.mouseDown.clear();
     this.latched = 0;
+    this.menu.clear();
   }
 
   private isActionDown(action: KeyAction): boolean {
