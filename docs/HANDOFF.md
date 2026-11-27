@@ -1,6 +1,6 @@
 # Handoff
 
-State: Pass 1E (gameplay loop, art, audio, feel) is done locally: 1E-1 and 1E-2 are green in CI; 1E-3 (audio) awaits its CI run. Next is Pass 1F (hardening and acceptance). Auto mode is on (owner, 2026-11-27). Owner device checks for builds 0.0.2+ are still pending. Releases: the owner starts them from Actions → Release → Run workflow; the APK appears on the Releases page.
+State: Pass 1E (gameplay loop, art, audio, feel) is done and green in CI (last run 45961388044). Version 0.0.3 is prepared (package.json and release notes) for the owner's Release run. Next is Pass 1F (hardening and acceptance). Auto mode is on (owner, 2026-11-27). Owner device checks for builds 0.0.2+ are still pending. Releases: the owner starts them from Actions → Release → Run workflow; the APK appears on the Releases page.
 
 What 1C added (all in `src/core`, Node-only):
 

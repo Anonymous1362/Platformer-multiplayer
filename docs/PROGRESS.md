@@ -8,7 +8,7 @@
 | 1B | DONE, approved (CI run 45607110857). |
 | 1C | DONE and green in CI (run 45620958633: verify, perf:bench, Chromium and WebKit browser tests, Android debug build). |
 | 1D | DONE and green in CI (run 45951307716). Released as `0.0.2` (release run 2, signed APK 3.68 MB). Device checks (2–3 fingers on a real phone, controller in the Android app) pending with the owner. |
-| 1E | DONE locally (1E-1 green in CI run 45953613318, 1E-2 green in CI run 45958847738, 1E-3 audio verified locally). Parry and slam are deferred to 3A, where the spec schedules them in full. |
+| 1E | DONE and green in CI (1E-1 run 45953613318, 1E-2 run 45958847738, 1E-3 run 45961388044 after a fix: CI's Chromium 159 needs `startRendering` to tell offline audio contexts apart). Parry and slam are deferred to 3A, where the spec schedules them in full. Release notes for `0.0.3` are ready; the owner can run the Release workflow. |
 | 1F onward | Not started |
 
 ## Pass 1E-3 evidence and 1E acceptance (2026-11-27)
