@@ -1,6 +1,28 @@
 # Handoff
 
-State: Pass 1 (1A–1F) and the owner-requested Art & sound A step are done; only the owner's phone checks remain (docs/DEVICES.md). Next is Pass 2A (UI foundation), after the owner approves. Manual mode. Version 0.0.4 is ready for the owner's Release run.
+State: Pass 2A (UI foundation) is done locally and waits for CI on its pull request, then the owner's OK. Next is 2B (Settings & accessibility). Manual mode. Owner phone checks still open: docs/DEVICES.md, plus the 2A "no long tasks on a Mid device" check.
+
+What 2A added (`src/ui`, Preact, DOM over the canvas inside `#game-root`):
+
+- `tokens.css` (spec 8.2 tokens as CSS variables under `.cd-ui`; glass via `data-glass`, opaque in high contrast or Battery/Safe Mode), `fonts.ts` (Exo 2 700, Inter 500/600 from @fontsource, bundled).
+- `motion.ts`: durations, easings, springs (analytic step response → CSS `linear()`), one `MOTIONS[kind](reduced, params)` per §8.4 row, `play()`, counter roll, logo shard offsets. `Transitions.ts`: fade through `bg.deep` (150 + 150 ms) and iris (disc scaled up, then fade; 450 ms), fade under reduced motion; `midpoint` switches scenes.
+- `components/`: Button (variants, pressed/selected/disabled, UI sound), Panel, Toggle, Segmented, Stepper, Badge, ItemCard, NumberCounter, ProgressRing (Basics); Slider, Tabs, CodeInput, ScrollList (Inputs); Modal, ConfirmDialog (Cancel focused), SideSheet, ToastQueue/ToastHost (Overlays).
+- `nav.ts` + `hooks.ts`: `NavStack` of scopes; menu intents move DOM focus over `[data-nav]` items, confirm clicks, back calls `onBack`; hover/focus set `data-selected`; modals trap Tab and restore focus.
+- `UiService.tsx`: owns the screen store (`none` | `photosensitivity` | `title` | `pause`), toasts, transitions, prefs (`prefs.ts`: reduced motion system/on/off, glass, contrast). `services.ui` in every scene. `closeTopModal()` lets the pause key close a dialog instead of the menu.
+- `screens/Screens.tsx`: PhotosensitivityNotice, TitleScreen (logo assembles, "Tap to start", version), PauseScreen (Resume, Restart level, performance overlay, Quit to title with confirm).
+- `gallery/Gallery.tsx`: `?debug=1&gallery=1`, a standalone page (no game).
+- `scenes/TitleScene.ts`: drifting nebula/star tile sprites, notice then Title, pumps intents, emits BOOT_READY. Boot → Title (or straight to Level with `?test=1`; add `&flow=1` for the real flow). Level Quit → fade → Title.
+- `TouchControlView.setSuppressed` hides touch controls on the Title. New synth keys `sfx_ui_toggle`, `sfx_ui_error`. `touch-action: none` now only on the canvas; the page uses `manipulation`.
+- Removed: `hud/PauseMenu.ts`, `hud/MenuModel.ts` (and its test).
+
+Gotchas learned:
+
+- Inside the game, keyboard menu input arrives twice (window key → intent, and the browser's native button activation). `UiService` (driven mode) prevents the native default for Enter, Space, and Up/Down; Left/Right, Tab, and text fields stay native.
+- preact typings reject `role="dialog"` on `<aside>`; use a `div`.
+- `@playwright/test` uses Chromium build 1243 here; a bare `playwright` script needs `executablePath: '/opt/pw-browsers/chromium-1243/chrome-linux64/chrome'`.
+- `?test=1` boots straight into the level; browser tests that need the Title must add `&flow=1`.
+
+Deferred on purpose: Title Settings/Credits (2B and later), attract loop (2D), "Skip tutorial" (2C); Pause Settings, Controls, Difficulty, "Restart from checkpoint" with those features; haptics (7B); UI navigation for left/right intents (gamepad sliders/tabs) with the 2B rebinding work.
 
 Art & sound A: `npm run art:bake` (Blender `bpy` + Pillow, dev machine only) renders tools/blender/{hero,crawler,shard,terrain,backdrop}.py into public/assets/global/ and refreshes the manifest hashes. Frame sheets are described in `src/render/world/SpriteSheets.ts` (`SHEETS`, `HERO_ANIMS`, `heroFrame`, `sheetScale`); frames are added when a baked file is swapped in (`createGame` texture store) and by the painters' grid fallbacks. `PlayerSprite` draws rim + body + slot-tinted accent. `TerrainView` front faces are tileSprites of `terrain_front`. `npm run audio:build` (ffmpeg) turns pinned Kenney CC0 packs (`npm run assets:fetch` first) into public/assets/audio/*.webm|*.m4a and the manifest's `audio` entries; `SoundEngine.setSamples` decodes them (Opus first where supported, then AAC) and falls back to synth recipes per key.
 

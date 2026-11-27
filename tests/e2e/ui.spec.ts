@@ -17,6 +17,9 @@ async function axe(page: Page): Promise<void> {
   await settle(page);
   const results = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+    // Owner decision 2026-11-27 (docs/DECISIONS.md): spec N14 keeps browser zoom off on the fixed-size game
+    // stage, so `meta-viewport` is the one rule excluded; the Text Size setting (2B) is the replacement.
+    .disableRules(['meta-viewport'])
     .analyze();
   const summary = results.violations.map(
     (v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(' | ')}`,

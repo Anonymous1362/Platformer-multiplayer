@@ -11,7 +11,17 @@
 | 1E | DONE and green in CI (1E-1 run 45953613318, 1E-2 run 45958847738, 1E-3 run 45961388044 after a fix: CI's Chromium 159 needs `startRendering` to tell offline audio contexts apart). Parry and slam are deferred to 3A, where the spec schedules them in full. Release notes for `0.0.3` are ready; the owner can run the Release workflow. |
 | 1F | DONE (CI green, run 45994813905). Every automated Pass 1 checklist item passes; three items need the owner's phone (marked below). |
 | Art & sound A (owner-requested, between 1F and 2A) | DONE (CI green, run 46025975171). Blender-baked animated hero, Crawler walk cycle, shard spinner, slab panels, skyline; 18 recorded CC0 sounds plus footsteps. Version 0.0.4 with release notes. |
-| 2A onward | Not started |
+| 2A | DONE locally (CI pending on the pull request). Preact UI layer, tokens, components, motion, Title, Pause, photosensitivity notice, fade and iris transitions, dev gallery. |
+| 2B onward | Not started |
+
+## Pass 2A evidence (2026-11-27)
+
+- `npm run verify`: passes (347 unit, input, property, and simulation tests incl. new UI tests; 7 golden replays unchanged; `levels:lint`; build). Bundle 436 KB gzipped (budget 900 KB).
+- `npm run test:e2e` (Chrome, local): 48 of 48, including 12 new UI tests (tests/e2e/ui.spec.ts). WebKit runs in CI.
+- "axe passes on every screen": WCAG 2.1 A/AA on the photosensitivity notice, Title, Pause, the quit confirmation, the gallery (every component and screen preview), the gallery modal, and the side sheet. No violations except the owner-approved `meta-viewport` exclusion (spec N14 keeps zoom off; DECISIONS 2026-11-27).
+- "Every animation has a reduced-motion variant": unit test over every motion (reduced variants are opacity-only; full variants touch only transform and opacity); browser test: under `prefers-reduced-motion` the pause screen runs opacity-only animations and the iris falls back to a fade.
+- "Transitions show no long tasks": the fade and iris run in the gallery with no long task over 100 ms (Chrome, software WebGL). **Mid-device check pending the owner's phone.**
+- Flow: first launch shows the notice (focused Continue), then Title (focused Start, version string), Start fades into the level; the notice is remembered (`cd.photoNotice`). Pause → Quit asks first (Cancel focused), Escape closes only the dialog, Quit fades back to Title. Fonts load from this origin only. Touch targets ≥ 48 px at 844 × 390.
 
 ## Pass 1F evidence and the Pass 1 checklist (2026-11-27)
 
