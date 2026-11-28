@@ -29,6 +29,26 @@ export const DEFAULT_GAINS: Readonly<Record<Bus | 'master', number>> = {
   ambience: 0.6,
 };
 
+/**
+ * Night mode (spec 8.6 "Dynamic range"): a gentle compressor before the limiter plus make-up gain, so
+ * quiet sounds come up and loud ones come down. Full mode leaves the stage transparent.
+ */
+export const NIGHT = {
+  thresholdDb: -30,
+  kneeDb: 10,
+  ratio: 4,
+  attackS: 0.01,
+  releaseS: 0.3,
+  makeupGain: 1.6,
+} as const;
+
+/** What the player's audio settings ask the mixer for (gains 0–1). */
+export interface MixSettings {
+  readonly gains: Readonly<Record<Bus | 'master', number>>;
+  readonly mono: boolean;
+  readonly night: boolean;
+}
+
 /** Stereo pan from screen position is at most ±0.6; off-screen sounds lose about 6 dB per screen width. */
 export const SPACE = { maxPan: 0.6, offscreenDbPerScreen: -6 } as const;
 

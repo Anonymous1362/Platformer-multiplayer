@@ -17,6 +17,8 @@ import { ConfirmDialog, Modal, SideSheet } from '../components/Overlays';
 import { UiContext, useReducedMotion } from '../context';
 import '../fonts';
 import { PauseScreen, PhotosensitivityNotice, TitleScreen } from '../screens/Screens';
+import { SettingsStore } from '../../settings/SettingsStore';
+import { SettingsScreen } from '../screens/SettingsScreen';
 import { UiService } from '../UiService';
 
 /** Dev-only component gallery (`?debug=1&gallery=1`): every component and screen, plus the transitions. */
@@ -43,7 +45,7 @@ function Gallery(props: { readonly service: UiService }): JSX.Element {
   const [code, setCode] = useState('');
   const [card, setCard] = useState(false);
   const [counter, setCounter] = useState(120);
-  const [modal, setModal] = useState<'none' | 'modal' | 'confirm' | 'sheet'>('none');
+  const [modal, setModal] = useState<'none' | 'modal' | 'confirm' | 'sheet' | 'settings'>('none');
   const [motionOn, setMotionOn] = useState(false);
   const reduced = useReducedMotion();
   return (
@@ -182,6 +184,13 @@ function Gallery(props: { readonly service: UiService }): JSX.Element {
             </Button>
             <Button
               onClick={() => {
+                setModal('settings');
+              }}
+            >
+              Open settings
+            </Button>
+            <Button
+              onClick={() => {
                 service.toast('Saved');
               }}
             >
@@ -268,6 +277,15 @@ function Gallery(props: { readonly service: UiService }): JSX.Element {
           }}
         />
       )}
+      {modal === 'settings' && service.settings && (
+        <SettingsScreen
+          store={service.settings}
+          about={service.about}
+          onClose={() => {
+            setModal('none');
+          }}
+        />
+      )}
       {modal === 'sheet' && (
         <SideSheet
           title="Workshop"
@@ -284,14 +302,18 @@ function Gallery(props: { readonly service: UiService }): JSX.Element {
 
 /** Mounts the gallery as a standalone page (no game). */
 export function mountGallery(host: HTMLElement): UiService {
-  const service = new UiService({ driven: false });
+  const service = new UiService({
+    driven: false,
+    settings: new SettingsStore(null),
+    about: { version: '0.0.0', build: 'gallery' },
+  });
   service.prefs.watchSystem(window);
   service.prefs.patch({ glass: true });
   service.mount(host);
   const page = document.createElement('div');
   service.root?.prepend(page);
   render(
-    <UiContext.Provider value={{ feedback: service.feedback, prefs: service.prefs, nav: service.nav }}>
+    <UiContext.Provider value={service.context}>
       <Gallery service={service} />
     </UiContext.Provider>,
     page,

@@ -1,6 +1,9 @@
 import { Capacitor } from '@capacitor/core';
 import { installAudioLifecycle } from './app/AudioUnlock';
-import { beginBoot, BOOT_KEY, markBootOk, type KeyValueStore } from './app/BootGuard';
+import { applySettings } from './app/SettingsApply';
+import { manualTier } from './settings/Derived';
+import { SettingsStore } from './settings/SettingsStore';
+import { beginBoot, BOOT_KEY, markBootOk } from './app/BootGuard';
 import { browserEnv, detectCapabilities, type Capabilities } from './app/Capabilities';
 import { createGame, type CreatedGame } from './app/createGame';
 import { GameInput } from './app/GameInput';
@@ -15,7 +18,8 @@ import { installViewportGuards } from './app/ViewportGuards';
 import { showWebGLRequiredScreen } from './app/WebGLRequiredScreen';
 import type { AssetSnapshotItem } from './assets/AssetRegistry';
 import { parseAssetPolicy } from './assets/AssetTypes';
-import type { EngineStats } from './audio/SoundEngine';
+import type { EngineStats, SoundEngine } from './audio/SoundEngine';
+import type { Settings } from './settings/SettingsSchema';
 import type { StressResult } from './audio/StressTest';
 import { validateReplay } from './core/Replay';
 
@@ -44,7 +48,10 @@ declare global {
         readonly limiter: () => { threshold: number; ratio: number; attack: number; release: number } | null;
         /** Renders a worst-case burst offline and returns the peak sample. */
         readonly stress: () => Promise<StressResult>;
+        readonly mix: () => ReturnType<SoundEngine['describeMix']>;
       };
+      readonly settings: () => Settings;
+      readonly fpsLimit: () => number;
       readonly counters: () => LeakSnapshot;
       readonly restartLevel: () => void;
       /** The current run as replay JSON. */
@@ -67,7 +74,7 @@ const leakCounts = testMode || debug ? installLeakCounting(window) : null;
 const log = new Log({ now: () => performance.now(), verbose: debug, console });
 installGlobalErrorHandlers(window, log);
 
-function storage(): KeyValueStore | null {
+function storage(): Storage | null {
   try {
     return window.localStorage;
   } catch {
@@ -93,7 +100,6 @@ function applyStageSize(element: HTMLElement): StageSize {
   return size;
 }
 
-const PERF_KEY = 'cd.perf';
 const NOTICE_KEY = 'cd.photoNotice';
 
 function start(gameRoot: HTMLElement): void {
@@ -113,8 +119,14 @@ function start(gameRoot: HTMLElement): void {
   installViewportGuards(gameRoot);
   applyStageSize(gameRoot);
 
-  const quality = new QualityGovernor(boot.safeMode ? 'battery' : initialTier(capabilities), {
+  // Settings load first: the quality preset decides the first tier (spec 8.6, 15.3).
+  const settings = new SettingsStore(store);
+  for (const issue of settings.loadIssues)
+    log.warn('settings', `${issue.path} was invalid; using the default`);
+  const preset = manualTier(settings.get());
+  const quality = new QualityGovernor(boot.safeMode ? 'battery' : (preset ?? initialTier(capabilities)), {
     nowMs: performance.now(),
+    manual: preset !== null,
   });
   const diagnostics = (): string =>
     JSON.stringify(
@@ -122,7 +134,7 @@ function start(gameRoot: HTMLElement): void {
         build: `${__APP_VERSION__} (${import.meta.env.MODE})`,
         userAgent: navigator.userAgent,
         capabilities,
-        settings: {},
+        settings: settings.get(),
         safeMode: boot.safeMode,
         quality: { tier: quality.tier, pending: quality.pending, history: quality.history },
         log: log.tail(50),
@@ -131,17 +143,12 @@ function start(gameRoot: HTMLElement): void {
       2,
     );
   let badge: PerfBadge | null = null;
-  const perfWanted = debug || store?.getItem(PERF_KEY) === '1';
+  // The pause menu's overlay item and Settings → Show FPS are the same setting.
+  const perfWanted = debug || settings.get().graphics.showFps;
   const perf = {
     shown: () => badge?.shown() ?? false,
     toggle: () => {
-      const next = !(badge?.shown() ?? false);
-      badge?.setVisible(next);
-      try {
-        store?.setItem(PERF_KEY, next ? '1' : '0');
-      } catch {
-        // storage blocked: the toggle still works for this session
-      }
+      settings.set('graphics', 'showFps', !(badge?.shown() ?? false));
     },
   };
 
@@ -158,6 +165,7 @@ function start(gameRoot: HTMLElement): void {
       safeMode: boot.safeMode,
       diagnostics,
       perf,
+      settings,
       flow: {
         skipToLevel: testMode && params.get('flow') !== '1',
         noticeSeen: () => store?.getItem(NOTICE_KEY) === '1',
@@ -240,7 +248,17 @@ function start(gameRoot: HTMLElement): void {
     }, 0);
   });
 
-  installAudioLifecycle(window, services.audio);
+  applySettings(settings, {
+    audio: services.audio,
+    input,
+    quality,
+    ui: services.ui,
+    game,
+    // In debug builds the badge is always on.
+    badge: () => (debug ? null : badge),
+    safeMode: boot.safeMode,
+  });
+  installAudioLifecycle(window, services.audio, () => settings.get().audio.muteInBackground);
   if (testMode) {
     const counters = (): LeakSnapshot => {
       let textureMb = 0;
@@ -277,7 +295,10 @@ function start(gameRoot: HTMLElement): void {
         stats: () => services.audio.stats(),
         limiter: () => services.audio.describeLimiter(),
         stress: async () => (await import('./audio/StressTest')).runAudioStress(),
+        mix: () => services.audio.describeMix(),
       },
+      settings: () => settings.get(),
+      fpsLimit: () => game.loop.fpsLimit,
       counters,
       restartLevel: () => services.level.current?.restart(),
       replay: () => {

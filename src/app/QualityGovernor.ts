@@ -32,7 +32,7 @@ export function initialTier(
 export class QualityGovernor {
   private current: QualityTier;
   private pendingTier: QualityTier | null = null;
-  private readonly manual: boolean;
+  private manual: boolean;
   private readonly stats = new FrameStats(0.1, 120);
   private aboveSince: number | null = null;
   private belowSince: number | null = null;
@@ -63,6 +63,26 @@ export class QualityGovernor {
 
   get p95Ms(): number {
     return this.stats.p95Ms();
+  }
+
+  /**
+   * The Settings quality preset: a tier stops automatic changes and applies at the next scene boundary;
+   * null returns to automatic.
+   */
+  setManual(tier: QualityTier | null, nowMs = 0): void {
+    if (tier === null) {
+      this.manual = false;
+      return;
+    }
+    this.manual = true;
+    if (tier !== (this.pendingTier ?? this.current)) {
+      this.changes.push({ atMs: nowMs, from: this.pendingTier ?? this.current, to: tier });
+    }
+    this.pendingTier = tier === this.current ? null : tier;
+  }
+
+  get isManual(): boolean {
+    return this.manual;
   }
 
   /** One rendered frame. Paused or hidden time should not be fed in. */

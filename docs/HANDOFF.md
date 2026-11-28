@@ -1,6 +1,23 @@
 # Handoff
 
-State: Pass 2A (UI foundation) is done locally and waits for CI on its pull request, then the owner's OK. Next is 2B (Settings & accessibility). Manual mode. Owner phone checks still open: docs/DEVICES.md, plus the 2A "no long tasks on a Mid device" check.
+State: Pass 2A is merged (#4). Pass 2B-1 (settings) is done locally and waits for CI on its pull request, then the owner's OK for 2B-2 (i18n). 2B is split into 2B-1 … 2B-5 (DECISIONS). Manual mode. Owner phone checks still open: docs/DEVICES.md and the 2A "no long tasks on a Mid device" check.
+
+What 2B-1 added:
+
+- `src/settings/`: `SettingsSchema.ts` (one Zod schema per §8.6 row, `DEFAULT_SETTINGS`, `parseSettings` never throws and falls back per field, `serializeSettings`), `SettingsStore.ts` (`cd.settings`, writes on every change, survives blocked storage, migrates `cd.perf`), `Derived.ts` (pure mappings: bus gains, stick tuning, `FxPrefs`, manual tier, fps limit, level difficulty, reduced motion).
+- `src/ui/screens/SettingsScreen.tsx`: tabs Audio, Graphics, Controls, Gameplay, Accessibility, Language, Data, About; rows say when a setting takes effect; Restore defaults per tab; pop-up rises from its opener (gear on the Title, "Settings" on Pause). Settings and About info travel in the UI context (`useUi().settings`).
+- `src/app/SettingsApply.ts`: on every change → `SoundEngine.setMix` (volumes, mono, night), stick tuning (touch and pads), touch stick type, button size and opacity, `InputRouter.setOptions` (shoot toggle, auto-fire, aim mode via `input/InputOptions.ts`), quality preset (`QualityGovernor.setManual`), `game.loop.setFPSLimit`, the FPS badge, UI reduced motion and `--text-scale`. `installAudioLifecycle` honours "Mute when in background".
+- Read at each level start (`LevelScene.create`): difficulty, assists, particles and parallax overrides, background intensity, the level's reduced motion. Read live: camera shake, hit-stop, screen flashes, damage numbers (`FxPrefs` getter into `Effects`, `CameraRig`, `ScreenFx`), game speed. TitleScene: menu background (static/animated) and intensity.
+- Core: `WorldSetup.assists?` (`Assists`, `NO_ASSISTS`, `assistBits`), `DamageRules` for `hitHazard`/`hurtPlayer`, infinite fuel in the jetpack, assists in the state hash only when on, optional `setup.assists` in replays.
+- Test hooks: `__CD_TEST__.settings()`, `.audio.mix()`, `.fpsLimit()`; the probe has `difficulty` and `assists`.
+
+Gotchas learned:
+
+- The game keyboard handler used to `preventDefault` Arrow keys everywhere; form controls now keep their own keys (`isFormControl`).
+- `choice()` option lists need a `const` type parameter, or the literals widen to `string`.
+- Hover-to-focus follows only real mouse movement (`pointermove` with movement) and never takes focus from a slider or text field: content opening under a still mouse used to steal focus from a slider mid-adjustment (CI caught it).
+- Navigation scopes register and autofocus in a layout effect, and autofocus never takes focus from something already focused inside the scope (a passive effect ran after paint and could steal focus on slow CI).
+- Eight axe scans on software WebGL take about 30 s; that test has its own 120 s timeout.
 
 What 2A added (`src/ui`, Preact, DOM over the canvas inside `#game-root`):
 

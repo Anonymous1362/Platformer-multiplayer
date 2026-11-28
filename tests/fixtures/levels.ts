@@ -3,7 +3,7 @@ import { NEUTRAL_INPUT } from '../../src/core/InputSanitize';
 import type { InputFrame } from '../../src/core/InputTypes';
 import { parseLevel } from '../../src/core/level/AsciiParser';
 import type { Level } from '../../src/core/level/LevelTypes';
-import type { PlayerState, SimulationEvent, WorldState } from '../../src/core/SimulationTypes';
+import type { Assists, PlayerState, SimulationEvent, WorldState } from '../../src/core/SimulationTypes';
 import { createWorld, setupFor, WorldSimulation } from '../../src/core/WorldSimulation';
 
 /** Builds the raw level JSON for an ASCII map (tests only; content levels live in content/levels). */
@@ -55,9 +55,18 @@ export class Harness {
   readonly sim: WorldSimulation;
   readonly events: SimulationEvent[] = [];
 
-  constructor(level: Level, playerCount = 1, seed = 1, difficulty: DifficultyId = 'normal') {
+  constructor(
+    level: Level,
+    playerCount = 1,
+    seed = 1,
+    difficulty: DifficultyId = 'normal',
+    assists?: Assists,
+  ) {
     this.level = level;
-    this.world = createWorld(setupFor(level, { seed, difficulty, playerCount }), level);
+    this.world = createWorld(
+      setupFor(level, { seed, difficulty, playerCount, ...(assists ? { assists } : {}) }),
+      level,
+    );
     this.sim = new WorldSimulation(level, { assertFinite: true });
   }
 

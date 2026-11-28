@@ -9,6 +9,7 @@ import { BootScene } from '../scenes/BootScene';
 import { LevelScene } from '../scenes/LevelScene';
 import { TitleScene } from '../scenes/TitleScene';
 import { UiPrefs, glassAllowed } from '../ui/prefs';
+import type { SettingsStore } from '../settings/SettingsStore';
 import { UiService } from '../ui/UiService';
 import '../ui/fonts';
 import { Palette, cssHex } from '../theme/ThemePalette';
@@ -28,6 +29,7 @@ export interface GameOptions {
   readonly diagnostics: () => string;
   readonly perf: GameServices['perf'];
   readonly flow: GameServices['flow'];
+  readonly settings: SettingsStore;
 }
 
 export interface CreatedGame {
@@ -88,6 +90,8 @@ export function createGame(root: HTMLElement, options: GameOptions): CreatedGame
   const ui = new UiService({
     driven: true,
     prefs,
+    settings: options.settings,
+    about: { version: options.flow.version, build: `${options.flow.version} (${import.meta.env.MODE})` },
     feedback: {
       sound: (kind) => {
         audio.play(`sfx_ui_${kind}`);
@@ -98,6 +102,7 @@ export function createGame(root: HTMLElement, options: GameOptions): CreatedGame
   });
   ui.mount(root);
   const services: GameServices = {
+    settings: options.settings,
     ui,
     flow: options.flow,
     assets,

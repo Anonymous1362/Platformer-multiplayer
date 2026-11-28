@@ -2,11 +2,39 @@ import type { JSX } from 'preact';
 import { useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { Button, Panel } from '../components/Basics';
 import { ConfirmDialog } from '../components/Overlays';
-import { useReducedMotion } from '../context';
+import { useReducedMotion, useUi } from '../context';
 import { useEntrance, useNavScope, type ElementRef } from '../hooks';
 import { logoShardOffset, play } from '../motion';
+import { SettingsScreen } from './SettingsScreen';
 
 export type PauseAction = 'resume' | 'restart' | 'perf' | 'quit';
+
+/** Settings as a pop-up that rises from the control that opened it (spec 8.4). */
+function useSettingsPopup(): {
+  readonly open: (from: EventTarget | null) => void;
+  readonly view: JSX.Element | null;
+} {
+  const { settings, about } = useUi();
+  const [origin, setOrigin] = useState<{ x: number; y: number } | null>(null);
+  const [isOpen, setOpen] = useState(false);
+  const open = (from: EventTarget | null): void => {
+    const rect = from instanceof Element ? from.getBoundingClientRect() : null;
+    setOrigin(rect ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 } : null);
+    setOpen(true);
+  };
+  const view =
+    isOpen && settings ? (
+      <SettingsScreen
+        store={settings}
+        about={about}
+        origin={origin ?? undefined}
+        onClose={() => {
+          setOpen(false);
+        }}
+      />
+    ) : null;
+  return { open, view };
+}
 
 /** The logo: letters that fly together from scattered shard offsets (1.2 s); a fade under reduced motion. */
 export function Logo(props: { readonly text: string }): JSX.Element {
@@ -47,6 +75,7 @@ export function TitleScreen(props: TitleScreenProps): JSX.Element {
   const root = useRef<HTMLDivElement>(null);
   const started = useRef(false);
   const preview = props.preview === true;
+  const settings = useSettingsPopup();
   const start = (): void => {
     if (started.current || preview) return;
     started.current = true;
@@ -62,6 +91,28 @@ export function TitleScreen(props: TitleScreenProps): JSX.Element {
       <span class="cd-version" data-role="version">
         v{props.version}
       </span>
+      <div class="cd-gear">
+        <Button
+          variant="icon"
+          label="Settings"
+          data-action="settings"
+          onClick={(event) => {
+            event.stopPropagation();
+            settings.open(event.currentTarget);
+          }}
+        >
+          <GearIcon />
+        </Button>
+      </div>
+      {settings.view ? (
+        <div
+          onClick={(event) => {
+            event.stopPropagation();
+          }}
+        >
+          {settings.view}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -128,6 +179,7 @@ export function PauseScreen(props: PauseScreenProps): JSX.Element {
   const root = useRef<HTMLDivElement>(null);
   const panel = useRef<HTMLDivElement>(null);
   const [confirming, setConfirming] = useState(false);
+  const settings = useSettingsPopup();
   const done = useRef(false);
   useEntrance(panel, 'panelOpen');
   const act = (action: PauseAction): void => {
@@ -174,6 +226,15 @@ export function PauseScreen(props: PauseScreenProps): JSX.Element {
           </Button>
           <Button
             align="start"
+            data-action="settings"
+            onClick={(event) => {
+              settings.open(event.currentTarget);
+            }}
+          >
+            Settings
+          </Button>
+          <Button
+            align="start"
             data-action="perf"
             onClick={() => {
               act('perf');
@@ -211,6 +272,20 @@ export function PauseScreen(props: PauseScreenProps): JSX.Element {
           }}
         />
       ) : null}
+      {settings.view}
     </div>
+  );
+}
+
+/** A simple gear (decorative: the button carries the label). */
+function GearIcon(): JSX.Element {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path
+        fill="currentColor"
+        d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.4-2.5 1a7.4 7.4 0 0 0-1.7-1L15 3.3h-4l-.3 2.7a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.4L6.6 11a7.6 7.6 0 0 0 0 2l-2.1 1.6 2 3.4 2.5-1a7.4 7.4 0 0 0 1.7 1l.3 2.7h4l.3-2.7a7.4 7.4 0 0 0 1.7-1l2.5 1 2-3.4zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"
+        transform="translate(-1 0)"
+      />
+    </svg>
   );
 }

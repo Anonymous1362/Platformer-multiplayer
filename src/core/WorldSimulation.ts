@@ -16,12 +16,13 @@ import { applyIntents, createPlayer, movePlayer } from './player/PlayerControlle
 import { createRun, resetAfterDeath, stepTriggers } from './Progress';
 import { Random } from './Random';
 import type { PlanetPhysics, SimContext } from './SimContext';
-import type {
-  PlayerState,
-  SimulationEvent,
-  SimulationStepResult,
-  WorldSetup,
-  WorldState,
+import {
+  NO_ASSISTS,
+  type PlayerState,
+  type SimulationEvent,
+  type SimulationStepResult,
+  type WorldSetup,
+  type WorldState,
 } from './SimulationTypes';
 
 export { approach } from './player/PlayerController';
@@ -129,6 +130,7 @@ export class WorldSimulation implements Simulation {
       world,
       planet: this.planet,
       difficulty: state.setup.difficulty,
+      assists: state.setup.assists ?? NO_ASSISTS,
       events,
       tick,
     };
@@ -159,7 +161,7 @@ export class WorldSimulation implements Simulation {
       if (player.mode === 'hazardRespawn' || player.mode === 'dead') continue;
       const cause = hazardAt(this.level, player);
       if (cause) {
-        hitHazard(player, cause, ctx.difficulty, events, tick);
+        hitHazard(player, cause, ctx, events, tick);
         continue;
       }
       if (player.grounded) {

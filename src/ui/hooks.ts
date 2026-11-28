@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef } from 'preact/hooks';
+import { useLayoutEffect, useRef } from 'preact/hooks';
 import { useReducedMotion, useUi } from './context';
 import { play, type MotionKind, type MotionParams } from './motion';
 import { NAV_SELECTOR } from './nav';
@@ -33,7 +33,8 @@ export function useNavScope(ref: ElementRef<HTMLElement>, options: NavScopeOptio
   const { nav } = useUi();
   const latest = useRef<(() => void) | undefined>(undefined);
   latest.current = options.onBack;
-  useEffect(() => {
+  // A layout effect: the scope exists and takes focus before the browser handles any further input.
+  useLayoutEffect(() => {
     const root = ref.current;
     if (!root) return undefined;
     const previous = root.ownerDocument.activeElement;
@@ -53,10 +54,15 @@ export function useNavScope(ref: ElementRef<HTMLElement>, options: NavScopeOptio
     const onFocusOut = (event: FocusEvent): void => {
       if (event.target instanceof HTMLElement) delete event.target.dataset['selected'];
     };
-    const onOver = (event: PointerEvent): void => {
+    // Hover selects like a mouse menu, but only when the mouse really moves: content changing under a
+    // still pointer must never steal focus, and a focused slider or text field keeps it.
+    const onMove = (event: PointerEvent): void => {
       if (event.pointerType !== 'mouse' || !(event.target instanceof Element)) return;
+      if (event.movementX === 0 && event.movementY === 0) return;
+      const active = root.ownerDocument.activeElement;
+      if (active instanceof HTMLElement && active.matches('input, textarea, select')) return;
       const item = event.target.closest<HTMLElement>(NAV_SELECTOR);
-      if (item && root.contains(item) && item !== root.ownerDocument.activeElement) item.focus();
+      if (item && root.contains(item) && item !== active) item.focus();
     };
     const onKey = (event: KeyboardEvent): void => {
       if (!options.trap || event.key !== 'Tab') return;
@@ -77,9 +83,10 @@ export function useNavScope(ref: ElementRef<HTMLElement>, options: NavScopeOptio
     };
     root.addEventListener('focusin', onFocusIn);
     root.addEventListener('focusout', onFocusOut);
-    root.addEventListener('pointerover', onOver);
+    root.addEventListener('pointermove', onMove);
     root.addEventListener('keydown', onKey);
-    if (options.autofocus !== false) {
+    // Never take focus back from something the player already focused inside the scope.
+    if (options.autofocus !== false && !root.contains(root.ownerDocument.activeElement)) {
       const first =
         root.querySelector<HTMLElement>('[data-autofocus]') ?? root.querySelector<HTMLElement>(NAV_SELECTOR);
       first?.focus({ preventScroll: true });
@@ -87,7 +94,7 @@ export function useNavScope(ref: ElementRef<HTMLElement>, options: NavScopeOptio
     return () => {
       root.removeEventListener('focusin', onFocusIn);
       root.removeEventListener('focusout', onFocusOut);
-      root.removeEventListener('pointerover', onOver);
+      root.removeEventListener('pointermove', onMove);
       root.removeEventListener('keydown', onKey);
       off();
       if (options.trap && previous instanceof HTMLElement && previous.isConnected) {

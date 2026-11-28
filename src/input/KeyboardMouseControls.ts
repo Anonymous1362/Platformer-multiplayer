@@ -142,6 +142,12 @@ export class KeyboardMouseControls implements InputSource {
  * Window keyboard listeners and canvas mouse listeners. Modified keys (Ctrl, Cmd, Alt) are never
  * handled, so browser shortcuts such as Ctrl/Cmd + W, R, T, L, Q keep working (spec 8.13).
  */
+/** A focused input, text area, select, or editable element takes its own keys. */
+export function isFormControl(target: EventTarget | null): boolean {
+  if (typeof HTMLElement === 'undefined' || !(target instanceof HTMLElement)) return false;
+  return target.isContentEditable || target.matches('input, textarea, select');
+}
+
 export function attachKeyboardMouse(
   win: Window,
   canvas: HTMLElement,
@@ -150,10 +156,13 @@ export function attachKeyboardMouse(
 ): () => void {
   const onKeyDown = (e: KeyboardEvent): void => {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
+    // Keys typed into a form control (a slider, a code box) belong to that control, not the game.
+    if (isFormControl(e.target)) return;
     if (controls.keyDown(e.code, e.repeat, now())) e.preventDefault();
   };
   const onKeyUp = (e: KeyboardEvent): void => {
-    if (controls.keyUp(e.code)) e.preventDefault();
+    // Key-ups always reach the game, so a key held before focusing a control is still released.
+    if (controls.keyUp(e.code) && !isFormControl(e.target)) e.preventDefault();
   };
   const onMouseDown = (e: MouseEvent): void => {
     controls.pointerMove(e.clientX, e.clientY);

@@ -3,11 +3,12 @@ import { render } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { MenuIntent } from '../input/MenuNav';
 import { ToastHost, ToastQueue } from './components/Overlays';
-import { UiContext, silentFeedback, type UiFeedback } from './context';
+import { UiContext, silentFeedback, type UiContextValue, type UiFeedback } from './context';
 import { motionTotalMs, MOTIONS, play } from './motion';
 import { NavStack } from './nav';
 import { UiPrefs, type UiPrefsState } from './prefs';
 import { PauseScreen, PhotosensitivityNotice, TitleScreen, type PauseAction } from './screens/Screens';
+import type { SettingsStore } from '../settings/SettingsStore';
 import { Store, useStore } from './store';
 import { Transitions, type TransitionKind } from './Transitions';
 
@@ -31,6 +32,8 @@ export interface UiServiceOptions {
    * also act natively. The standalone gallery has no scene loop and uses native keys.
    */
   readonly driven: boolean;
+  readonly settings?: SettingsStore;
+  readonly about?: { readonly version: string; readonly build: string };
 }
 
 const DRIVEN_KEYS: ReadonlySet<string> = new Set(['Enter', 'NumpadEnter', 'Space', 'ArrowUp', 'ArrowDown']);
@@ -84,7 +87,7 @@ function UiRoot(props: { readonly service: UiService }): JSX.Element {
     if (leaving) play(leaveRef.current, 'panelClose', service.prefs.reduced);
   }, [leaving, service]);
   return (
-    <UiContext.Provider value={{ feedback: service.feedback, prefs: service.prefs, nav: service.nav }}>
+    <UiContext.Provider value={service.context}>
       {leaving ? (
         <div ref={leaveRef} style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }} inert>
           <ScreenView screen={leaving} />
@@ -108,14 +111,30 @@ export class UiService {
   readonly prefs: UiPrefs;
   readonly feedback: UiFeedback;
   private readonly driven: boolean;
+  readonly settings: SettingsStore | null;
+  readonly about: { readonly version: string; readonly build: string };
   private element: HTMLElement | null = null;
   private transitions: Transitions | null = null;
   private offs: (() => void)[] = [];
+  private textScale = 1;
 
   constructor(options: UiServiceOptions) {
     this.driven = options.driven;
     this.prefs = options.prefs ?? new UiPrefs();
     this.feedback = options.feedback ?? silentFeedback;
+    this.settings = options.settings ?? null;
+    this.about = options.about ?? { version: '0.0.0', build: 'dev' };
+  }
+
+  /** What every UI component reads through `useUi()`. */
+  get context(): UiContextValue {
+    return {
+      feedback: this.feedback,
+      prefs: this.prefs,
+      nav: this.nav,
+      settings: this.settings,
+      about: this.about,
+    };
   }
 
   /** Mounts the layer as the last child of `host` (pointer events pass through where nothing is drawn). */
@@ -130,6 +149,7 @@ export class UiService {
     root.append(view, overlays);
     host.append(root);
     this.element = root;
+    root.style.setProperty('--text-scale', String(this.textScale));
     this.transitions = new Transitions(overlays);
     const apply = (state: UiPrefsState): void => {
       root.dataset['glass'] = state.glass ? 'on' : 'off';
@@ -157,6 +177,12 @@ export class UiService {
 
   get root(): HTMLElement | null {
     return this.element;
+  }
+
+  /** Text Size (spec 8.2, 8.6): scales every UI type size; the setting is 90–150%. */
+  setTextScale(scale: number): void {
+    this.textScale = Math.min(1.5, Math.max(0.9, scale));
+    this.element?.style.setProperty('--text-scale', String(this.textScale));
   }
 
   show(screen: ScreenState): void {

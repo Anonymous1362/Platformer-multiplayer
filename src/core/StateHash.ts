@@ -1,7 +1,7 @@
 import { Fnv1a32 } from './Hash';
 import { DIFFICULTY_IDS } from './Ids';
 import { ENEMY_ARCHETYPES } from './level/LevelTypes';
-import { ENEMY_MODES, PLAYER_MODES, type WorldState } from './SimulationTypes';
+import { assistBits, ENEMY_MODES, PLAYER_MODES, type WorldState } from './SimulationTypes';
 
 /** Writes a small signed integer as two's-complement u8 (-1, 0, 1 fields). */
 function sign(value: number): number {
@@ -19,6 +19,9 @@ export function hashWorld(state: WorldState): string {
   h.u32(state.tick);
   h.f64(setup.seed).u8(DIFFICULTY_IDS.indexOf(setup.difficulty)).u8(setup.playerCount);
   h.string(setup.levelId).string(setup.levelHash);
+  // Assists only enter the hash when one is on, so every run without them hashes as before.
+  const assists = assistBits(setup.assists);
+  if (assists !== 0) h.u8(0xa5).u8(assists);
   for (const word of state.rng) h.u32(word);
 
   h.u32(entities.capacity);

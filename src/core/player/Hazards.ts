@@ -2,7 +2,13 @@ import { GameConfig, Ticks } from '../GameConfig';
 import { HAZARD_FLAGS, TileFlag, type Level } from '../level/LevelTypes';
 import { overlapsSolid, tileFlags, type CollisionWorld, type Support } from '../Collision';
 import type { DifficultyId } from '../Ids';
-import type { HazardCause, PlayerState, SimulationEvent } from '../SimulationTypes';
+import type { Assists, HazardCause, PlayerState, SimulationEvent } from '../SimulationTypes';
+
+/** The rules a damage call needs: difficulty scaling and the run's assists (spec 3.4). */
+export interface DamageRules {
+  readonly difficulty: DifficultyId;
+  readonly assists: Assists;
+}
 
 /**
  * Hazards, damage, safe ground, and respawn (spec section 4.3). Hazard contact always sends the player
@@ -149,15 +155,19 @@ function die(player: PlayerState, events: SimulationEvent[], tick: number): void
   events.push({ type: 'died', playerId: player.id, tick });
 }
 
-/** Hazard contact or a crush: damage (unless invulnerable), then the fade-and-respawn sequence or death. */
+/**
+ * Hazard contact or a crush: damage (unless invulnerable, or with the "hazard respawn without damage"
+ * or invulnerability assist), then the fade-and-respawn sequence or death.
+ */
 export function hitHazard(
   player: PlayerState,
   cause: HazardCause,
-  difficulty: DifficultyId,
+  rules: DamageRules,
   events: SimulationEvent[],
   tick: number,
 ): void {
-  const damage = applyDamage(player, scaledDamage(GameConfig.hazard.damage, difficulty));
+  const spared = rules.assists.invulnerable || rules.assists.hazardNoDamage;
+  const damage = spared ? 0 : applyDamage(player, scaledDamage(GameConfig.hazard.damage, rules.difficulty));
   events.push({ type: 'hazardHit', playerId: player.id, tick, cause, damage });
   if (player.hp <= 0) {
     die(player, events, tick);
@@ -176,11 +186,12 @@ export function hurtPlayer(
   player: PlayerState,
   amount: number,
   sourceX: number,
-  difficulty: DifficultyId,
+  rules: DamageRules,
   events: SimulationEvent[],
   tick: number,
 ): boolean {
-  const dealt = applyDamage(player, scaledDamage(amount, difficulty));
+  if (rules.assists.invulnerable) return false;
+  const dealt = applyDamage(player, scaledDamage(amount, rules.difficulty));
   if (dealt === 0) return false;
   events.push({ type: 'playerHurt', playerId: player.id, tick, damage: dealt, sourceX });
   if (player.hp <= 0) {

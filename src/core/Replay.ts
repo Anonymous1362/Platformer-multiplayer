@@ -3,7 +3,7 @@ import { isDifficultyId } from './Ids';
 import { quantizeAxis, sanitizeAim, sanitizeHeld } from './InputSanitize';
 import type { InputFrame } from './InputTypes';
 import type { Level } from './level/LevelTypes';
-import type { WorldSetup, WorldState } from './SimulationTypes';
+import type { Assists, WorldSetup, WorldState } from './SimulationTypes';
 import { hashWorld } from './StateHash';
 import { createWorld, WorldSimulation } from './WorldSimulation';
 
@@ -139,6 +139,24 @@ export function validateReplay(raw: unknown): ReplayValidation {
   ) {
     return fail('bad setup');
   }
+  // Optional (absent in replays made before Pass 2B, which means no assists).
+  const rawAssists = setup['assists'];
+  let assists: Assists | null = null;
+  if (rawAssists !== undefined) {
+    if (typeof rawAssists !== 'object' || rawAssists === null) return fail('bad assists');
+    const a = rawAssists as Record<string, unknown>;
+    if (
+      typeof a['invulnerable'] !== 'boolean' ||
+      typeof a['infiniteFuel'] !== 'boolean' ||
+      typeof a['hazardNoDamage'] !== 'boolean'
+    )
+      return fail('bad assists');
+    assists = {
+      invulnerable: a['invulnerable'],
+      infiniteFuel: a['infiniteFuel'],
+      hazardNoDamage: a['hazardNoDamage'],
+    };
+  }
 
   const inputs = r['inputs'];
   if (!Array.isArray(inputs) || inputs.length !== setup['playerCount'])
@@ -182,6 +200,7 @@ export function validateReplay(raw: unknown): ReplayValidation {
       playerCount: setup['playerCount'],
       levelId: setup['levelId'],
       levelHash: setup['levelHash'],
+      ...(assists ? { assists } : {}),
     },
     ticks: r['ticks'],
     inputs: (inputs as InputRun[][]).map((list) => list.map((run): InputRun => [...run])),

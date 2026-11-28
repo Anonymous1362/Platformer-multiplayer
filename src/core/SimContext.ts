@@ -2,7 +2,7 @@ import type { CollisionWorld } from './Collision';
 import { allocateEntity, type EntityId } from './EntityIds';
 import type { DifficultyId } from './Ids';
 import type { Level } from './level/LevelTypes';
-import type { SimulationEvent, WorldState } from './SimulationTypes';
+import type { Assists, SimulationEvent, WorldState } from './SimulationTypes';
 
 /** Gravity scale and air control of the level's planet (spec 4.1). */
 export interface PlanetPhysics {
@@ -17,6 +17,7 @@ export interface SimContext {
   readonly world: CollisionWorld;
   readonly planet: PlanetPhysics;
   readonly difficulty: DifficultyId;
+  readonly assists: Assists;
   readonly events: SimulationEvent[];
   readonly tick: number;
 }

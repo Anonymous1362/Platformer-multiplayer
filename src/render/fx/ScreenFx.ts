@@ -1,6 +1,7 @@
 import type Phaser from 'phaser';
 import { Palette } from '../../theme/ThemePalette';
 import { Depth } from '../world/Depth';
+import { DEFAULT_FX_PREFS, flashScale, type FxPrefs } from './FxMath';
 
 const DAMAGE_FLASH_MS = 350;
 const DAMAGE_FLASH_ALPHA = 0.5;
@@ -20,8 +21,11 @@ export class ScreenFx {
   private timeMs = 0;
   private outlineKey = '';
 
-  constructor(scene: Phaser.Scene, reducedMotion: boolean) {
+  private readonly prefs: () => FxPrefs;
+
+  constructor(scene: Phaser.Scene, reducedMotion: boolean, prefs: () => FxPrefs = () => DEFAULT_FX_PREFS) {
     this.reducedMotion = reducedMotion;
+    this.prefs = prefs;
     this.vignette = scene.add
       .image(0, 0, 'fx_vignette')
       .setOrigin(0, 0)
@@ -39,7 +43,8 @@ export class ScreenFx {
   update(camera: Phaser.Cameras.Scene2D.Camera, dtMs: number, lowHp: boolean): void {
     this.timeMs += dtMs;
     this.flashLeftMs = Math.max(0, this.flashLeftMs - dtMs);
-    const flash = (this.flashLeftMs / DAMAGE_FLASH_MS) * DAMAGE_FLASH_ALPHA;
+    const flash =
+      (this.flashLeftMs / DAMAGE_FLASH_MS) * DAMAGE_FLASH_ALPHA * flashScale(this.prefs().flashes);
     const pulse =
       lowHp && !this.reducedMotion
         ? 0.16 + 0.14 * (0.5 + 0.5 * Math.sin((this.timeMs / LOW_HP_PERIOD_MS) * Math.PI * 2))

@@ -311,7 +311,8 @@ export function movePlayer(player: PlayerState, frame: InputFrame, ctx: PlayerCo
       player.jetpacking = true;
       if (player.vy > P.jetpack.targetVyUps)
         player.vy = Math.max(P.jetpack.targetVyUps, player.vy - P.jetpack.accelUps2 * DT);
-      player.fuelS -= P.jetpack.drainPerS * DT;
+      // The infinite-fuel assist (spec 3.4) keeps the tank full.
+      if (ctx.state.setup.assists?.infiniteFuel !== true) player.fuelS -= P.jetpack.drainPerS * DT;
       if (player.fuelS <= FUEL_EPS) player.fuelS = 0;
     } else {
       player.jetpacking = false;

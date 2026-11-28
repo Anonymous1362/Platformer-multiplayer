@@ -11,8 +11,17 @@
 | 1E | DONE and green in CI (1E-1 run 45953613318, 1E-2 run 45958847738, 1E-3 run 45961388044 after a fix: CI's Chromium 159 needs `startRendering` to tell offline audio contexts apart). Parry and slam are deferred to 3A, where the spec schedules them in full. Release notes for `0.0.3` are ready; the owner can run the Release workflow. |
 | 1F | DONE (CI green, run 45994813905). Every automated Pass 1 checklist item passes; three items need the owner's phone (marked below). |
 | Art & sound A (owner-requested, between 1F and 2A) | DONE (CI green, run 46025975171). Blender-baked animated hero, Crawler walk cycle, shard spinner, slab panels, skyline; 18 recorded CC0 sounds plus footsteps. Version 0.0.4 with release notes. |
-| 2A | DONE locally (CI pending on the pull request). Preact UI layer, tokens, components, motion, Title, Pause, photosensitivity notice, fade and iris transitions, dev gallery. |
-| 2B onward | Not started |
+| 2A | DONE (CI green, run 46045057262; merged as #4). Awaiting the owner's OK for 2B. Preact UI layer, tokens, components, motion, Title, Pause, photosensitivity notice, fade and iris transitions, dev gallery. |
+| 2B-1 | DONE locally (CI pending). Settings model (Zod, per-field fallback, per device), Settings screen with every §8.6 tab, live apply, simulation assists. |
+| 2B-2 … 2B-5 | Not started |
+
+## Pass 2B-1 evidence (2026-11-27)
+
+- `npm run verify`: passes (371 unit, input, property, and simulation tests incl. settings schema/store/derived and assists; 7 golden replays unchanged; `levels:lint`; build). Bundle 458 KB gzipped (budget 900 KB); Vite warns that the main chunk is over its 1500 kB minified warning size (Zod).
+- `npm run test:e2e` (Chrome, local): 60 of 60, including 12 settings tests (tests/e2e/settings.spec.ts). WebKit runs in CI.
+- Persists and applies: master volume change reaches the mixer at once and survives a reload; mono and night reach the mixer; frame-rate cap applies at once; text size scales the UI; shoot toggle keeps firing until the next tap; difficulty (Easy) and infinite fuel apply at the restart; one invalid stored value falls back alone and is logged; Restore defaults resets only its tab; Esc closes only the pop-up (Title and Pause), focus returns to the opener.
+- axe (WCAG 2.1 A/AA, `meta-viewport` excluded by owner decision) passes on all 8 Settings tabs, from the Title, and at 844 × 390, where the dialog fits the screen and scrolls inside.
+- Simulation assists (tests/sim/assists.test.ts): hazard respawn without damage and invulnerability spare HP and shield; infinite fuel never drains; no assists hash exactly as before; replays carry assists and re-simulate to the same hash; malformed assists are refused. `perf:bench` 0.011 ms mean per tick.
 
 ## Pass 2A evidence (2026-11-27)
 

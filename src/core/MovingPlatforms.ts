@@ -159,8 +159,7 @@ export function stepPlatforms(ctx: SimContext): void {
       if (player.grounded && player.groundPlatform === i) ok = carryRider(world, player, i, p, def);
       else if (!def.oneWay && overlapsPlatform(player, p, def)) ok = pushBody(world, player, i, p, def);
       else continue;
-      if (!ok || overlapsSolid(world, player.x, player.y))
-        hitHazard(player, 'crush', ctx.difficulty, events, tick);
+      if (!ok || overlapsSolid(world, player.x, player.y)) hitHazard(player, 'crush', ctx, events, tick);
     }
   });
 }

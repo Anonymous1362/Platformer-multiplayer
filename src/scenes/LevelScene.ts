@@ -16,7 +16,7 @@ import { hashWorld } from '../core/StateHash';
 import { GameConfig } from '../core/GameConfig';
 import { parseLevel } from '../core/level/AsciiParser';
 import type { Level } from '../core/level/LevelTypes';
-import type { WorldState } from '../core/SimulationTypes';
+import { assistBits, type Assists, type WorldState } from '../core/SimulationTypes';
 import { createWorld, setupFor, WorldSimulation } from '../core/WorldSimulation';
 import { GameAudio } from '../audio/GameAudio';
 import { hudState } from '../hud/HudModel';
@@ -25,7 +25,8 @@ import type { PauseAction } from '../ui/screens/Screens';
 import { CameraRig } from '../render/fx/CameraRig';
 import { Effects } from '../render/fx/Effects';
 import { FallTracker } from '../render/fx/FallTracker';
-import { PARTICLE_CAPS, type QualityTier } from '../render/fx/FxMath';
+import { PARTICLE_CAPS, type FxPrefs, type QualityTier } from '../render/fx/FxMath';
+import { fxPrefs, levelDifficulty } from '../settings/Derived';
 import { Particles } from '../render/fx/Particles';
 import { ScreenFx } from '../render/fx/ScreenFx';
 import { LevelView } from '../render/world/LevelView';
@@ -35,6 +36,12 @@ import { LEVEL_TEXTURES, PARALLAX_TEXTURES } from '../render/world/TextureKeys';
 import { Palette, UiTokens } from '../theme/ThemePalette';
 
 const TILE = GameConfig.world.tileSizeU;
+
+/** Settings → Particles overrides the tier's particle cap (null follows the tier). */
+function particleTierFor(particles: 'low' | 'medium' | 'high' | null, tier: QualityTier): QualityTier {
+  if (particles === null) return tier;
+  return particles === 'low' ? 'battery' : particles === 'medium' ? 'balanced' : 'high';
+}
 const PLAYER_H = GameConfig.player.colliderU.height;
 
 interface Run {
@@ -125,10 +132,26 @@ export class LevelScene extends Phaser.Scene {
     if (!parsed.ok) throw new Error(`test_arena failed validation: ${parsed.errors.join('; ')}`);
     const level = parsed.level;
     const replay = isLevelSceneData(data) ? (data.replay ?? null) : null;
-    const setup = replay?.setup ?? setupFor(level, { seed: 1, difficulty: 'normal', playerCount: 1 });
+    // A new run takes difficulty and assists from Settings (spec 3.4: they apply at the next restart);
+    // a replay brings its own.
+    const settings = this.services.settings.get();
+    const assists: Assists = {
+      invulnerable: settings.gameplay.invulnerable,
+      infiniteFuel: settings.gameplay.infiniteFuel,
+      hazardNoDamage: settings.gameplay.hazardNoDamage,
+    };
+    const setup =
+      replay?.setup ??
+      setupFor(level, {
+        seed: 1,
+        difficulty: levelDifficulty(settings, false),
+        playerCount: 1,
+        ...(assistBits(assists) !== 0 ? { assists } : {}),
+      });
     const world = createWorld(setup, level);
     const sim = new WorldSimulation(level, { assertFinite: import.meta.env.DEV });
-    const reducedMotion = this.services.capabilities.reducedMotion;
+    // System setting plus the Reduce motion override; read once per level start.
+    const reducedMotion = this.services.ui.prefs.reduced;
     // Quality tier (O6): picked at boot, adapted at runtime, applied here at the scene boundary.
     const tier: QualityTier = this.services.safeMode ? 'battery' : this.services.quality.takeTierForScene();
     const playback: Playback | null = replay
@@ -151,12 +174,22 @@ export class LevelScene extends Phaser.Scene {
     camera.setBounds(0, 0, widthU, heightU);
     this.layout();
 
-    const parallax = new ParallaxView(this, heightU, tier);
+    const parallax = new ParallaxView(this, heightU, tier, {
+      layers: settings.graphics.parallaxLayers,
+      intensity: settings.graphics.backgroundIntensity / 100,
+    });
+    let fx = fxPrefs(settings);
+    const offSettings = this.services.settings.subscribe(() => {
+      fx = fxPrefs(this.services.settings.get());
+    });
+    const readFx = (): FxPrefs => fx;
     const view = new LevelView(this, level, world, reducedMotion);
-    const rig = new CameraRig(camera, reducedMotion);
-    const screen = new ScreenFx(this, reducedMotion);
+    const rig = new CameraRig(camera, reducedMotion, readFx);
+    const screen = new ScreenFx(this, reducedMotion, readFx);
+    const particleTier = particleTierFor(settings.graphics.particles, tier);
     const effects = new Effects(this, {
-      particles: new Particles(this, PARTICLE_CAPS[tier]),
+      prefs: readFx,
+      particles: new Particles(this, PARTICLE_CAPS[particleTier]),
       camera: rig,
       screen,
       level,
@@ -218,6 +251,7 @@ export class LevelScene extends Phaser.Scene {
       // M6 and N13: a scene change releases all input and every listener and DOM node it added.
       input.router.releaseAll();
       input.keyboard.setAimResolver(null);
+      offSettings();
       offInterrupt();
       this.scale.off(Phaser.Scale.Events.RESIZE, onResize);
       renderer.off(Phaser.Renderer.Events.LOSE_WEBGL, onLost);
@@ -433,7 +467,9 @@ export class LevelScene extends Phaser.Scene {
     if (live) {
       // Playback can run faster than real time: several fixed-loop passes per frame.
       for (let pass = 0; pass < (pb?.speed ?? 1); pass += 1) {
-        const result = run.loop.advance(deltaMs / 1000, () => {
+        // Assist game speed (spec 3.4) scales simulation steps per real second, never the fixed step.
+        const speed = pb ? 1 : this.services.settings.get().gameplay.gameSpeed / 100;
+        const result = run.loop.advance((deltaMs / 1000) * speed, () => {
           this.tick(run);
         });
         alpha = result.renderAlpha;
@@ -556,6 +592,8 @@ export class LevelScene extends Phaser.Scene {
       tick: run?.world.tick ?? 0,
       paused: this.paused,
       menuOpen: this.menuShown,
+      difficulty: run?.world.setup.difficulty ?? '',
+      assists: assistBits(run?.world.setup.assists),
       contextLost: this.contextLost,
       lastFrame: this.services.input.router.lastFrame,
       counts: {

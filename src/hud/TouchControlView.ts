@@ -81,6 +81,11 @@ export class TouchControlView {
     this.root.style.display = 'block';
   }
 
+  /** Button opacity from Settings (30–100%). */
+  setOpacity(pct: number): void {
+    this.root.style.opacity = String(Math.min(1, Math.max(0.3, pct / 100)));
+  }
+
   /** Hides the controls without losing their state (menus and the title screen have no use for them). */
   setSuppressed(suppressed: boolean): void {
     this.root.style.visibility = suppressed ? 'hidden' : 'visible';
@@ -88,7 +93,7 @@ export class TouchControlView {
 
   private rebuildButtons(): void {
     const layout = this.controls.currentLayout;
-    const key = `${String(layout.width)}x${String(layout.height)}`;
+    const key = `${String(layout.width)}x${String(layout.height)}:${layout.buttons.map((b) => b.radius).join(',')}`;
     if (key === this.layoutKey) return;
     this.layoutKey = key;
     for (const el of this.buttons.values()) el.remove();
