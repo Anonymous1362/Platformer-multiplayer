@@ -5,6 +5,8 @@
     python3 -I tools/blender/lookdev/look_lock.py --cache DIR   # also keep the rendered layers in DIR
     python3 -I tools/blender/lookdev/look_lock.py --compose DIR # re-compose from DIR (seconds; for fog,
                                                                 # grade or placement tweaks, no Blender render)
+    python3 -I tools/blender/lookdev/look_lock.py --cache DIR --only play,mid,wreck_big
+                                                                # re-render only those layers into DIR
 
 What changed from the B0 style test (owner feedback, 2026-11-28):
 - Kes wears a warm, human colour that stands apart from the teal world (scheme 'rust'; 'mustard' and the
@@ -66,7 +68,10 @@ def hide_except(collection, prefix):
     return restore
 
 
-def render(tmp, scale, samples):
+def render(tmp, scale, samples, only=None):
+    """Builds the scene and renders every layer into `tmp`. With `only` (a set of layer names), renders just
+    those and reuses the files already in `tmp` for the rest (the scene is deterministic, so anchors and
+    cameras match the cached layers)."""
     look = LOOKS[LOOK]
     stage.new_scene(look, samples)
     m = kepler.materials(look)
@@ -92,15 +97,24 @@ def render(tmp, scale, samples):
     shard_cam = ST.sprite_cam('shard_cam', (0, 0, 0.0), (int(96 * d / 2), int(96 * d / 2)), d)
 
     paths = {}
+
+    def wanted(name):
+        if only is None or name in only:
+            return True
+        paths[name] = os.path.join(tmp, f'{name}.png')
+        return False
+
     for layer, cam, rig in (('far', bg_cam, 'rig_world'), ('giant', bg_cam, 'rig_world'), ('mid', bg_cam, 'rig_world'),
                             ('near', bg_cam, 'rig_world'), ('play', play_cam2, 'rig_world'),
                             ('fore', bg_cam, 'rig_world'), ('crawler', crawler_cam, 'rig_sprite'),
                             ('shard', shard_cam, 'rig_sprite')):
-        paths[layer] = stage.render_layer(layer, cam, os.path.join(tmp, f'{layer}.png'), rig)
+        if wanted(layer):
+            paths[layer] = stage.render_layer(layer, cam, os.path.join(tmp, f'{layer}.png'), rig)
     for scheme in SCHEMES:
-        kes.recolor(look, scheme)
-        paths['hero_' + scheme] = stage.render_layer('hero', hero_cam, os.path.join(tmp, f'hero_{scheme}.png'),
-                                                     'rig_sprite')
+        if wanted('hero_' + scheme):
+            kes.recolor(look, scheme)
+            paths['hero_' + scheme] = stage.render_layer('hero', hero_cam, os.path.join(tmp, f'hero_{scheme}.png'),
+                                                         'rig_sprite')
     anchors = {
         'hero': stage.to_px(play_cam, (ST.HERO_X, 0, 0)),
         'crawler': stage.to_px(play_cam, (ST.CRAWLER_X, 0, kepler.ISLAND_TOP)),
@@ -118,17 +132,22 @@ def render(tmp, scale, samples):
     kes.recolor(look, 'rust')
     k = 1.0 if scale >= 1 else 0.6
     big = ST.sprite_cam('hero_big', (0, 0, 0.95), (int(560 * k), int(720 * k)), 6 * k)
-    paths['hero_front'] = stage.render_layer('hero', big, os.path.join(tmp, 'hero_front.png'), 'rig_sprite')
-    kes.pose(J, 'idle', 150)
-    paths['hero_back'] = stage.render_layer('hero', big, os.path.join(tmp, 'hero_back.png'), 'rig_sprite')
-    cbig = ST.sprite_cam('crawler_big', (0.05, 0, 0.48), (int(640 * k), int(400 * k)), 4.2 * k)
-    paths['crawler_big'] = stage.render_layer('crawler', cbig, os.path.join(tmp, 'crawler_big.png'), 'rig_sprite')
-    restore = hide_except('mid', 'wreck')
-    wx, wy, wz = kepler.WRECK
-    ship_cam = stage.perspective_camera('ship_cam', (wx - 6, wy - 78, wz + 10), 26, (int(1100 * k), int(520 * k)),
-                                        tilt_deg=-7.0)
-    paths['wreck_big'] = stage.render_layer('mid', ship_cam, os.path.join(tmp, 'wreck_big.png'))
-    restore()
+    if wanted('hero_front'):
+        paths['hero_front'] = stage.render_layer('hero', big, os.path.join(tmp, 'hero_front.png'), 'rig_sprite')
+    if wanted('hero_back'):
+        kes.pose(J, 'idle', 150)
+        paths['hero_back'] = stage.render_layer('hero', big, os.path.join(tmp, 'hero_back.png'), 'rig_sprite')
+    if wanted('crawler_big'):
+        cbig = ST.sprite_cam('crawler_big', (0.05, 0, 0.48), (int(640 * k), int(400 * k)), 4.2 * k)
+        paths['crawler_big'] = stage.render_layer('crawler', cbig, os.path.join(tmp, 'crawler_big.png'),
+                                                  'rig_sprite')
+    if wanted('wreck_big'):
+        restore = hide_except('mid', 'wreck')
+        wx, wy, wz = kepler.WRECK
+        ship_cam = stage.perspective_camera('ship_cam', (wx - 6, wy - 78, wz + 10), 26,
+                                            (int(1100 * k), int(520 * k)), tilt_deg=-7.0)
+        paths['wreck_big'] = stage.render_layer('mid', ship_cam, os.path.join(tmp, 'wreck_big.png'))
+        restore()
     return paths, anchors
 
 
@@ -347,7 +366,10 @@ def main(argv):
         else:
             work = cache or tmp
             os.makedirs(work, exist_ok=True)
-            paths, anchors = render(work, scale, samples)
+            only = arg(argv, '--only')
+            if only and not cache:
+                raise SystemExit('--only needs --cache DIR (the other layers come from it)')
+            paths, anchors = render(work, scale, samples, set(only.split(',')) if only else None)
             if cache:
                 with open(os.path.join(cache, 'anchors.json'), 'w') as fh:
                     json.dump({'paths': {k: os.path.basename(v) for k, v in paths.items()}, 'scale': scale,

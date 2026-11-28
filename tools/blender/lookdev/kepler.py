@@ -50,7 +50,7 @@ def materials(look):
         'canopy': mats.glass('canopy', '#0B0F12', glow=look['hull_light'][0], glow_strength=0.25),
         'giant': mats.surface('giant', '#1B1F22', rough=0.7, variation=0.12, scale=0.05),
         'mite': mats.surface('mite', '#17191B', rough=0.25, coat=0.8, variation=0.1, scale=40),
-        'mite_glow': mats.emissive('mite_glow', c['glow'], 1.6),
+        'mite_glow': mats.emissive('mite_glow', c['glow'], 3.2),
         'root': mats.surface('root', '#211E1A', rough=0.8, variation=0.15, scale=20),
         'lamp': mats.emissive('lamp', hull_light, hk),
         'grate': mats.surface('grate', look['grate'], rough=0.4, metal=0.75, variation=0.1, wear='#8A8F92',
@@ -221,7 +221,7 @@ def mites_on(m, layer, rng, target, spots):
     for k, (x, z) in enumerate(spots):
         hit, loc, normal, _ = target.ray_cast(Vector((x, -12.0, z)), Vector((0, 1, 0)))
         if hit:
-            mite(f'mite{k}', m, layer, loc, normal, rng.uniform(0, math.tau), rng.uniform(0.17, 0.24))
+            mite(f'mite{k}', m, layer, loc, normal, rng.uniform(0, math.tau), rng.uniform(0.22, 0.3))
 
 
 def play_layer(m, layer, seed=11):
@@ -354,11 +354,11 @@ def lantern_wreck(m, layer, loc, length=44.0, yaw=25.0, rng=None):
     # Torn plating and exposed ribs at the break, hanging cables.
     for piece, u, sign in ((front, 0.47, 1), (rear, 0.53, -1)):
         _, ry, rz, zc = [v for v in st if abs(v[0] - u) < 1e-6][0]
-        for k in range(12):
-            a = math.tau * k / 12 + rng.uniform(-0.15, 0.15)
-            p = Vector((X(u) + sign * rng.uniform(0.2, 1.1), math.cos(a) * ry * 0.98, zc + math.sin(a) * rz * 0.9))
-            S.box(f'wreck_tear{u}_{k}', (rng.uniform(0.8, 1.8), 0.12, rng.uniform(0.8, 1.6)), p, m['hull'], layer,
-                  piece, rot=(rng.uniform(-0.6, 0.6) + a, rng.uniform(-0.5, 0.5), rng.uniform(-0.4, 0.4)))
+        angles = sorted(rng.uniform(0, math.tau) for _ in range(7))
+        for k, a in enumerate(angles):
+            p = Vector((X(u) + sign * rng.uniform(0.1, 1.6), math.cos(a) * ry * 0.98, zc + math.sin(a) * rz * 0.9))
+            S.box(f'wreck_tear{u}_{k}', (rng.uniform(0.5, 2.4), 0.12, rng.uniform(0.6, 2.0)), p, m['hull'], layer,
+                  piece, rot=(rng.uniform(-0.9, 0.9) + a, rng.uniform(-0.8, 0.8), rng.uniform(-0.7, 0.7)))
         for k, du in enumerate((0.01, 0.045)):
             rib = S.torus(f'wreck_rib{u}_{k}', 1.0, 0.25 / rz, (X(u) - sign * du * L, 0, zc), m['hull_dark'], layer,
                           None, rot=(0, math.radians(90), 0))

@@ -157,6 +157,7 @@ def rock(name, a, b, top, top_amount=0.8, strata=0.25, scale=0.7, bump=0.35, cra
         fine_mask.inputs['From Max'].default_value = 0.6
         g.link(g.noise(1.3, 2.0, 0.5, co), fine_mask.inputs['Value'])
         fine = g.math('MULTIPLY', cracks(g, co, 3.4, 0.022), fine_mask.outputs['Result'])
+        big = g.math('MULTIPLY', big, g.mad(up.outputs['Result'], 0.8, 0.2))  # faces: 20% of the top's cells
         crack_all = g.math('MAXIMUM', big, g.math('MULTIPLY', fine, 0.8))
         color = g.mix(g.math('MULTIPLY', crack_all, 0.8), color, '#050505')
         height = g.mad(crack_all, -1.6, height)

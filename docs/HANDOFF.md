@@ -8,7 +8,7 @@ What B1a added (no shipped art or game code changed):
 - Kit:
   - `shapes.crystal_cluster` sets a per-object `glow` (crc32 of the name).
   - `mats.crystal(per_object=True)` reads it.
-  - `mats.rock(crack=True, lichen=hex)`; `mats.hull` (Voronoi plate tones, scorch).
+  - `mats.rock(crack=True, lichen=hex)` (large crack cells on walkable tops, 20% of that on faces, where strata and fine cracks carry the detail); `mats.hull` (Voronoi plate tones, scorch).
   - `comp.rim_light_dir` (rim only on the edge facing the light; replaces the all-round `rim_light`).
   - `comp.smoke_plume`, `comp.shift`.
   - `looks.py`: B locked (`LOOKS['B']`), flip-safe sprite rig, `rim_engine`, finer grain, `lichen`.
@@ -24,7 +24,7 @@ What B1a added (no shipped art or game code changed):
   - composes like the engine: per-foot contact shadows, sprites fogged like the play plane, rim toward the star, crystal flare with sparks, wreck smoke;
   - writes `look-B-v2.png`/`.jpg`, grayscale, `board.jpg`, `metrics.json`;
   - `--quick` for half size (about 1.5 min); a full render takes about 12 min on 4 cores.
-  - `--cache DIR` keeps the rendered layers; `--compose DIR` re-composes from them in seconds (fog, grade, placement tweaks).
+  - `--cache DIR` keeps the rendered layers; `--compose DIR` re-composes from them in seconds (fog, grade, placement tweaks); `--cache DIR --only play,mid` re-renders just those layers (the scene is deterministic, so the cached ones still line up).
 - The workflow `.claude/workflows/art-ui-b-production.js`: look B by default; new jobs ambient, crystals, shardflight; a B2e sound batch (ambience, sfx).
 
 What B0 added (no shipped art or game code changed):
