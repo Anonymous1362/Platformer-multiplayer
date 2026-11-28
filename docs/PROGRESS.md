@@ -18,7 +18,14 @@
 | 2B-3 | DONE (CI green, run 46126279023; merged as #8). Colorblind palettes with the CVD test, sound captions, high-contrast HUD. |
 | 2B-4 | DONE (CI green, run 46126279023; merged as #8). Touch presets (Classic, Simple, Left-handed) and the layout editor; edits saved per device and orientation profile. |
 | 2B-5 | DONE (CI green, run 46126279023; merged as #8). Keyboard and controller rebinding with conflict flags and reset; full controller menu navigation. **Pass 2B complete.** |
-| Art & UI B | IN PROGRESS (owner-requested, out of order; plan in docs/ART_UI_B_PLAN.md). **B0 done** (CI green, run 46137320914; PR #9): the owner picked look B "Ember Dark". **B1a done, waiting for the owner:** look B v2 with the owner's feedback (docs/art/look-lock/), Art Bible v1 (docs/ART_BIBLE.md), ADR, art skill rewritten. Owner: approve, pick Kes's colour key, say "go B1b" (engine proof). Then B2a–e (ultracode), B3 (polish, 0.0.6). |
+| Art & UI B | IN PROGRESS (owner-requested, out of order; plan in docs/ART_UI_B_PLAN.md). **B0 done** (CI green, run 46137320914; PR #9): the owner picked look B "Ember Dark". **B1a done (CI green, run 46150229638), waiting for the owner:** look B v2 with the owner's feedback (docs/art/look-lock/), Art Bible v1 (docs/ART_BIBLE.md), ADR, art skill rewritten. Owner: approve, pick Kes's colour key, say "go B1b" (engine proof). Then B2a–e (ultracode), B3 (polish, 0.0.6). |
+
+## Art & UI B · B1a evidence (2026-11-28)
+
+- `npm run verify`: passes locally (418 unit tests, 7 golden replays, levels lint, build). CI run 46150229638 green: verify, browser tests, dependency audit, Android build.
+- `npm run art:lookdev` (look lock): the full render takes about 12 min on 4 cores (exit 0). After the last fixes, the play, mid and wreck layers were re-rendered with `--cache DIR --only play,mid,wreck_big` (exit 0). Outputs are in docs/art/look-lock/.
+- Readability (brightness of the sprite vs its surroundings, rust key): hero 0.14 vs 0.12 (it also separates by hue, warm on cool); Crawler 0.10 vs 0.07.
+- No shipped art or game code changed in B1a.
 
 ## Art & UI B · B0 evidence (2026-11-28)
 
