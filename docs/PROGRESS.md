@@ -14,7 +14,15 @@
 | 2A | DONE (CI green, run 46045057262; merged as #4). Awaiting the owner's OK for 2B. Preact UI layer, tokens, components, motion, Title, Pause, photosensitivity notice, fade and iris transitions, dev gallery. |
 | 2B-1 | DONE (CI green, run 46056876731; merged as #5). Settings model (Zod, per-field fallback, per device), Settings screen with every §8.6 tab, live apply, simulation assists. |
 | Release 0.0.5 | Version bumped with release notes (Pass 2A and 2B-1). The owner runs Actions → Release after the bump is on `main`. |
-| 2B-2 … 2B-5 | Not started |
+| 2B-2 | DONE locally (CI pending). Locale files and translator (plurals, numbers), every player-facing string on a key, Language setting live, `en-XA` pseudo-locale overflow screenshots. |
+| 2B-3 … 2B-5 | Not started |
+
+## Pass 2B-2 evidence (2026-11-28)
+
+- `npm run verify`: passes (380 unit, input, property, and simulation tests incl. 9 i18n tests: every used key exists, no unused keys, plural and placeholder rules, pseudo-locale, locale resolution; goldens unchanged; build). Bundle 461 KB gzipped.
+- `npm run test:e2e` (Chrome, local): 68 of 68, including 8 pseudo-locale tests (tests/e2e/pseudo-locale.spec.ts).
+- "Pseudo-locale screenshots show no overflow": in `en-XA` at 844 × 390 and 1280 × 720, the photosensitivity notice, Title, Pause, quit confirmation, all 8 Settings tabs (scrolled through every row), the error panel, and the no-graphics screen show no hard-coded text and no clipped, off-screen, or out-of-panel text; touch button labels are translated. A self-test proves the audit catches English text and clipped text. Screenshots are in the CI `reports` artifact under `test-results/`.
+- Found by looking at the screenshots: Settings on a phone held sideways showed one row (fixed: one-line scrolling tabs, footer scrolls with rows, tighter chrome on short screens); touch buttons drew over the pause menu (fixed: hidden while a menu is open).
 
 ## Pass 2B-1 evidence (2026-11-27)
 

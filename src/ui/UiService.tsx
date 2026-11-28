@@ -8,6 +8,8 @@ import { motionTotalMs, MOTIONS, play } from './motion';
 import { NavStack } from './nav';
 import { UiPrefs, type UiPrefsState } from './prefs';
 import { PauseScreen, PhotosensitivityNotice, TitleScreen, type PauseAction } from './screens/Screens';
+import type { Translator } from '../i18n/I18n';
+import { createTranslator } from '../i18n/Locales';
 import type { SettingsStore } from '../settings/SettingsStore';
 import { Store, useStore } from './store';
 import { Transitions, type TransitionKind } from './Transitions';
@@ -33,6 +35,7 @@ export interface UiServiceOptions {
    */
   readonly driven: boolean;
   readonly settings?: SettingsStore;
+  readonly i18n?: Store<Translator>;
   readonly about?: { readonly version: string; readonly build: string };
 }
 
@@ -112,6 +115,7 @@ export class UiService {
   readonly feedback: UiFeedback;
   private readonly driven: boolean;
   readonly settings: SettingsStore | null;
+  readonly i18n: Store<Translator>;
   readonly about: { readonly version: string; readonly build: string };
   private element: HTMLElement | null = null;
   private transitions: Transitions | null = null;
@@ -123,6 +127,7 @@ export class UiService {
     this.prefs = options.prefs ?? new UiPrefs();
     this.feedback = options.feedback ?? silentFeedback;
     this.settings = options.settings ?? null;
+    this.i18n = options.i18n ?? new Store<Translator>(createTranslator('en'));
     this.about = options.about ?? { version: '0.0.0', build: 'dev' };
   }
 
@@ -134,6 +139,7 @@ export class UiService {
       nav: this.nav,
       settings: this.settings,
       about: this.about,
+      i18n: this.i18n,
     };
   }
 

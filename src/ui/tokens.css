@@ -702,3 +702,21 @@
   top: var(--space-4);
   right: var(--space-4);
 }
+/* Tabs stay on one line; the tab strip scrolls sideways instead of growing taller. */
+.cd-tab {
+  white-space: nowrap;
+  flex: none;
+}
+/* Short screens (a phone held sideways): tighter chrome so more rows fit. */
+@media (max-height: 480px) {
+  .cd-settings {
+    padding: var(--space-2) var(--space-4);
+    gap: var(--space-2);
+  }
+  .cd-settings .cd-title {
+    font-size: var(--size-body);
+  }
+  .cd-settings .cd-tabs {
+    gap: var(--space-2);
+  }
+}

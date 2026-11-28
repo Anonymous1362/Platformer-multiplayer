@@ -9,7 +9,9 @@ import { BootScene } from '../scenes/BootScene';
 import { LevelScene } from '../scenes/LevelScene';
 import { TitleScene } from '../scenes/TitleScene';
 import { UiPrefs, glassAllowed } from '../ui/prefs';
+import type { Translator } from '../i18n/I18n';
 import type { SettingsStore } from '../settings/SettingsStore';
+import type { Store } from '../ui/store';
 import { UiService } from '../ui/UiService';
 import '../ui/fonts';
 import { Palette, cssHex } from '../theme/ThemePalette';
@@ -30,6 +32,7 @@ export interface GameOptions {
   readonly perf: GameServices['perf'];
   readonly flow: GameServices['flow'];
   readonly settings: SettingsStore;
+  readonly i18n: Store<Translator>;
 }
 
 export interface CreatedGame {
@@ -91,6 +94,7 @@ export function createGame(root: HTMLElement, options: GameOptions): CreatedGame
     driven: true,
     prefs,
     settings: options.settings,
+    i18n: options.i18n,
     about: { version: options.flow.version, build: `${options.flow.version} (${import.meta.env.MODE})` },
     feedback: {
       sound: (kind) => {
@@ -103,6 +107,7 @@ export function createGame(root: HTMLElement, options: GameOptions): CreatedGame
   ui.mount(root);
   const services: GameServices = {
     settings: options.settings,
+    i18n: options.i18n,
     ui,
     flow: options.flow,
     assets,

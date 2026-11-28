@@ -189,6 +189,7 @@ export class LevelScene extends Phaser.Scene {
     const particleTier = particleTierFor(settings.graphics.particles, tier);
     const effects = new Effects(this, {
       prefs: readFx,
+      savedLabel: () => this.services.i18n.get().t('level.saved'),
       particles: new Particles(this, PARTICLE_CAPS[particleTier]),
       camera: rig,
       screen,
@@ -238,7 +239,7 @@ export class LevelScene extends Phaser.Scene {
     const onLost = (): void => {
       this.contextLost = true;
       this.setPaused(true);
-      this.showNotice('context-lost', 'Restoring graphics…', '42%');
+      this.showNotice('context-lost', this.services.i18n.get().t('level.restoring'), '42%');
     };
     const onRestored = (): void => {
       this.contextLost = false;
@@ -337,6 +338,8 @@ export class LevelScene extends Phaser.Scene {
 
   private showPause(): void {
     this.menuShown = true;
+    // Menus cover the game: the touch controls would only draw over them.
+    this.services.input.touchView?.setSuppressed(true);
     this.services.ui.show({
       id: 'pause',
       perfShown: this.services.perf.shown(),
@@ -350,6 +353,7 @@ export class LevelScene extends Phaser.Scene {
   private hidePause(): void {
     if (!this.menuShown) return;
     this.menuShown = false;
+    this.services.input.touchView?.setSuppressed(false);
     this.services.ui.hide();
   }
 
@@ -427,13 +431,13 @@ export class LevelScene extends Phaser.Scene {
     if (!parent) return;
     this.recovery = new RecoveryScreen(parent, {
       role: 'error-panel',
-      title: 'Something went wrong',
-      message:
-        'The level stopped because of an error. Restart it to keep playing; nothing else was affected.',
+      title: this.services.i18n.get().t('error.title'),
+      message: this.services.i18n.get().t('error.levelMessage'),
+      copyLabel: this.services.i18n.get().t('error.copy'),
       actions: [
         {
           id: 'restart',
-          label: 'Restart level',
+          label: this.services.i18n.get().t('error.restartLevel'),
           primary: true,
           run: () => {
             this.recovery?.destroy();
@@ -577,7 +581,7 @@ export class LevelScene extends Phaser.Scene {
   /** Level complete: a short banner (the results screen arrives with the scene flow, Pass 2D). */
   private showBanner(run: Run): void {
     const shards = run.world.run.shardsBanked;
-    const text = `Level complete · ${String(shards)} shard${shards === 1 ? '' : 's'}`;
+    const text = this.services.i18n.get().t('level.complete', { count: shards });
     if (!this.showNotice('level-complete', text, '30%')) return;
     this.time.delayedCall(4000, () => {
       this.removeNotice('level-complete');

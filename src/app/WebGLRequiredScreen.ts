@@ -1,8 +1,15 @@
 import { UiTokens } from '../theme/ThemePalette';
+import type { Translator } from '../i18n/I18n';
 import type { Capabilities } from './Capabilities';
 
 /** Shown instead of the game when WebGL is missing or fails to start. Plain DOM, no Phaser. */
-export function showWebGLRequiredScreen(host: HTMLElement, caps: Capabilities, reason: string): void {
+export function showWebGLRequiredScreen(
+  host: HTMLElement,
+  caps: Capabilities,
+  reason: string,
+  i18n: Translator,
+): void {
+  const t = (key: string, params?: Readonly<Record<string, string | number>>): string => i18n.t(key, params);
   const screen = document.createElement('section');
   screen.id = 'webgl-required';
   screen.setAttribute('role', 'alert');
@@ -32,21 +39,16 @@ export function showWebGLRequiredScreen(host: HTMLElement, caps: Capabilities, r
   } satisfies Partial<CSSStyleDeclaration>);
 
   const title = document.createElement('h1');
-  title.textContent = 'Graphics are not available';
+  title.textContent = t('webgl.title');
   Object.assign(title.style, { margin: '0 0 8px', fontSize: '24px', color: UiTokens.textPrimary });
 
   const body = document.createElement('p');
-  body.textContent =
-    'Cosmic Drift needs WebGL graphics, which this browser or device has turned off or does not support.';
+  body.textContent = t('webgl.body');
   Object.assign(body.style, { margin: '0 0 12px', lineHeight: '1.5' });
 
   const tips = document.createElement('ul');
   Object.assign(tips.style, { margin: '0 0 16px', paddingLeft: '20px', lineHeight: '1.6' });
-  for (const tip of [
-    'Update your browser. On Android, also update "Android System WebView" in the Play Store.',
-    'On a computer, turn on hardware acceleration in your browser settings.',
-    'Try Chrome, Edge, Firefox, or Safari.',
-  ]) {
+  for (const tip of [t('webgl.tipUpdate'), t('webgl.tipAcceleration'), t('webgl.tipBrowsers')]) {
     const item = document.createElement('li');
     item.textContent = tip;
     tips.appendChild(item);
@@ -54,7 +56,7 @@ export function showWebGLRequiredScreen(host: HTMLElement, caps: Capabilities, r
 
   const button = document.createElement('button');
   button.type = 'button';
-  button.textContent = 'Try again';
+  button.textContent = t('webgl.retry');
   Object.assign(button.style, {
     minHeight: '48px',
     padding: '0 24px',
@@ -70,7 +72,11 @@ export function showWebGLRequiredScreen(host: HTMLElement, caps: Capabilities, r
   });
 
   const details = document.createElement('p');
-  details.textContent = `Details: ${reason} · ${caps.platform} · DPR ${caps.devicePixelRatio.toFixed(2)}`;
+  details.textContent = t('webgl.details', {
+    reason,
+    platform: caps.platform,
+    dpr: caps.devicePixelRatio.toFixed(2),
+  });
   Object.assign(details.style, { margin: '16px 0 0', fontSize: '13px', color: UiTokens.textSecondary });
 
   panel.append(title, body, tips, button, details);

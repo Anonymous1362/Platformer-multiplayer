@@ -2,14 +2,18 @@ import type { TouchControls } from '../input/TouchControls';
 import { TOUCH_METRICS, type PlacedButton } from '../input/TouchLayout';
 import { UiTokens } from '../theme/ThemePalette';
 
-const LABELS: Readonly<Record<PlacedButton['role'], string>> = {
-  jump: 'JUMP',
-  shoot: 'FIRE',
-  dash: 'DASH',
-  parry: 'PARRY',
-  gadget: 'GEAR',
-  pause: 'II',
+/** Label keys (spec 8.11); the pause button shows a symbol, not a word. */
+const LABEL_KEYS: Readonly<Record<Exclude<PlacedButton['role'], 'pause'>, string>> = {
+  jump: 'touch.jump',
+  shoot: 'touch.shoot',
+  dash: 'touch.dash',
+  parry: 'touch.parry',
+  gadget: 'touch.gadget',
 };
+
+function labelFor(role: PlacedButton['role'], t: (key: string) => string): string {
+  return role === 'pause' ? 'II' : t(LABEL_KEYS[role]);
+}
 
 function circle(diameter: number): HTMLDivElement {
   const el = document.createElement('div');
@@ -43,6 +47,7 @@ export class TouchControlView {
   private readonly stickKnob: HTMLDivElement;
   private layoutKey = '';
   private visible: boolean;
+  private translate: (key: string) => string = (key) => key;
 
   constructor(parent: HTMLElement, controls: TouchControls, visible: boolean) {
     this.controls = controls;
@@ -81,6 +86,15 @@ export class TouchControlView {
     this.root.style.display = 'block';
   }
 
+  /** Button labels in a new language: re-labels the buttons now. */
+  setTranslate(translate: (key: string) => string): void {
+    this.translate = translate;
+    for (const [role, el] of this.buttons) {
+      const label = el.querySelector<HTMLElement>('[data-label]');
+      if (label) label.textContent = labelFor(role, translate);
+    }
+  }
+
   /** Button opacity from Settings (30–100%). */
   setOpacity(pct: number): void {
     this.root.style.opacity = String(Math.min(1, Math.max(0.3, pct / 100)));
@@ -117,7 +131,11 @@ export class TouchControlView {
         alignItems: 'center',
         justifyContent: 'center',
       });
-      el.textContent = LABELS[b.role];
+      // The label has its own node so re-labelling never removes the cooldown ring.
+      const label = document.createElement('span');
+      label.dataset['label'] = b.role;
+      label.textContent = labelFor(b.role, this.translate);
+      el.append(label);
       if (b.role === 'shoot' || b.role === 'dash') {
         // Heat ring on Shoot, cooldown ring on Dash (spec 8.7): a conic fill masked to a thin ring.
         const ring = document.createElement('div');

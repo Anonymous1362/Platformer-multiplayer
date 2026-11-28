@@ -1,5 +1,6 @@
 import type { ComponentChildren, JSX } from 'preact';
 import { useId, useRef } from 'preact/hooks';
+import { useT } from '../context';
 import { useEntrance, useNavScope } from '../hooks';
 import { Store, useStore } from '../store';
 import { Button } from './Basics';
@@ -58,12 +59,13 @@ export interface ConfirmDialogProps {
 
 /** Confirm dialog: Cancel is focused first, so a stray Enter never confirms a destructive action. */
 export function ConfirmDialog(props: ConfirmDialogProps): JSX.Element {
+  const t = useT();
   return (
     <Modal title={props.title} onClose={props.onCancel} role="alertdialog">
       <p class="cd-body">{props.message}</p>
       <div class="cd-row">
         <Button autofocus sound="back" onClick={props.onCancel}>
-          {props.cancelLabel ?? 'Cancel'}
+          {props.cancelLabel ?? t('common.cancel')}
         </Button>
         <Button variant={props.danger === true ? 'danger' : 'primary'} onClick={props.onConfirm}>
           {props.confirmLabel}
@@ -79,6 +81,7 @@ export function SideSheet(props: {
   readonly children?: ComponentChildren;
   readonly onClose: () => void;
 }): JSX.Element {
+  const t = useT();
   const panel = useRef<HTMLDivElement>(null);
   const titleId = useId();
   useEntrance(panel, 'sideSheetOpen');
@@ -104,7 +107,7 @@ export function SideSheet(props: {
         </h2>
         {props.children}
         <Button sound="back" onClick={props.onClose}>
-          Close
+          {t('common.close')}
         </Button>
       </div>
     </div>

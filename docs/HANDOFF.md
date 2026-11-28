@@ -1,6 +1,18 @@
 # Handoff
 
-State: Pass 2A (#4) and Pass 2B-1 (settings, #5, CI run 46056876731) are merged. Waiting for the owner's OK to start 2B-2 (i18n). 2B is split into 2B-1 … 2B-5 (DECISIONS). Manual mode. Owner phone checks still open: docs/DEVICES.md and the 2A "no long tasks on a Mid device" check.
+State: 2A, 2B-1, and release prep for 0.0.5 are merged (#4, #5, #6). Pass 2B-2 (i18n) is done locally; the agent opens its PR and watches CI, then the owner merges and OKs 2B-3 (colorblind palettes with the CVD test, captions, high-contrast HUD). The owner runs Actions → Release for 0.0.5 (and later versions). Manual mode. Owner phone checks still open: docs/DEVICES.md and the 2A "no long tasks on a Mid device" check.
+
+What 2B-2 added:
+
+- `content/locale/en.json` (all player-facing strings), `src/i18n/I18n.ts` (`I18n.t(key, params)`, plurals, numbers, English fallback, `pseudoLocalize`, `PSEUDO_LOCALE = 'en-XA'`), `src/i18n/Locales.ts` (`resolveLocale`, `createTranslator`, `SUPPORTED_LANGUAGES = ['en']`).
+- `main.ts` `createLanguage(settings)`: a `Store<Translator>` that follows Settings → Language live; `?lang=en-XA` in test/debug builds. It goes into `services.i18n` and the UI context; Preact components call `useT()` (and `useTranslator()` for numbers); non-Preact code calls `services.i18n.get().t(...)` (level notices, error panel, Safe Mode, no-graphics screen, checkpoint label) or receives a translate function (touch labels via `GameInput.setTranslate`).
+- Adding a language later: add `content/locale/<lang>.json`, add the code to `SUPPORTED_LANGUAGES` and the Language options, and load it in `createTranslator`. Keys missing in a language fall back to English and are logged once.
+- Tests: `tests/unit/i18n.test.ts`; `tests/e2e/pseudo-locale.spec.ts` (`audit()` collects untranslated and overflowing text per screen and saves screenshots).
+
+Gotchas learned:
+
+- New player-facing text must go through a key, or the pseudo-locale test fails; the unit test also fails on keys nobody uses.
+- Touch button labels live in their own `[data-label]` span, so re-labelling never removes the cooldown rings.
 
 What 2B-1 added:
 
