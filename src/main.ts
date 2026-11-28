@@ -60,6 +60,8 @@ declare global {
       readonly fpsLimit: () => number;
       /** The live touch layout (buttons with centers and radii). */
       readonly touchLayout: () => TouchLayout;
+      /** Gamepad polls so far (one per rendered frame while a scene runs). */
+      readonly gamepadPolls: () => number;
       readonly counters: () => LeakSnapshot;
       readonly restartLevel: () => void;
       /** The current run as replay JSON. */
@@ -354,6 +356,7 @@ function start(gameRoot: HTMLElement): void {
       settings: () => settings.get(),
       fpsLimit: () => game.loop.fpsLimit,
       touchLayout: () => input.touch.currentLayout,
+      gamepadPolls: () => input.gamepad.pollCount,
       counters,
       restartLevel: () => services.level.current?.restart(),
       replay: () => {

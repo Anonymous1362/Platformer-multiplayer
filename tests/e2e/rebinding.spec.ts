@@ -118,16 +118,24 @@ test.describe('with a controller', () => {
     });
   });
 
-  /** Press and release one button, a few frames apart (the game polls once per frame). */
+  /**
+   * Press and release one button. The game polls pads once per rendered frame, and CI's software
+   * renderer can be slower than a quick tap, so each edge is held until the game has polled twice.
+   */
   async function tap(page: Page, button: number): Promise<void> {
-    await page.evaluate((b) => {
-      (window as unknown as { __pad: { buttons: number[] } }).__pad.buttons[b] = 1;
-    }, button);
-    await page.waitForTimeout(120);
-    await page.evaluate((b) => {
-      (window as unknown as { __pad: { buttons: number[] } }).__pad.buttons[b] = 0;
-    }, button);
-    await page.waitForTimeout(120);
+    const polls = (): Promise<number> => page.evaluate(() => window.__CD_TEST__?.gamepadPolls() ?? 0);
+    const set = (value: number): Promise<void> =>
+      page.evaluate(
+        ({ b, v }) => {
+          (window as unknown as { __pad: { buttons: number[] } }).__pad.buttons[b] = v;
+        },
+        { b: button, v: value },
+      );
+    for (const value of [1, 0]) {
+      const before = await polls();
+      await set(value);
+      await expect.poll(polls, { timeout: 10_000 }).toBeGreaterThanOrEqual(before + 2);
+    }
   }
 
   test('rebind Jump to Y with the controller; Y then jumps', async ({ page }) => {

@@ -48,6 +48,7 @@ Gotchas learned:
 - `choice()` option lists need a `const` type parameter, or the literals widen to `string`.
 - Hover-to-focus follows only real mouse movement (`pointermove` with movement) and never takes focus from a slider or text field: content opening under a still mouse used to steal focus from a slider mid-adjustment (CI caught it).
 - Navigation scopes register and autofocus in a layout effect, and autofocus never takes focus from something already focused inside the scope (a passive effect ran after paint and could steal focus on slow CI).
+- Controller browser tests press a mocked button until the game has polled it twice (`__CD_TEST__.gamepadPolls()`): the game reads pads once per rendered frame, and on CI's software renderer a 120 ms tap could fall between two frames.
 - Screenshot-heavy browser tests: CI's software renderer needs seconds per full-page screenshot, so the pseudo-locale audit runs one test per Settings tab (and per rebinding tab) rather than one long sweep that ran past its time limit in CI.
 - Eight axe scans on software WebGL take about 30 s; that test has its own 120 s timeout.
 

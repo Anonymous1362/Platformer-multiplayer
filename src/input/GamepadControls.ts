@@ -105,6 +105,7 @@ export class GamepadControls implements InputSource {
   /** Raw button states per pad index, for press edges while capturing a rebind. */
   private readonly rawPrev = new Map<number, boolean[]>();
   private capture: ((button: number, family: PadFamily) => void) | null = null;
+  private polls = 0;
 
   constructor(tuning: StickTuning = DEFAULT_STICK_TUNING) {
     this.tuning = tuning;
@@ -147,7 +148,13 @@ export class GamepadControls implements InputSource {
     return this.ids.map(padFamily);
   }
 
+  /** How many times the pads were polled (tests wait on it instead of on wall time). */
+  get pollCount(): number {
+    return this.polls;
+  }
+
   poll(pads: readonly (GamepadLike | null)[], nowMs: number): void {
+    this.polls += 1;
     let held = 0;
     let pause = false;
     let best = { x: 0, y: 0, m: 0 };
