@@ -15,9 +15,9 @@
 | 2B-1 | DONE (CI green, run 46056876731; merged as #5). Settings model (Zod, per-field fallback, per device), Settings screen with every §8.6 tab, live apply, simulation assists. |
 | Release 0.0.5 | Version bumped with release notes (Pass 2A and 2B-1). The owner runs Actions → Release after the bump is on `main`. |
 | 2B-2 | DONE (CI green, run 46118310127; merged as #7). Locale files and translator (plurals, numbers), every player-facing string on a key, Language setting live, `en-XA` pseudo-locale overflow screenshots. |
-| 2B-3 | DONE locally (CI pending). Colorblind palettes with the CVD test, sound captions, high-contrast HUD. |
-| 2B-4 | DONE locally (CI pending). Touch presets (Classic, Simple, Left-handed) and the layout editor; edits saved per device and orientation profile. |
-| 2B-5 | DONE locally (CI pending). Keyboard and controller rebinding with conflict flags and reset; full controller menu navigation. **2B complete** once merged. |
+| 2B-3 | DONE (CI green, run 46126279023; merged as #8). Colorblind palettes with the CVD test, sound captions, high-contrast HUD. |
+| 2B-4 | DONE (CI green, run 46126279023; merged as #8). Touch presets (Classic, Simple, Left-handed) and the layout editor; edits saved per device and orientation profile. |
+| 2B-5 | DONE (CI green, run 46126279023; merged as #8). Keyboard and controller rebinding with conflict flags and reset; full controller menu navigation. **Pass 2B complete.** |
 | Art & UI B | Waiting for the owner's command (owner-requested, out of order). |
 
 ## Pass 2B-5 evidence (2026-11-28)

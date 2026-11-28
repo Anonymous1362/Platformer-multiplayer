@@ -1,6 +1,6 @@
 # Handoff
 
-State: Pass 2A and 2B-1, 2B-2 are merged (#4–#7). 2B-3 + 2B-4 are in PR #8; 2B-5 (rebinding and controller menus) is done, which completes 2B. Next, on the owner's command: "Art & UI B" (owner-requested, out of order; ultracode workflows, workflow size medium). Then 2C (saves). Manual mode. Owner phone checks still open: docs/DEVICES.md and the 2A "no long tasks on a Mid device" check.
+State: Pass 2A and all of Pass 2B are merged (#4–#8; 2B-3…2B-5 green in CI run 46126279023). Next, on the owner's command: "Art & UI B" (owner-requested, out of order; ultracode workflows, workflow size medium). Then 2C (saves). Manual mode. Owner phone checks still open: docs/DEVICES.md and the 2A "no long tasks on a Mid device" check.
 
 What 2B-5 added:
 
