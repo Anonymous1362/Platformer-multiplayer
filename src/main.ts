@@ -3,6 +3,9 @@ import { installAudioLifecycle } from './app/AudioUnlock';
 import { applySettings } from './app/SettingsApply';
 import { manualTier } from './settings/Derived';
 import { SettingsStore } from './settings/SettingsStore';
+import type { Translator } from './i18n/I18n';
+import { createTranslator, resolveLocale } from './i18n/Locales';
+import { Store } from './ui/store';
 import { beginBoot, BOOT_KEY, markBootOk } from './app/BootGuard';
 import { browserEnv, detectCapabilities, type Capabilities } from './app/Capabilities';
 import { createGame, type CreatedGame } from './app/createGame';
@@ -102,6 +105,28 @@ function applyStageSize(element: HTMLElement): StageSize {
 
 const NOTICE_KEY = 'cd.photoNotice';
 
+/**
+ * The active language: the Settings choice, else the device language, else English. `?lang=en-XA` picks
+ * the pseudo-locale in test and debug builds (spec 8.11). Follows the Language setting live.
+ */
+function createLanguage(settings: SettingsStore): Store<Translator> {
+  const override = testMode || debug ? params.get('lang') : null;
+  const device = navigator.languages.length > 0 ? navigator.languages : [navigator.language];
+  const onMissing = (key: string): void => {
+    log.warn('i18n', `missing string ${key}`);
+  };
+  const pick = (): string => resolveLocale(settings.get().language.language, device, override);
+  const store = new Store<Translator>(createTranslator(pick(), onMissing));
+  document.documentElement.lang = store.get().locale;
+  settings.subscribe(() => {
+    const locale = pick();
+    if (locale === store.get().locale) return;
+    store.set(createTranslator(locale, onMissing));
+    document.documentElement.lang = locale;
+  });
+  return store;
+}
+
 function start(gameRoot: HTMLElement): void {
   const store = storage();
   const boot = beginBoot(store);
@@ -109,9 +134,14 @@ function start(gameRoot: HTMLElement): void {
     browserEnv({ isNative: Capacitor.isNativePlatform(), platform: Capacitor.getPlatform() }),
   );
   log.info('boot', `build ${__APP_VERSION__}`, { safeMode: boot.safeMode, failures: boot.failures });
+  // Settings and the language load first: every screen from here on is translated (spec 8.6, 8.11).
+  const settings = new SettingsStore(store);
+  for (const issue of settings.loadIssues)
+    log.warn('settings', `${issue.path} was invalid; using the default`);
+  const i18n = createLanguage(settings);
   if (capabilities.webgl === 0) {
     gameRoot.style.display = 'none';
-    showWebGLRequiredScreen(document.body, capabilities, 'WebGL unavailable');
+    showWebGLRequiredScreen(document.body, capabilities, 'WebGL unavailable', i18n.get());
     markBootOk(store); // a missing GPU is not a crash; never escalate it to Safe Mode
     return;
   }
@@ -119,10 +149,7 @@ function start(gameRoot: HTMLElement): void {
   installViewportGuards(gameRoot);
   applyStageSize(gameRoot);
 
-  // Settings load first: the quality preset decides the first tier (spec 8.6, 15.3).
-  const settings = new SettingsStore(store);
-  for (const issue of settings.loadIssues)
-    log.warn('settings', `${issue.path} was invalid; using the default`);
+  // The quality preset decides the first tier (spec 8.6, 15.3).
   const preset = manualTier(settings.get());
   const quality = new QualityGovernor(boot.safeMode ? 'battery' : (preset ?? initialTier(capabilities)), {
     nowMs: performance.now(),
@@ -166,6 +193,7 @@ function start(gameRoot: HTMLElement): void {
       diagnostics,
       perf,
       settings,
+      i18n,
       flow: {
         skipToLevel: testMode && params.get('flow') !== '1',
         noticeSeen: () => store?.getItem(NOTICE_KEY) === '1',
@@ -186,6 +214,7 @@ function start(gameRoot: HTMLElement): void {
       document.body,
       capabilities,
       error instanceof Error ? error.message : 'startup failed',
+      i18n.get(),
     );
     return;
   }
@@ -197,15 +226,16 @@ function start(gameRoot: HTMLElement): void {
   });
 
   if (boot.safeMode) {
+    const t = i18n.get();
     const screen = new RecoveryScreen(gameRoot, {
       role: 'safe-mode',
-      title: 'Safe Mode',
-      message:
-        'The game did not start correctly twice in a row, so it is running in Safe Mode: lighter graphics and no sound.',
+      title: t.t('safe.title'),
+      message: t.t('safe.message'),
+      copyLabel: t.t('error.copy'),
       actions: [
         {
           id: 'restart',
-          label: 'Continue in Safe Mode',
+          label: t.t('safe.continue'),
           primary: true,
           run: () => {
             screen.destroy();
@@ -213,7 +243,7 @@ function start(gameRoot: HTMLElement): void {
         },
         {
           id: 'retry',
-          label: 'Retry normal start',
+          label: t.t('safe.retry'),
           run: () => {
             markBootOk(store);
             window.location.reload();
@@ -221,7 +251,7 @@ function start(gameRoot: HTMLElement): void {
         },
         {
           id: 'reset',
-          label: 'Reset settings',
+          label: t.t('safe.reset'),
           run: () => {
             try {
               for (const key of Object.keys(window.localStorage)) {
@@ -259,6 +289,12 @@ function start(gameRoot: HTMLElement): void {
     safeMode: boot.safeMode,
   });
   installAudioLifecycle(window, services.audio, () => settings.get().audio.muteInBackground);
+  const relabel = (): void => {
+    const translator = i18n.get();
+    input.setTranslate((key) => translator.t(key));
+  };
+  relabel();
+  i18n.subscribe(relabel);
   if (testMode) {
     const counters = (): LeakSnapshot => {
       let textureMb = 0;
@@ -336,7 +372,7 @@ if (debug && params.get('gallery') === '1') {
   // Dev-only component gallery (spec 22: 2A): no game, just the DOM layer.
   root.style.display = 'none';
   void import('./ui/gallery/Gallery').then(({ mountGallery }) => {
-    mountGallery(document.body);
+    mountGallery(document.body, params.get('lang'));
     document.body.dataset['gallery'] = 'ready';
   });
 } else {

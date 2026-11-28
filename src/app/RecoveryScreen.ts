@@ -23,6 +23,8 @@ export class RecoveryScreen {
       readonly message: string;
       readonly actions: readonly RecoveryAction[];
       readonly diagnostics: () => string;
+      /** The "Copy diagnostics" label in the current language. */
+      readonly copyLabel: string;
     },
   ) {
     this.root = document.createElement('div');
@@ -71,7 +73,7 @@ export class RecoveryScreen {
     const buttons: HTMLButtonElement[] = [];
     const all: RecoveryAction[] = [
       ...options.actions,
-      { id: 'copy', label: 'Copy diagnostics', run: () => void this.copy(options.diagnostics(), panel) },
+      { id: 'copy', label: options.copyLabel, run: () => void this.copy(options.diagnostics(), panel) },
     ];
     for (const action of all) {
       const b = document.createElement('button');

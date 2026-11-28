@@ -17,7 +17,10 @@ import { ConfirmDialog, Modal, SideSheet } from '../components/Overlays';
 import { UiContext, useReducedMotion } from '../context';
 import '../fonts';
 import { PauseScreen, PhotosensitivityNotice, TitleScreen } from '../screens/Screens';
+import type { Translator } from '../../i18n/I18n';
+import { createTranslator, resolveLocale } from '../../i18n/Locales';
 import { SettingsStore } from '../../settings/SettingsStore';
+import { Store } from '../store';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { UiService } from '../UiService';
 
@@ -301,10 +304,11 @@ function Gallery(props: { readonly service: UiService }): JSX.Element {
 }
 
 /** Mounts the gallery as a standalone page (no game). */
-export function mountGallery(host: HTMLElement): UiService {
+export function mountGallery(host: HTMLElement, lang: string | null = null): UiService {
   const service = new UiService({
     driven: false,
     settings: new SettingsStore(null),
+    i18n: new Store<Translator>(createTranslator(resolveLocale(null, ['en'], lang))),
     about: { version: '0.0.0', build: 'gallery' },
   });
   service.prefs.watchSystem(window);

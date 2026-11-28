@@ -1,6 +1,6 @@
 import type { ComponentChildren, JSX } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { useReducedMotion, useUi, type UiSound } from '../context';
+import { useReducedMotion, useT, useTranslator, useUi, type UiSound } from '../context';
 import { COUNTER_MS, counterValue, play } from '../motion';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'icon';
@@ -204,6 +204,7 @@ export interface StepperProps {
 
 /** Stepper: minus and plus buttons around a live value. */
 export function Stepper(props: StepperProps): JSX.Element {
+  const t = useT();
   const step = props.step ?? 1;
   const set = (value: number): void => {
     props.onChange(Math.min(props.max, Math.max(props.min, value)));
@@ -212,7 +213,7 @@ export function Stepper(props: StepperProps): JSX.Element {
     <div class="cd-stepper" role="group" aria-label={props.label}>
       <Button
         variant="icon"
-        label={`Decrease ${props.label}`}
+        label={t('common.decrease', { label: props.label })}
         disabled={props.value <= props.min}
         onClick={() => {
           set(props.value - step);
@@ -223,7 +224,7 @@ export function Stepper(props: StepperProps): JSX.Element {
       <output aria-live="polite">{props.value}</output>
       <Button
         variant="icon"
-        label={`Increase ${props.label}`}
+        label={t('common.increase', { label: props.label })}
         disabled={props.value >= props.max}
         onClick={() => {
           set(props.value + step);
@@ -282,6 +283,8 @@ export function ItemCard(props: ItemCardProps): JSX.Element {
 
 /** Number counter: rolls to a new value over 600 ms (ease-out); instant under reduced motion. */
 export function NumberCounter(props: { readonly value: number; readonly label: string }): JSX.Element {
+  const t = useT();
+  const translator = useTranslator();
   const reduced = useReducedMotion();
   const [shown, setShown] = useState(props.value);
   const current = useRef(props.value);
@@ -308,8 +311,8 @@ export function NumberCounter(props: { readonly value: number; readonly label: s
     };
   }, [props.value, reduced]);
   return (
-    <span role="status" aria-label={`${props.label}: ${String(props.value)}`}>
-      <span aria-hidden="true">{shown}</span>
+    <span role="status" aria-label={t('common.counter', { label: props.label, value: props.value })}>
+      <span aria-hidden="true">{translator.number(shown)}</span>
     </span>
   );
 }

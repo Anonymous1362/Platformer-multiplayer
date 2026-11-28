@@ -6,7 +6,9 @@ import type { PlayerMode } from '../core/SimulationTypes';
 import type { Capabilities } from './Capabilities';
 import type { GameInput } from './GameInput';
 import type { Log } from './Log';
+import type { Translator } from '../i18n/I18n';
 import type { SettingsStore } from '../settings/SettingsStore';
+import type { Store } from '../ui/store';
 import type { UiService } from '../ui/UiService';
 import type { QualityGovernor } from './QualityGovernor';
 
@@ -89,6 +91,8 @@ export interface GameServices {
   readonly safeMode: boolean;
   /** Text for "Copy diagnostics" (build, capabilities, settings, last 50 log lines). */
   readonly diagnostics: () => string;
+  /** The active language (spec 8.11); replaced when the player switches. */
+  readonly i18n: Store<Translator>;
   /** The player's settings (spec 8.6), per device. */
   readonly settings: SettingsStore;
   /** The DOM UI layer (menus, notices, transitions). */

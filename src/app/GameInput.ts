@@ -22,6 +22,7 @@ export class GameInput {
   private readonly detach: (() => void)[] = [];
   private size = { width: 0, height: 0 };
   private touchPrefs = { floatingStick: true, buttonScale: 1, opacity: 70 };
+  private translate: (key: string) => string = (key) => key;
 
   constructor(win: Window, touchDevice: boolean) {
     this.win = win;
@@ -38,6 +39,7 @@ export class GameInput {
   attach(canvas: HTMLElement, overlayParent: HTMLElement): void {
     const now = (): number => this.win.performance.now();
     this.view = new TouchControlView(overlayParent, this.touch, this.showTouch);
+    this.view.setTranslate(this.translate);
     this.view.setOpacity(this.touchPrefs.opacity);
     this.detach.push(
       attachTouchListeners(canvas, this.touch, now, () => this.view?.show()),
@@ -51,6 +53,12 @@ export class GameInput {
   resize(width: number, height: number): void {
     this.size = { width, height };
     this.relayout();
+  }
+
+  /** Touch button labels in the current language (spec 8.11). */
+  setTranslate(translate: (key: string) => string): void {
+    this.translate = translate;
+    this.view?.setTranslate(translate);
   }
 
   /** Stick type, button size, and opacity from Settings; applied at once. */

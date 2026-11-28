@@ -1,9 +1,10 @@
 import { createContext } from 'preact';
 import { useContext } from 'preact/hooks';
 import type { NavStack } from './nav';
+import type { Params, Translator } from '../i18n/I18n';
 import type { SettingsStore } from '../settings/SettingsStore';
 import type { UiPrefs } from './prefs';
-import { useStore } from './store';
+import { useStore, type Store } from './store';
 
 export type UiSound = 'tap' | 'back' | 'toggle' | 'error';
 
@@ -22,6 +23,8 @@ export interface UiContextValue {
   /** Null in previews that have no settings. */
   readonly settings: SettingsStore | null;
   readonly about: { readonly version: string; readonly build: string };
+  /** The active language; replaced (not mutated) when the player switches. */
+  readonly i18n: Store<Translator>;
 }
 
 export const UiContext = createContext<UiContextValue | null>(null);
@@ -37,4 +40,19 @@ export function useReducedMotion(): boolean {
   const { prefs } = useUi();
   useStore(prefs.state);
   return prefs.reduced;
+}
+
+export type TFunction = (key: string, params?: Params) => string;
+
+/** The translate function for the current language; components re-render when it changes. */
+export function useT(): TFunction {
+  const { i18n } = useUi();
+  const translator = useStore(i18n);
+  return (key, params) => translator.t(key, params);
+}
+
+/** The current translator, for number formatting (`translator.number`). */
+export function useTranslator(): Translator {
+  const { i18n } = useUi();
+  return useStore(i18n);
 }

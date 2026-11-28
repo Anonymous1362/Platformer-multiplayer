@@ -43,6 +43,7 @@ export class Effects implements EntityFx {
   private readonly level: Level;
   private readonly reducedMotion: boolean;
   private readonly prefs: () => FxPrefs;
+  private readonly savedLabel: () => string;
   private readonly snapshot: (id: number) => SpriteSnapshot | null;
   private readonly heroScale: number;
   private readonly rng = new Random(0x0c0ffee);
@@ -66,9 +67,12 @@ export class Effects implements EntityFx {
       readonly snapshot: (id: number) => SpriteSnapshot | null;
       /** Player effect settings, read live (spec 8.6 Gameplay). */
       readonly prefs?: () => FxPrefs;
+      /** The checkpoint "Saved" label in the current language. */
+      readonly savedLabel?: () => string;
     },
   ) {
     this.prefs = options.prefs ?? ((): FxPrefs => DEFAULT_FX_PREFS);
+    this.savedLabel = options.savedLabel ?? ((): string => 'Saved');
     this.particles = options.particles;
     this.camera = options.camera;
     this.screen = options.screen;
@@ -268,7 +272,8 @@ export class Effects implements EntityFx {
         });
         this.ring(cp.x, cp.y - CHECKPOINT_H / 2, Palette.electricCyan, 600, 0.4, 1.6);
         this.motes(cp.x, cp.y, 10, Palette.electricCyan);
-        this.number('Saved', cp.x, cp.y - CHECKPOINT_H - 16, '#00F5D4');
+        // A status label, not a damage number: the Damage numbers setting never hides it.
+        this.floatText(this.savedLabel(), cp.x, cp.y - CHECKPOINT_H - 16, '#00F5D4');
         break;
       }
       case 'weaponVented': {
@@ -436,6 +441,10 @@ export class Effects implements EntityFx {
 
   private number(label: string, x: number, y: number, color: string): void {
     if (!this.prefs().damageNumbers) return;
+    this.floatText(label, x, y, color);
+  }
+
+  private floatText(label: string, x: number, y: number, color: string): void {
     const slot =
       this.numbers.find((n) => !n.active) ?? this.numbers.reduce((a, b) => (a.start <= b.start ? a : b));
     slot.active = true;

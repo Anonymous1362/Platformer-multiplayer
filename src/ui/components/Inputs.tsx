@@ -1,6 +1,6 @@
 import type { ComponentChildren, JSX } from 'preact';
 import { useRef, useState } from 'preact/hooks';
-import { useReducedMotion, useUi } from '../context';
+import { useReducedMotion, useT, useUi } from '../context';
 import { play } from '../motion';
 
 export interface SliderProps {
@@ -142,6 +142,7 @@ export interface CodeInputProps {
 
 /** Code input (room codes): one box per character, auto-advance, backspace goes back, paste fills all. */
 export function CodeInput(props: CodeInputProps): JSX.Element {
+  const t = useT();
   const boxes = useRef<(HTMLInputElement | null)[]>([]);
   const chars = Array.from({ length: props.length }, (_, i) => props.value[i] ?? '');
   const clean = (text: string): string => text.toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -163,7 +164,7 @@ export function CodeInput(props: CodeInputProps): JSX.Element {
           autoCapitalize="characters"
           maxLength={1}
           value={char}
-          aria-label={`${props.label} character ${String(i + 1)} of ${String(props.length)}`}
+          aria-label={t('common.codeChar', { label: props.label, index: i + 1, count: props.length })}
           onInput={(event) => {
             const typed = clean(event.currentTarget.value).slice(-1);
             const next = [...chars];
