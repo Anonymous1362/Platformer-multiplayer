@@ -1,25 +1,14 @@
 import { Button } from '../core/InputTypes';
+import { DEFAULT_KEYS, KEY_ACTIONS, normalizeCode, type KeyAction, type KeyBindings } from './Bindings';
 import type { InputSource, SourceSample } from './InputRouter';
 import { MenuIntentQueue, menuIntentForKey } from './MenuNav';
 
 /**
  * Keyboard and mouse (spec sections 8.9 and 14.4). Both keyboard columns work at the same time. Only
  * physical down/up changes state: OS key repeat is ignored, so a key cleared by a blur stays released
- * until it is pressed again. Rebinding arrives in Pass 2B; these are the defaults.
+ * until it is pressed again. Bindings are rebindable (`setBindings`, spec 8.13).
  */
-export type KeyAction = 'left' | 'right' | 'down' | 'jump' | 'shoot' | 'dash' | 'parry' | 'gadget' | 'pause';
-
-export const DEFAULT_KEY_BINDINGS: Readonly<Record<KeyAction, readonly string[]>> = {
-  left: ['KeyA', 'ArrowLeft'],
-  right: ['KeyD', 'ArrowRight'],
-  down: ['KeyS', 'ArrowDown'],
-  jump: ['Space', 'KeyZ'],
-  shoot: ['KeyX'],
-  dash: ['ShiftLeft', 'ShiftRight', 'KeyC'],
-  parry: ['KeyV'],
-  gadget: ['KeyE', 'KeyB'],
-  pause: ['Escape', 'KeyP'],
-};
+export type { KeyAction } from './Bindings';
 
 const ACTION_BITS: Partial<Readonly<Record<KeyAction, number>>> = {
   jump: Button.Jump,
@@ -36,7 +25,8 @@ export class KeyboardMouseControls implements InputSource {
   readonly kind = 'keyboard';
   /** Menu intents from the keyboard; drained by whichever menu is open. */
   readonly menu = new MenuIntentQueue();
-  private readonly codeToAction = new Map<string, KeyAction>();
+  /** A code may drive several actions while a conflict is flagged in Settings. */
+  private readonly codeToActions = new Map<string, KeyAction[]>();
   private readonly down = new Set<string>();
   private readonly mouseDown = new Set<number>();
   private latched = 0;
@@ -45,28 +35,44 @@ export class KeyboardMouseControls implements InputSource {
   private cursor: { x: number; y: number } | null = null;
   private aimResolver: ((clientX: number, clientY: number) => number | null) | null = null;
 
-  constructor(bindings: Readonly<Record<KeyAction, readonly string[]>> = DEFAULT_KEY_BINDINGS) {
-    for (const [action, codes] of Object.entries(bindings) as [KeyAction, readonly string[]][]) {
-      for (const code of codes) this.codeToAction.set(code, action);
+  constructor(bindings: KeyBindings = DEFAULT_KEYS) {
+    this.setBindings(bindings);
+  }
+
+  /** Rebinding (Settings → Controls → Rebind) applies at once; held keys are released. */
+  setBindings(bindings: KeyBindings): void {
+    this.codeToActions.clear();
+    for (const action of KEY_ACTIONS) {
+      for (const code of bindings[action]) {
+        if (code === null) continue;
+        const list = this.codeToActions.get(code) ?? [];
+        list.push(action);
+        this.codeToActions.set(code, list);
+      }
     }
+    this.down.clear();
   }
 
   /** True when the key is bound or navigates menus (the caller then prevents the browser default). */
-  keyDown(code: string, repeat: boolean, nowMs: number): boolean {
-    const intent = menuIntentForKey(code, repeat);
+  keyDown(rawCode: string, repeat: boolean, nowMs: number): boolean {
+    const intent = menuIntentForKey(rawCode, repeat);
     if (intent) this.menu.push(intent);
-    const action = this.codeToAction.get(code);
-    if (!action) return intent !== null;
+    const code = normalizeCode(rawCode);
+    const actions = this.codeToActions.get(code);
+    if (!actions) return intent !== null;
     if (repeat || this.down.has(code)) return true;
     this.down.add(code);
     this.lastUseMs = nowMs;
-    if (action === 'pause') this.pauses += 1;
-    this.latched |= ACTION_BITS[action] ?? 0;
+    for (const action of actions) {
+      if (action === 'pause') this.pauses += 1;
+      this.latched |= ACTION_BITS[action] ?? 0;
+    }
     return true;
   }
 
-  keyUp(code: string): boolean {
-    if (!this.codeToAction.has(code)) return false;
+  keyUp(rawCode: string): boolean {
+    const code = normalizeCode(rawCode);
+    if (!this.codeToActions.has(code)) return false;
     this.down.delete(code);
     return true;
   }
@@ -100,15 +106,14 @@ export class KeyboardMouseControls implements InputSource {
   }
 
   private isActionDown(action: KeyAction): boolean {
-    for (const code of this.down) if (this.codeToAction.get(code) === action) return true;
+    for (const code of this.down) if (this.codeToActions.get(code)?.includes(action)) return true;
     return false;
   }
 
   sample(): SourceSample {
     let held = 0;
     for (const code of this.down) {
-      const action = this.codeToAction.get(code);
-      if (action) held |= ACTION_BITS[action] ?? 0;
+      for (const action of this.codeToActions.get(code) ?? []) held |= ACTION_BITS[action] ?? 0;
     }
     for (const button of this.mouseDown) held |= MOUSE_BITS[button] ?? 0;
     let x = (this.isActionDown('right') ? 1 : 0) - (this.isActionDown('left') ? 1 : 0);
@@ -142,10 +147,13 @@ export class KeyboardMouseControls implements InputSource {
  * Window keyboard listeners and canvas mouse listeners. Modified keys (Ctrl, Cmd, Alt) are never
  * handled, so browser shortcuts such as Ctrl/Cmd + W, R, T, L, Q keep working (spec 8.13).
  */
-/** A focused input, text area, select, or editable element takes its own keys. */
+/**
+ * A focused input, text area, select, editable element, or anything marked `data-keys="own"` (the
+ * layout editor's movable controls) takes its own keys.
+ */
 export function isFormControl(target: EventTarget | null): boolean {
   if (typeof HTMLElement === 'undefined' || !(target instanceof HTMLElement)) return false;
-  return target.isContentEditable || target.matches('input, textarea, select');
+  return target.isContentEditable || target.matches('input, textarea, select, [data-keys="own"]');
 }
 
 export function attachKeyboardMouse(

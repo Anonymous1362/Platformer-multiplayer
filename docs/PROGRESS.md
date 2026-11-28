@@ -14,8 +14,36 @@
 | 2A | DONE (CI green, run 46045057262; merged as #4). Awaiting the owner's OK for 2B. Preact UI layer, tokens, components, motion, Title, Pause, photosensitivity notice, fade and iris transitions, dev gallery. |
 | 2B-1 | DONE (CI green, run 46056876731; merged as #5). Settings model (Zod, per-field fallback, per device), Settings screen with every §8.6 tab, live apply, simulation assists. |
 | Release 0.0.5 | Version bumped with release notes (Pass 2A and 2B-1). The owner runs Actions → Release after the bump is on `main`. |
-| 2B-2 | DONE locally (CI pending). Locale files and translator (plurals, numbers), every player-facing string on a key, Language setting live, `en-XA` pseudo-locale overflow screenshots. |
-| 2B-3 … 2B-5 | Not started |
+| 2B-2 | DONE (CI green, run 46118310127; merged as #7). Locale files and translator (plurals, numbers), every player-facing string on a key, Language setting live, `en-XA` pseudo-locale overflow screenshots. |
+| 2B-3 | DONE locally (CI pending). Colorblind palettes with the CVD test, sound captions, high-contrast HUD. |
+| 2B-4 | DONE locally (CI pending). Touch presets (Classic, Simple, Left-handed) and the layout editor; edits saved per device and orientation profile. |
+| 2B-5 | DONE locally (CI pending). Keyboard and controller rebinding with conflict flags and reset; full controller menu navigation. **2B complete** once merged. |
+| Art & UI B | Waiting for the owner's command (owner-requested, out of order). |
+
+## Pass 2B-5 evidence (2026-11-28)
+
+- `npm run verify`: passes (418 tests, incl. 14 binding tests: defaults, conflict flags, duplicate clearing, reserved keys, family detection, keyboard and pad rebinding effects, Right Shift, capture takes only a new press and blocks game and menus, cancel, D-pad/stick left/right and bumper intents, store per device with per-action fallback).
+- `npm run test:e2e` (Chrome, local): 101 of 101 (the pseudo-locale audit now runs one test per screen and tab), incl. tests/e2e/rebinding.spec.ts: rebind Jump to J in the UI (J jumps, Space no longer does, survives a reload); a conflict is flagged on both actions, Esc cancels a capture, Backspace clears, Reset to defaults restores, axe passes; with a mocked Xbox pad, rebind Jump to Y by pressing Y and Y then jumps; menus by pad: Start, D-pad, A, RB/LB switch tabs, D-pad right moves the volume slider, B closes Settings. The pseudo-locale audit now covers the rebinding screen and the layout editor.
+
+### 2B acceptance
+
+| Done when (spec 23) | Status | Evidence |
+| --- | --- | --- |
+| Every setting persists and applies | Pass for every system that exists; rows for later systems store the choice and say when it applies | settings.spec, accessibility.spec, layout-editor.spec, rebinding.spec |
+| Pseudo-locale screenshots show no overflow | Pass | pseudo-locale.spec (every screen, phone and desktop; CI artifact) |
+| Edited layouts survive restarts | Pass | layout-editor.spec (drag, save, reload) |
+
+## Pass 2B-4 evidence (2026-11-28)
+
+- `npm run verify`: passes (404 tests, incl. 9 layout tests: Classic equals the 1D layout, Simple hides Fire and auto-fires, Left-handed mirrors buttons and stick with Pause staying top-right, edits land where dropped and keep their corner distance on other sizes, clamping, profiles, saved layouts survive a new store and reset per preset, bad entries dropped).
+- `npm run test:e2e` (Chrome, local): 75 of 75, incl. tests/e2e/layout-editor.spec.ts at 844 × 390 with touch: "edited layouts survive restarts" (drag Jump, Save, reload, still moved; Reset to preset restores it); resize to 150% and arrow-key nudges are saved; Esc cancels without saving and the game stays paused; axe passes on the editor; Left-handed and Simple apply at once.
+- Found from screenshots and fixed: the toolbar hid the top controls, and the pause menu showed through.
+
+## Pass 2B-3 evidence (2026-11-28)
+
+- `npm run verify`: passes (395 unit, input, property, and simulation tests, incl. 12 CVD tests: CIEDE2000 against 7 published reference pairs, Machado simulation sanity, every palette pair ≥ 30 under its deficiency, contrast ≥ 4.5:1, the default palette failing protanopia; 3 caption tests).
+- `npm run test:e2e` (Chrome, local): 72 of 72, incl. tests/e2e/accessibility.spec.ts: Protanopia swaps the UI tokens and the HUD shield color live and Off restores them; High-contrast HUD outlines the HUD, makes menus opaque, and axe still passes; walking right with the volume at 0 shows "[Crawler alerted]" in an `aria-live` region; turning captions off hides a caption that is showing.
+- Hardened along the way: the replay-export test now waits on simulation ticks instead of wall time (under heavy parallel load the loop runs fewer ticks per second).
 
 ## Pass 2B-2 evidence (2026-11-28)
 

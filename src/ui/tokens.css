@@ -720,3 +720,118 @@
     gap: var(--space-2);
   }
 }
+
+/* ---- Touch layout editor (spec 8.8) ---- */
+.cd-editor {
+  padding: 0;
+  justify-content: flex-start;
+  /* Dark enough that the paused menu underneath does not compete with the controls. */
+  background: rgba(8, 11, 26, 0.9);
+  touch-action: none;
+}
+.cd-editor-control {
+  position: absolute;
+  appearance: none;
+  border-radius: var(--radius-pill);
+  border: 2px dashed var(--text-secondary);
+  background: rgba(15, 23, 42, 0.7);
+  color: var(--text-primary);
+  font: 700 var(--size-caption) / 1 var(--font-ui);
+  letter-spacing: 0.06em;
+  cursor: grab;
+  touch-action: none;
+  pointer-events: auto;
+  /* Controls always sit above the toolbar, so none can hide under it. */
+  z-index: 3;
+}
+.cd-editor-control[data-selected='true'] {
+  border-style: solid;
+  border-color: var(--accent);
+}
+.cd-editor-control[data-pressed='true'] {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.cd-editor-stick {
+  border-style: dotted;
+}
+.cd-editor-zone {
+  position: absolute;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: var(--space-3);
+  border: 1px dashed var(--stroke);
+  border-radius: var(--radius-lg);
+  pointer-events: none;
+}
+.cd-editor-toolbar {
+  /* On the side away from the buttons (top-left, or top-right for Left-handed). */
+  position: absolute;
+  top: var(--space-3);
+  left: var(--space-3);
+  width: min(440px, 54%);
+  max-height: calc(100% - 2 * var(--space-3));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  padding: var(--space-3) var(--space-4);
+  gap: var(--space-2);
+  z-index: 2;
+}
+.cd-editor-head {
+  gap: var(--space-2);
+}
+.cd-editor[data-side='left'] .cd-editor-toolbar {
+  left: auto;
+  right: var(--space-3);
+}
+.cd-editor-toolbar .cd-row {
+  flex-wrap: wrap;
+}
+.cd-editor-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+}
+.cd-editor-tool {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 160px;
+}
+.cd-editor-actions {
+  flex-wrap: wrap;
+}
+@media (max-height: 480px) {
+  .cd-editor-toolbar {
+    top: var(--space-1);
+    padding: var(--space-2) var(--space-3);
+    gap: var(--space-1);
+  }
+  .cd-editor-toolbar .cd-title {
+    font-size: var(--size-body);
+  }
+}
+
+/* ---- Rebinding (spec 8.13) ---- */
+.cd-binding-slots {
+  flex-wrap: nowrap;
+  gap: var(--space-2);
+}
+.cd-binding-slot {
+  min-width: 112px;
+  padding: 0 var(--space-3);
+  font-size: var(--size-caption);
+}
+.cd-binding-slot[data-capturing='true'] {
+  border-color: var(--accent);
+  background: var(--bg-panel-opaque);
+}
+.cd-binding-conflict {
+  color: var(--warning);
+}
+.cd-binding-conflict::before {
+  content: '⚠ ';
+}

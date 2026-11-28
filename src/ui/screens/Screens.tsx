@@ -5,6 +5,8 @@ import { ConfirmDialog } from '../components/Overlays';
 import { useReducedMotion, useT, useUi } from '../context';
 import { useEntrance, useNavScope, type ElementRef } from '../hooks';
 import { logoShardOffset, play } from '../motion';
+import { BindingsScreen } from './BindingsScreen';
+import { LayoutEditor } from './LayoutEditor';
 import { SettingsScreen } from './SettingsScreen';
 
 export type PauseAction = 'resume' | 'restart' | 'perf' | 'quit';
@@ -14,25 +16,55 @@ function useSettingsPopup(): {
   readonly open: (from: EventTarget | null) => void;
   readonly view: JSX.Element | null;
 } {
-  const { settings, about } = useUi();
+  const { settings, about, touch, bindings } = useUi();
   const [origin, setOrigin] = useState<{ x: number; y: number } | null>(null);
   const [isOpen, setOpen] = useState(false);
+  // The layout editor and the rebinding screen replace Settings, then return to its Controls tab.
+  const [sub, setSub] = useState<'editor' | 'bindings' | null>(null);
+  const [backToControls, setBackToControls] = useState(false);
   const open = (from: EventTarget | null): void => {
     const rect = from instanceof Element ? from.getBoundingClientRect() : null;
     setOrigin(rect ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 } : null);
     setOpen(true);
   };
-  const view =
-    isOpen && settings ? (
+  const back = (): void => {
+    setSub(null);
+  };
+  let view: JSX.Element | null = null;
+  if (isOpen && settings && sub === 'editor' && touch) {
+    view = <LayoutEditor store={settings} host={touch} onClose={back} />;
+  } else if (isOpen && settings && sub === 'bindings' && bindings) {
+    view = <BindingsScreen host={bindings} onClose={back} />;
+  } else if (isOpen && settings) {
+    view = (
       <SettingsScreen
         store={settings}
         about={about}
         origin={origin ?? undefined}
+        initialTab={backToControls ? 'controls' : undefined}
+        onEditLayout={
+          touch
+            ? () => {
+                setSub('editor');
+                setBackToControls(true);
+              }
+            : undefined
+        }
+        onRebind={
+          bindings
+            ? () => {
+                setSub('bindings');
+                setBackToControls(true);
+              }
+            : undefined
+        }
         onClose={() => {
           setOpen(false);
+          setBackToControls(false);
         }}
       />
-    ) : null;
+    );
+  }
   return { open, view };
 }
 

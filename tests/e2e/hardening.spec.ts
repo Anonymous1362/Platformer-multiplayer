@@ -74,11 +74,13 @@ test('a live keyboard run exports a replay that re-simulates headlessly to the s
 }) => {
   const seen = watch(page);
   await boot(page);
+  // Wait on simulation ticks, not wall time: under load the loop runs fewer ticks per second.
+  const start = (await probe(page)).tick;
   await page.keyboard.down('KeyD');
   await page.keyboard.down('KeyX');
-  await page.waitForTimeout(1200);
+  await expect.poll(async () => (await probe(page)).tick, { timeout: 15_000 }).toBeGreaterThan(start + 60);
   await page.keyboard.press('Space');
-  await page.waitForTimeout(800);
+  await expect.poll(async () => (await probe(page)).tick, { timeout: 15_000 }).toBeGreaterThan(start + 100);
   await page.keyboard.up('KeyX');
   await page.keyboard.up('KeyD');
   await page.keyboard.press('Escape'); // pause, so the export is the whole run so far

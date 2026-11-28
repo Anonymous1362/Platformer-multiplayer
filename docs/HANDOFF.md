@@ -1,6 +1,25 @@
 # Handoff
 
-State: 2A, 2B-1, and release prep for 0.0.5 are merged (#4, #5, #6). Pass 2B-2 (i18n) is done locally; the agent opens its PR and watches CI, then the owner merges and OKs 2B-3 (colorblind palettes with the CVD test, captions, high-contrast HUD). The owner runs Actions → Release for 0.0.5 (and later versions). Manual mode. Owner phone checks still open: docs/DEVICES.md and the 2A "no long tasks on a Mid device" check.
+State: Pass 2A and 2B-1, 2B-2 are merged (#4–#7). 2B-3 + 2B-4 are in PR #8; 2B-5 (rebinding and controller menus) is done, which completes 2B. Next, on the owner's command: "Art & UI B" (owner-requested, out of order; ultracode workflows, workflow size medium). Then 2C (saves). Manual mode. Owner phone checks still open: docs/DEVICES.md and the 2A "no long tasks on a Mid device" check.
+
+What 2B-5 added:
+
+- `input/Bindings.ts` (actions, defaults, `padFamily`, `conflicts`, `bind`, `normalizeCode`, `isBindableCode`); `KeyboardMouseControls.setBindings` (one code may drive several actions while flagged); `GamepadControls.setBindings` (per family), `captureNext`, `connectedFamilies`, and new menu intents `left`, `right`, `prevTab`, `nextTab` (`MenuNav`), handled by `NavStack` (slider steps, radio and tab moves, bumper tab switching).
+- `settings/BindingsStore.ts` (`cd.bindings`); `main.ts` applies bindings live; the UI context's `bindings` host gives the screen the store, connected families, and pad capture.
+- `ui/screens/BindingsScreen.tsx` and `bindingLabels.ts` (key and button names, all through translation keys).
+
+What 2B-4 added:
+
+- `input/TouchLayout.ts`: `buildLayout(width, height, { preset, floatingStick, buttonScale, custom })`, `presetButtons`, `presetAutoFire`, `overrideFromPoint`, `layoutProfile`; `classicLayout` is now a wrapper.
+- `settings/TouchLayoutStore.ts` (`cd.touchLayouts`); `GameInput.setTouchPrefs({ preset, ..., custom(profile) })`, `layoutProfile`, `canvasSize`; `SettingsApply` re-lays out on settings or saved-layout changes and forces auto-fire for Simple.
+- `ui/screens/LayoutEditor.tsx`, opened through `useSettingsPopup` (Settings ⇄ editor); the UI context's `touch` host gives it the layout store, canvas size, and profile.
+- Test hook `__CD_TEST__.touchLayout()`.
+
+What 2B-3 added:
+
+- `src/theme/Cvd.ts`: Machado 2009 matrices, sRGB ↔ linear ↔ Lab, CIEDE2000, `perceivedDelta`, `contrastRatio`. `ThemePalette.ts`: `SemanticColors`, `CVD_PALETTES`, `semanticColors(mode)`, `WorldColors`/`worldColors()`.
+- Apply: `UiService.setSemantic` (CSS variables on `.cd-ui`), `HudView.setStyle(colors, highContrast)`, `TouchControlView.setColors`, and `colors` passed to `LevelView`, `TerrainView` (spikes), `Effects`, `ScreenFx` at level start.
+- `src/audio/Captions.ts` (`CAPTION_KEYS`, `captionDirection`, `CaptionQueue`) and `src/hud/CaptionView.ts`; `LevelScene` wraps the engine given to `GameAudio` so captioned sounds post captions.
 
 What 2B-2 added:
 
@@ -29,6 +48,8 @@ Gotchas learned:
 - `choice()` option lists need a `const` type parameter, or the literals widen to `string`.
 - Hover-to-focus follows only real mouse movement (`pointermove` with movement) and never takes focus from a slider or text field: content opening under a still mouse used to steal focus from a slider mid-adjustment (CI caught it).
 - Navigation scopes register and autofocus in a layout effect, and autofocus never takes focus from something already focused inside the scope (a passive effect ran after paint and could steal focus on slow CI).
+- Controller browser tests press a mocked button until the game has polled it twice (`__CD_TEST__.gamepadPolls()`): the game reads pads once per rendered frame, and on CI's software renderer a 120 ms tap could fall between two frames.
+- Screenshot-heavy browser tests: CI's software renderer needs seconds per full-page screenshot, so the pseudo-locale audit runs one test per Settings tab (and per rebinding tab) rather than one long sweep that ran past its time limit in CI.
 - Eight axe scans on software WebGL take about 30 s; that test has its own 120 s timeout.
 
 What 2A added (`src/ui`, Preact, DOM over the canvas inside `#game-root`):

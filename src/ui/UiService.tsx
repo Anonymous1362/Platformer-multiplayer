@@ -3,7 +3,14 @@ import { render } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { MenuIntent } from '../input/MenuNav';
 import { ToastHost, ToastQueue } from './components/Overlays';
-import { UiContext, silentFeedback, type UiContextValue, type UiFeedback } from './context';
+import {
+  UiContext,
+  silentFeedback,
+  type BindingsHost,
+  type TouchEditorHost,
+  type UiContextValue,
+  type UiFeedback,
+} from './context';
 import { motionTotalMs, MOTIONS, play } from './motion';
 import { NavStack } from './nav';
 import { UiPrefs, type UiPrefsState } from './prefs';
@@ -11,6 +18,7 @@ import { PauseScreen, PhotosensitivityNotice, TitleScreen, type PauseAction } fr
 import type { Translator } from '../i18n/I18n';
 import { createTranslator } from '../i18n/Locales';
 import type { SettingsStore } from '../settings/SettingsStore';
+import { DEFAULT_SEMANTIC, type SemanticColors } from '../theme/ThemePalette';
 import { Store, useStore } from './store';
 import { Transitions, type TransitionKind } from './Transitions';
 
@@ -36,6 +44,8 @@ export interface UiServiceOptions {
   readonly driven: boolean;
   readonly settings?: SettingsStore;
   readonly i18n?: Store<Translator>;
+  readonly touch?: TouchEditorHost;
+  readonly bindings?: BindingsHost;
   readonly about?: { readonly version: string; readonly build: string };
 }
 
@@ -116,11 +126,14 @@ export class UiService {
   private readonly driven: boolean;
   readonly settings: SettingsStore | null;
   readonly i18n: Store<Translator>;
+  readonly touch: TouchEditorHost | null;
+  readonly bindings: BindingsHost | null;
   readonly about: { readonly version: string; readonly build: string };
   private element: HTMLElement | null = null;
   private transitions: Transitions | null = null;
   private offs: (() => void)[] = [];
   private textScale = 1;
+  private semantic: SemanticColors = DEFAULT_SEMANTIC;
 
   constructor(options: UiServiceOptions) {
     this.driven = options.driven;
@@ -128,6 +141,8 @@ export class UiService {
     this.feedback = options.feedback ?? silentFeedback;
     this.settings = options.settings ?? null;
     this.i18n = options.i18n ?? new Store<Translator>(createTranslator('en'));
+    this.touch = options.touch ?? null;
+    this.bindings = options.bindings ?? null;
     this.about = options.about ?? { version: '0.0.0', build: 'dev' };
   }
 
@@ -140,6 +155,8 @@ export class UiService {
       settings: this.settings,
       about: this.about,
       i18n: this.i18n,
+      touch: this.touch,
+      bindings: this.bindings,
     };
   }
 
@@ -156,6 +173,7 @@ export class UiService {
     host.append(root);
     this.element = root;
     root.style.setProperty('--text-scale', String(this.textScale));
+    this.applySemantic();
     this.transitions = new Transitions(overlays);
     const apply = (state: UiPrefsState): void => {
       root.dataset['glass'] = state.glass ? 'on' : 'off';
@@ -183,6 +201,24 @@ export class UiService {
 
   get root(): HTMLElement | null {
     return this.element;
+  }
+
+  /** Colorblind palette (spec 8.6): swaps the semantic color tokens on the UI layer. */
+  setSemantic(colors: SemanticColors): void {
+    this.semantic = colors;
+    this.applySemantic();
+  }
+
+  private applySemantic(): void {
+    const root = this.element;
+    if (!root) return;
+    const c = this.semantic;
+    root.style.setProperty('--accent', c.accent);
+    root.style.setProperty('--focus', c.accent);
+    root.style.setProperty('--danger', c.danger);
+    root.style.setProperty('--currency-shard', c.currencyShard);
+    root.style.setProperty('--currency-core', c.currencyCore);
+    root.dataset['palette'] = c === DEFAULT_SEMANTIC ? 'default' : 'colorblind';
   }
 
   /** Text Size (spec 8.2, 8.6): scales every UI type size; the setting is 90–150%. */

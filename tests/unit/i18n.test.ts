@@ -31,7 +31,7 @@ const code = files.map((f) => readFileSync(f, 'utf8')).join('\n');
 /** Keys used as string literals: t('a.b'), .t('a.b'), and key tables ('settings.tab.audio'). */
 const usedKeys = new Set<string>();
 for (const m of code.matchAll(
-  /['"]((?:common|notice|title|pause|settings|level|error|safe|webgl|touch)\.[A-Za-z0-9.]+)['"]/g,
+  /['"]((?:common|notice|title|pause|settings|level|error|safe|webgl|touch|caption|editor|bindings|action|key|pad)\.[A-Za-z0-9.]+)['"]/g,
 )) {
   if (m[1]) usedKeys.add(m[1]);
 }

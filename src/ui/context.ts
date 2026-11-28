@@ -3,8 +3,29 @@ import { useContext } from 'preact/hooks';
 import type { NavStack } from './nav';
 import type { Params, Translator } from '../i18n/I18n';
 import type { SettingsStore } from '../settings/SettingsStore';
+import type { PadFamily } from '../input/Bindings';
+import type { BindingsStore } from '../settings/BindingsStore';
+import type { TouchLayoutStore } from '../settings/TouchLayoutStore';
 import type { UiPrefs } from './prefs';
 import { useStore, type Store } from './store';
+
+/** What the rebinding screen needs from the running game. */
+export interface BindingsHost {
+  readonly store: BindingsStore;
+  /** Families of the connected controllers (first one first). */
+  readonly families: () => readonly PadFamily[];
+  /** The next controller button goes to `onButton`; returns a cancel function. */
+  readonly capturePad: (onButton: (button: number, family: PadFamily) => void) => () => void;
+}
+
+/** What the layout editor needs from the running game. */
+export interface TouchEditorHost {
+  readonly layouts: TouchLayoutStore;
+  /** The canvas size the controls are laid out on (CSS px). */
+  readonly size: () => { readonly width: number; readonly height: number };
+  /** The orientation profile edits are saved under. */
+  readonly profile: () => string;
+}
 
 export type UiSound = 'tap' | 'back' | 'toggle' | 'error';
 
@@ -23,6 +44,10 @@ export interface UiContextValue {
   /** Null in previews that have no settings. */
   readonly settings: SettingsStore | null;
   readonly about: { readonly version: string; readonly build: string };
+  /** The touch layout editor's view of the game (null in previews and the gallery). */
+  readonly touch: TouchEditorHost | null;
+  /** The rebinding screen's view of the game (null in previews and the gallery). */
+  readonly bindings: BindingsHost | null;
   /** The active language; replaced (not mutated) when the player switches. */
   readonly i18n: Store<Translator>;
 }

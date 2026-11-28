@@ -1,4 +1,4 @@
-import { cssHex, Palette, UiTokens } from '../theme/ThemePalette';
+import { DEFAULT_SEMANTIC, UiTokens, type SemanticColors } from '../theme/ThemePalette';
 import type { HudState } from './HudModel';
 
 function el(
@@ -48,6 +48,10 @@ export class HudView {
   private readonly shardBox: HTMLElement;
   private readonly shardCount: HTMLElement;
   private readonly reducedMotion: boolean;
+  private readonly tracks: HTMLElement[] = [];
+  private readonly shardIcon: HTMLElement;
+  private colors: SemanticColors = DEFAULT_SEMANTIC;
+  private highContrast = false;
   private last: HudState | null = null;
 
   constructor(parent: HTMLElement, reducedMotion: boolean) {
@@ -61,7 +65,8 @@ export class HudView {
         userSelect: 'none',
         fontFamily: 'system-ui, sans-serif',
       },
-      { 'data-role': 'hud', 'aria-hidden': 'true' },
+      // Not aria-hidden as a whole: the sound captions inside it are a live region.
+      { 'data-role': 'hud' },
     );
 
     const vitals = el('div', {
@@ -91,11 +96,12 @@ export class HudView {
       { 'data-hud': 'shield' },
     );
     hp.track.append(this.shieldFill);
+    this.tracks.push(hp.track);
     const fuel = bar(180, 8);
     fuel.track.dataset['hud'] = 'fuel';
     this.fuelTrack = fuel.track;
     this.fuelFill = fuel.fill;
-    this.fuelFill.style.background = UiTokens.currencyShard;
+    this.tracks.push(fuel.track);
     vitals.append(hp.track, fuel.track);
 
     this.shardBox = el(
@@ -121,26 +127,68 @@ export class HudView {
       width: '12px',
       height: '12px',
       transform: 'rotate(45deg)',
-      background: cssHex(Palette.starlightGold),
-      boxShadow: `0 0 8px ${cssHex(Palette.starlightGold)}`,
       borderRadius: '2px',
     });
+    this.shardIcon = icon;
     this.shardCount = el('span', {}, { 'data-hud': 'shard-count' });
     this.shardCount.textContent = '0';
     this.shardBox.append(icon, this.shardCount);
 
+    vitals.setAttribute('aria-hidden', 'true');
+    this.shardBox.setAttribute('aria-hidden', 'true');
     this.root.append(vitals, this.shardBox);
     parent.append(this.root);
+    this.applyStyle();
+  }
+
+  /** The HUD layer element (sound captions live inside it). */
+  get element(): HTMLElement {
+    return this.root;
+  }
+
+  /**
+   * Colorblind palette (semantic colors) and High-contrast HUD (spec 8.6): opaque backing, a bright
+   * 2 px outline, and no glow, so the bars read on any background. Applies at once.
+   */
+  setStyle(colors: SemanticColors, highContrast: boolean): void {
+    this.colors = colors;
+    this.highContrast = highContrast;
+    this.applyStyle();
+  }
+
+  private applyStyle(): void {
+    const c = this.colors;
+    const hc = this.highContrast;
+    this.root.dataset['contrast'] = hc ? 'high' : 'normal';
+    for (const track of this.tracks) {
+      track.style.background = hc ? '#000000' : 'rgba(8, 11, 26, 0.72)';
+      track.style.border = hc ? `2px solid ${UiTokens.textPrimary}` : `1px solid ${UiTokens.stroke}`;
+    }
+    this.shieldFill.style.background = c.accent;
+    this.shieldFill.style.boxShadow = hc ? 'none' : `0 0 8px ${c.accent}`;
+    this.fuelFill.style.background = c.currencyShard;
+    this.shardIcon.style.background = c.currencyShard;
+    this.shardIcon.style.boxShadow = hc ? `0 0 0 2px ${UiTokens.textPrimary}` : `0 0 8px ${c.currencyShard}`;
+    this.shardBox.style.background = hc ? UiTokens.bgPanelOpaque : UiTokens.bgPanel;
+    this.shardBox.style.border = hc ? `2px solid ${UiTokens.textPrimary}` : `1px solid ${UiTokens.stroke}`;
+    this.paintHp(this.last?.lowHp ?? false);
+  }
+
+  private paintHp(lowHp: boolean): void {
+    const hc = this.highContrast;
+    this.hpFill.style.background = lowHp
+      ? hc
+        ? this.colors.danger
+        : `linear-gradient(180deg, ${this.colors.danger}, #BE185D)`
+      : hc
+        ? '#FFFFFF'
+        : 'linear-gradient(180deg, #F8FAFC, #CBD5E1)';
   }
 
   update(s: HudState): void {
     const prev = this.last;
     if (prev?.hpPct !== s.hpPct) this.hpFill.style.transform = `scaleX(${String(s.hpPct / 100)})`;
-    if (prev?.lowHp !== s.lowHp) {
-      this.hpFill.style.background = s.lowHp
-        ? `linear-gradient(180deg, ${UiTokens.danger}, #BE185D)`
-        : 'linear-gradient(180deg, #F8FAFC, #CBD5E1)';
-    }
+    if (prev?.lowHp !== s.lowHp) this.paintHp(s.lowHp);
     if (prev?.shieldPct !== s.shieldPct)
       this.shieldFill.style.transform = `scaleX(${String(s.shieldPct / 100)})`;
     if (prev?.fuelPct !== s.fuelPct) {
@@ -158,7 +206,7 @@ export class HudView {
   private bump(): void {
     if (typeof this.shardBox.animate !== 'function') return;
     const frames: Keyframe[] = this.reducedMotion
-      ? [{ color: UiTokens.currencyShard }, { color: UiTokens.textPrimary }]
+      ? [{ color: this.colors.currencyShard }, { color: UiTokens.textPrimary }]
       : [{ transform: 'scale(1.18)' }, { transform: 'scale(1)' }];
     this.shardBox.animate(frames, {
       duration: this.reducedMotion ? 220 : 160,

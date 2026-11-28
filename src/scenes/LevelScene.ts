@@ -18,7 +18,9 @@ import { parseLevel } from '../core/level/AsciiParser';
 import type { Level } from '../core/level/LevelTypes';
 import { assistBits, type Assists, type WorldState } from '../core/SimulationTypes';
 import { createWorld, setupFor, WorldSimulation } from '../core/WorldSimulation';
-import { GameAudio } from '../audio/GameAudio';
+import { CAPTION_KEYS, CaptionQueue, captionDirection } from '../audio/Captions';
+import { GameAudio, type SfxPlayer } from '../audio/GameAudio';
+import { CaptionView } from '../hud/CaptionView';
 import { hudState } from '../hud/HudModel';
 import { HudView } from '../hud/HudView';
 import type { PauseAction } from '../ui/screens/Screens';
@@ -33,7 +35,7 @@ import { LevelView } from '../render/world/LevelView';
 import { ParallaxView } from '../render/world/ParallaxView';
 import { capturePoses, type PrevPoses } from '../render/world/Poses';
 import { LEVEL_TEXTURES, PARALLAX_TEXTURES } from '../render/world/TextureKeys';
-import { Palette, UiTokens } from '../theme/ThemePalette';
+import { Palette, UiTokens, semanticColors, worldColors } from '../theme/ThemePalette';
 
 const TILE = GameConfig.world.tileSizeU;
 
@@ -55,6 +57,8 @@ interface Run {
   readonly effects: Effects;
   readonly screen: ScreenFx;
   readonly hud: HudView | null;
+  readonly captionView: CaptionView | null;
+  readonly captions: CaptionQueue;
   readonly audio: GameAudio;
   readonly falls: FallTracker;
   readonly tier: QualityTier;
@@ -179,16 +183,26 @@ export class LevelScene extends Phaser.Scene {
       intensity: settings.graphics.backgroundIntensity / 100,
     });
     let fx = fxPrefs(settings);
+    // The colorblind palette recolors in-world effects from the next level start; the HUD, touch
+    // rings, captions, and menus follow it at once.
+    const colors = worldColors(semanticColors(settings.accessibility.colorblind));
+    const applyHudStyle = (): void => {
+      const a = this.services.settings.get().accessibility;
+      hud?.setStyle(semanticColors(a.colorblind), a.highContrastHud);
+      captionView?.setHighContrast(a.highContrastHud);
+    };
     const offSettings = this.services.settings.subscribe(() => {
       fx = fxPrefs(this.services.settings.get());
+      applyHudStyle();
     });
     const readFx = (): FxPrefs => fx;
-    const view = new LevelView(this, level, world, reducedMotion);
+    const view = new LevelView(this, level, world, reducedMotion, colors);
     const rig = new CameraRig(camera, reducedMotion, readFx);
-    const screen = new ScreenFx(this, reducedMotion, readFx);
+    const screen = new ScreenFx(this, reducedMotion, readFx, colors);
     const particleTier = particleTierFor(settings.graphics.particles, tier);
     const effects = new Effects(this, {
       prefs: readFx,
+      colors,
       savedLabel: () => this.services.i18n.get().t('level.saved'),
       particles: new Particles(this, PARTICLE_CAPS[particleTier]),
       camera: rig,
@@ -199,6 +213,33 @@ export class LevelScene extends Phaser.Scene {
     });
     const parent = this.game.canvas.parentElement;
     const hud = parent ? new HudView(parent, reducedMotion) : null;
+    // Captions belong to the HUD layer (no extra node under #game-root).
+    const captionView = hud ? new CaptionView(hud.element) : null;
+    const captions = new CaptionQueue();
+    applyHudStyle();
+    // Captions (spec 7.5) hook the sounds GameAudio plays; they show even when the game is muted.
+    const engine = this.services.audio;
+    let listenerX = 0;
+    let viewWidthU = 1920;
+    const captioned: SfxPlayer = {
+      play: (key, options) => {
+        const captionKey = CAPTION_KEYS[key];
+        if (captionKey)
+          captions.add(captionKey, captionDirection(options?.x, listenerX, viewWidthU), performance.now());
+        return engine.play(key, options);
+      },
+      stop: (id) => {
+        engine.stop(id);
+      },
+      duck: (db, holdMs) => {
+        engine.duck(db, holdMs);
+      },
+      setListener: (x, width) => {
+        listenerX = x;
+        viewWidthU = width;
+        engine.setListener(x, width);
+      },
+    };
 
     const player = world.players[0];
     rig.snap(player?.x ?? 0, (player?.y ?? 0) - PLAYER_H / 2);
@@ -213,7 +254,9 @@ export class LevelScene extends Phaser.Scene {
       effects,
       screen,
       hud,
-      audio: new GameAudio(this.services.audio, level),
+      captionView,
+      captions,
+      audio: new GameAudio(captioned, level),
       falls: new FallTracker(),
       tier,
       recorder: new ReplayRecorder(setup),
@@ -262,6 +305,7 @@ export class LevelScene extends Phaser.Scene {
       this.recovery?.destroy();
       this.recovery = null;
       hud?.destroy();
+      captionView?.destroy();
       for (const node of this.notices.values()) node.remove();
       this.notices.clear();
       this.services.probe.current = null;
@@ -543,6 +587,16 @@ export class LevelScene extends Phaser.Scene {
     const state = hudState(run.world.players[0], run.world.run);
     run.screen.update(camera, dtMs, state.lowHp);
     run.hud?.update(state);
+    const translator = this.services.i18n.get();
+    run.captionView?.render(
+      run.captions.visible(performance.now()),
+      (line) => {
+        const text = translator.t(line.key);
+        if (line.direction === 'left') return translator.t('caption.left', { text });
+        return line.direction === 'right' ? translator.t('caption.right', { text }) : text;
+      },
+      this.services.settings.get().accessibility.captions,
+    );
     run.audio.frame(run.world, run.rig.centerX, camera.width / camera.zoom, state.lowHp, dtMs);
     this.services.input.touchView?.setRings(state.heatPct, state.venting, state.dashCooldownPct);
   }

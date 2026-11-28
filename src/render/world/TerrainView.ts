@@ -36,7 +36,11 @@ function iceAt(level: Level, col: number, row: number): boolean {
 export class TerrainView {
   private readonly sides: SideFace[] = [];
 
-  constructor(scene: Phaser.Scene, level: Level) {
+  /** `danger` is the spike color (the colorblind palette's danger). */
+  private readonly danger: number;
+
+  constructor(scene: Phaser.Scene, level: Level, danger: number = Palette.neonCrimson) {
+    this.danger = danger;
     const rim = PlanetRim[level.planet];
     const back = scene.add.container(0, 0).setDepth(Depth.TerrainBack);
     const front = scene.add.graphics().setDepth(Depth.TerrainFront);
@@ -148,14 +152,7 @@ export class TerrainView {
           g.fillStyle(Palette.slateHull, 1).fillRect(x, y + TILE - 10, TILE, 10);
           for (let i = 0; i < 4; i += 1) {
             const sx = x + i * 16;
-            g.fillStyle(Palette.neonCrimson, 1).fillTriangle(
-              sx,
-              y + TILE - 8,
-              sx + 8,
-              y + 22,
-              sx + 16,
-              y + TILE - 8,
-            );
+            g.fillStyle(this.danger, 1).fillTriangle(sx, y + TILE - 8, sx + 8, y + 22, sx + 16, y + TILE - 8);
             g.fillStyle(0xffffff, 0.35).fillTriangle(
               sx + 4,
               y + TILE - 16,

@@ -38,7 +38,11 @@ export interface SettingsScreenProps {
   readonly onClose: () => void;
   /** Where the pop-up rises from (the gear icon), in client pixels. */
   readonly origin?: { readonly x: number; readonly y: number } | undefined;
-  readonly initialTab?: Tab;
+  readonly initialTab?: Tab | undefined;
+  /** Opens the touch layout editor (absent where there is no game to edit). */
+  readonly onEditLayout?: (() => void) | undefined;
+  /** Opens the rebinding screen (absent where there is no game). */
+  readonly onRebind?: (() => void) | undefined;
 }
 
 function Row(props: {
@@ -266,7 +270,12 @@ function GraphicsTab(props: { readonly s: Settings; readonly store: SettingsStor
   );
 }
 
-function ControlsTab(props: { readonly s: Settings; readonly store: SettingsStore }): JSX.Element {
+function ControlsTab(props: {
+  readonly s: Settings;
+  readonly store: SettingsStore;
+  readonly onEditLayout?: (() => void) | undefined;
+  readonly onRebind?: (() => void) | undefined;
+}): JSX.Element {
   const t = useT();
   const { s, store } = props;
   const c = s.controls;
@@ -284,8 +293,14 @@ function ControlsTab(props: { readonly s: Settings; readonly store: SettingsStor
           ])}
         />
       </Row>
-      <Row label={t('settings.controls.editLayout')}>
-        <Button disabled disabledReason={t('settings.controls.editLayoutLater')}>
+      <Row label={t('settings.controls.editLayout')} hint={t('settings.controls.editLayoutHint')}>
+        <Button
+          data-action="edit-layout"
+          disabled={!props.onEditLayout}
+          onClick={() => {
+            props.onEditLayout?.();
+          }}
+        >
           {t('settings.controls.editLayout')}
         </Button>
       </Row>
@@ -395,8 +410,14 @@ function ControlsTab(props: { readonly s: Settings; readonly store: SettingsStor
           ])}
         />
       </Row>
-      <Row label={t('settings.controls.bindings')}>
-        <Button disabled disabledReason={t('settings.controls.rebindLater')}>
+      <Row label={t('settings.controls.bindings')} hint={t('settings.controls.rebindHint')}>
+        <Button
+          data-action="rebind"
+          disabled={!props.onRebind}
+          onClick={() => {
+            props.onRebind?.();
+          }}
+        >
           {t('settings.controls.rebind')}
         </Button>
       </Row>
@@ -533,14 +554,14 @@ function AccessibilityTab(props: { readonly s: Settings; readonly store: Setting
           onChange={(v) => store.set('accessibility', 'autoAdvance', v)}
         />
       </Row>
-      <Row label={t('settings.access.captions')} hint={t('settings.access.captionsLater')}>
+      <Row label={t('settings.access.captions')} hint={t('settings.access.captionsHint')}>
         <Toggle
           label={t('settings.access.captions')}
           checked={a.captions}
           onChange={(v) => store.set('accessibility', 'captions', v)}
         />
       </Row>
-      <Row label={t('settings.access.highContrast')} hint={t('settings.access.highContrastLater')}>
+      <Row label={t('settings.access.highContrast')} hint={t('settings.access.highContrastHint')}>
         <Toggle
           label={t('settings.access.highContrast')}
           checked={a.highContrastHud}
@@ -677,7 +698,14 @@ export function SettingsScreen(props: SettingsScreenProps): JSX.Element {
       case 'graphics':
         return <GraphicsTab s={s} store={props.store} />;
       case 'controls':
-        return <ControlsTab s={s} store={props.store} />;
+        return (
+          <ControlsTab
+            s={s}
+            store={props.store}
+            onEditLayout={props.onEditLayout}
+            onRebind={props.onRebind}
+          />
+        );
       case 'gameplay':
         return <GameplayTab s={s} store={props.store} />;
       case 'accessibility':
