@@ -65,7 +65,7 @@
     "golden:record": "tsx tools/replay-run/record-golden.ts",
     "perf:bench": "tsx tools/perf-bench/main.ts",
     "art:bake": "python3 -I tools/blender/bake.py",
-    "art:lookdev": "python3 -I tools/blender/lookdev/style_test.py",
+    "art:lookdev": "python3 -I tools/blender/lookdev/look_lock.py",
     "audio:build": "python3 -I tools/audio-build/build.py"
   }
 }

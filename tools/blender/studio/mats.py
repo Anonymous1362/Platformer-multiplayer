@@ -94,8 +94,34 @@ def obj_coord(g):
     return g.node('ShaderNodeTexCoord').outputs['Object']
 
 
-def rock(name, a, b, top, top_amount=0.8, strata=0.25, scale=0.7, bump=0.35):
-    """Two-tone rock with lighter walkable tops (readability: platform tops are lit) and strata bands."""
+def cracks(g, co, scale, width, warp=0.35):
+    """Crack mask (1 on a crack, 0 elsewhere): warped Voronoi cell edges, so cracks wander like real ones."""
+    wn = g.node('ShaderNodeTexNoise')
+    wn.inputs['Scale'].default_value = scale * 0.8
+    wn.inputs['Detail'].default_value = 3.0
+    g.link(co, wn.inputs['Vector'])
+    offset = g.node('ShaderNodeVectorMath', operation='SCALE')
+    g.link(wn.outputs['Color'], offset.inputs[0])
+    offset.inputs['Scale'].default_value = warp / scale
+    warped = g.node('ShaderNodeVectorMath', operation='ADD')
+    g.link(co, warped.inputs[0])
+    g.link(offset.outputs[0], warped.inputs[1])
+    vor = g.node('ShaderNodeTexVoronoi', feature='DISTANCE_TO_EDGE')
+    vor.inputs['Scale'].default_value = scale
+    g.link(warped.outputs[0], vor.inputs['Vector'])
+    edge = g.node('ShaderNodeMapRange', clamp=True)
+    edge.inputs['From Min'].default_value = 0.0
+    edge.inputs['From Max'].default_value = width
+    edge.inputs['To Min'].default_value = 1.0
+    edge.inputs['To Max'].default_value = 0.0
+    g.link(vor.outputs['Distance'], edge.inputs['Value'])
+    return edge.outputs['Result']
+
+
+def rock(name, a, b, top, top_amount=0.8, strata=0.25, scale=0.7, bump=0.35, crack=False, lichen=None):
+    """Two-tone rock with lighter walkable tops (readability: platform tops are lit) and strata bands.
+    `crack` adds two scales of wandering cracks (darkened and recessed); `lichen` (hex) adds sparse dark
+    growth patches on the tops that stay darker than the lit top but never hide it."""
     mat, g, bsdf = new(name)
     co = obj_coord(g)
     tone = g.ramp(g.noise(scale, 8.0, 0.62, co), [(0.3, a), (0.7, b)])
@@ -116,18 +142,63 @@ def rock(name, a, b, top, top_amount=0.8, strata=0.25, scale=0.7, bump=0.35):
     g.nodes[patches.node.name].inputs[2].default_value = -0.25
     up_fac = g.math('MULTIPLY', g.math('MULTIPLY', up.outputs['Result'], top_amount), patches, clamp=True)
     color = g.mix(up_fac, banded, top)
+    height = g.noise(scale * 7, 10.0, 0.7, co)
+    if lichen:
+        patch = g.node('ShaderNodeMapRange', clamp=True)
+        patch.inputs['From Min'].default_value = 0.56
+        patch.inputs['From Max'].default_value = 0.66
+        g.link(g.noise(2.2, 5.0, 0.6, co), patch.inputs['Value'])
+        cover = g.math('MULTIPLY', g.math('MULTIPLY', patch.outputs['Result'], up.outputs['Result']), 0.7)
+        color = g.mix(cover, color, lichen)
+    if crack:
+        big = cracks(g, co, 1.1, 0.035)
+        fine_mask = g.node('ShaderNodeMapRange', clamp=True)
+        fine_mask.inputs['From Min'].default_value = 0.45
+        fine_mask.inputs['From Max'].default_value = 0.6
+        g.link(g.noise(1.3, 2.0, 0.5, co), fine_mask.inputs['Value'])
+        fine = g.math('MULTIPLY', cracks(g, co, 3.4, 0.022), fine_mask.outputs['Result'])
+        crack_all = g.math('MAXIMUM', big, g.math('MULTIPLY', fine, 0.8))
+        color = g.mix(g.math('MULTIPLY', crack_all, 0.8), color, '#050505')
+        height = g.mad(crack_all, -1.6, height)
     g.link(color, bsdf.inputs['Base Color'])
     bsdf.inputs['Roughness'].default_value = 0.88
     bump_n = g.node('ShaderNodeBump')
     bump_n.inputs['Strength'].default_value = bump
     bump_n.inputs['Distance'].default_value = 0.08
-    g.link(g.noise(scale * 7, 10.0, 0.7, co), bump_n.inputs['Height'])
+    g.link(height, bump_n.inputs['Height'])
     g.link(bump_n.outputs['Normal'], bsdf.inputs['Normal'])
     return mat
 
 
-def crystal(name, base, glow, emit, edge=None, invert=False, rough=0.1):
-    """Faceted crystal: dark-ish glassy body, light at the edges (fresnel), glow toward the tips."""
+def hull(name, color, rough=0.5, metal=0.45, plate_scale=0.45, plate_var=0.22, scorch=None):
+    """Ship hull: plating read as patchy panel tones (Voronoi cells, about 2 m) that survives distance,
+    soft dirt, and optional scorch (hex) rising from the bottom."""
+    mat, g, bsdf = new(name)
+    co = obj_coord(g)
+    cells = g.node('ShaderNodeTexVoronoi', feature='F1')
+    cells.inputs['Scale'].default_value = plate_scale
+    g.link(co, cells.inputs['Vector'])
+    tone = g.node('ShaderNodeSeparateColor')
+    g.link(cells.outputs['Color'], tone.inputs[0])
+    var = g.mad(tone.outputs['Red'], plate_var * 2, 1.0 - plate_var)
+    col = g.mix(1.0, color, g.gray(var), 'MULTIPLY')
+    dirt = g.mad(g.noise(1.4, 6.0, 0.6, co), 0.5, 0.75)
+    col = g.mix(1.0, col, g.gray(dirt), 'MULTIPLY')
+    if scorch:
+        burn = g.node('ShaderNodeMapRange', clamp=True)
+        burn.inputs['From Min'].default_value = 0.4
+        burn.inputs['From Max'].default_value = 0.75
+        g.link(g.noise(0.35, 4.0, 0.6, co), burn.inputs['Value'])
+        col = g.mix(g.math('MULTIPLY', burn.outputs['Result'], 0.85), col, scorch)
+    g.link(col, bsdf.inputs['Base Color'])
+    bsdf.inputs['Roughness'].default_value = rough
+    bsdf.inputs['Metallic'].default_value = metal
+    return mat
+
+
+def crystal(name, base, glow, emit, edge=None, invert=False, rough=0.1, per_object=False):
+    """Faceted crystal: dark-ish glassy body, light at the edges (fresnel), glow toward the tips. With
+    `per_object`, emission is scaled by the object's `glow` property (see shapes.crystal_cluster)."""
     mat, g, bsdf = new(name)
     bsdf.inputs['Base Color'].default_value = (*lin(base), 1.0)
     bsdf.inputs['Roughness'].default_value = rough
@@ -148,6 +219,9 @@ def crystal(name, base, glow, emit, edge=None, invert=False, rough=0.1):
     co = obj_coord(g)
     veins = g.mad(g.noise(1.6, 6.0, 0.65, co), 1.6, -0.35)
     strength = g.math('MULTIPLY', g.math('MULTIPLY', g.math('MULTIPLY', tip, edge_glow), emit), veins)
+    if per_object:
+        attr = g.node('ShaderNodeAttribute', attribute_type='OBJECT', attribute_name='glow')
+        strength = g.math('MULTIPLY', strength, attr.outputs['Fac'])
     g.link(strength, bsdf.inputs['Emission Strength'])
     body = g.mix(g.noise(0.9, 4.0, 0.6, co), base, g.mix(0.5, base, '#000000'))
     if edge:

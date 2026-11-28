@@ -1,5 +1,8 @@
 """Art-direction looks: the style anchor every asset reads (palette, light rigs, fog, grade, HUD).
 
+LOCKED (owner, 2026-11-28): look B "Ember Dark" is the game's look (docs/ART_BIBLE.md). A and C stay as
+level-mood variants (C's rain and dusk, A's heavy fog), not as competing directions.
+
 Three candidate looks for the Art & UI B style test. All three keep the game's rules:
 - dark, realistic, atmospheric sci-fi; no neon cyberpunk palette;
 - one cool key light, a rim light that separates characters, contact shadows;
@@ -74,11 +77,15 @@ LOOKS = {
             {'name': 'rim', 'travel': (-0.3, -0.75, -0.55), 'color': '#7FD4F0', 'energy': 2.1, 'angle': 6},
             {'name': 'bounce', 'travel': (0.1, 0.2, 0.97), 'color': '#123038', 'energy': 0.12, 'angle': 40},
         ],
+        # B1a: strictly flip-safe (no x component); the blue all-round rim that read as an outline is gone.
+        # Direction comes from the engine's screen-space rim toward the star (`rim_engine`).
         'rig_sprite': [
-            {'name': 'key', 'travel': (0.18, 0.55, -0.82), 'color': '#FFDDA8', 'energy': 2.9, 'angle': 3},
-            {'name': 'rim', 'travel': (0.0, -0.62, -0.78), 'color': '#86DAF5', 'energy': 3.6, 'angle': 6},
-            {'name': 'fill', 'travel': (-0.4, 0.8, -0.1), 'color': '#2F5868', 'energy': 0.3, 'angle': 30},
+            {'name': 'key', 'travel': (0.0, 0.5, -0.87), 'color': '#FFDDA8', 'energy': 3.4, 'angle': 3},
+            {'name': 'rim', 'travel': (0.0, -0.62, -0.78), 'color': '#A9BEC4', 'energy': 1.1, 'angle': 6},
+            {'name': 'bounce', 'travel': (0.0, 0.45, 0.89), 'color': '#2E7A73', 'energy': 0.35, 'angle': 30},
         ],
+        'rim_engine': {'color': '#FFD9A0', 'amount': 0.5, 'width': 2.0},
+        'lichen': '#1E3330',
         'rock': ('#14181B', '#21272B', '#4D5653'),
         'crystal': {'base': '#0C2F31', 'glow': '#3FE0C8', 'emit': 1.8, 'edge': '#2A7A73'},
         'hull': '#383D42', 'hull_light': ('#FF9E3D', 12.0), 'metal': '#2F3439', 'grate': '#3C4248',
@@ -86,7 +93,7 @@ LOOKS = {
         'foreground': {'color': '#030506', 'blur': 7},
         'motes': {'color': '#FFE3B0', 'count': 70, 'alpha': 0.5},
         'grade': {'exposure': 0.0, 'contrast': 1.12, 'saturation': 0.85, 'lift': (0.0, 0.01, 0.015),
-                  'gain': (1.02, 1.0, 0.98), 'vignette': 0.5, 'grain': 0.03, 'bloom': 0.55, 'bloom_at': 0.7},
+                  'gain': (1.02, 1.0, 0.98), 'vignette': 0.5, 'grain': 0.012, 'bloom': 0.55, 'bloom_at': 0.7},
         'hud': {'color': '#EAF2F2', 'accent': '#4FF0D8', 'danger': '#FF3B2E'},
     },
     'C': {
@@ -127,3 +134,5 @@ LOOKS = {
         'hud': {'color': '#E6EEEA', 'accent': '#6FF0DA', 'danger': '#F0402F'},
     },
 }
+
+LOCKED = 'B'

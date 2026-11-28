@@ -8,10 +8,13 @@ This plan runs like a small studio. The owner is the **Art Director** and approv
 
 | Phase | Mode | What happens | Owner gate |
 | --- | --- | --- | --- |
-| **B0 Pre-production** (done) | max | Studio kit, new hero and Crawler designs, the style test (one Kepler scene in looks A, B, C, built from engine-style layers), this plan, the workflow script draft. | **Pick a look** (or a mix, naming the parts). |
-| **B1 Look lock** | max | Art Bible v2 (`docs/ART_BIBLE.md`). An ADR replacing spec §9.1/§9.2 with the picked look. Colour-blind palettes recomputed and tested. Shared style tokens (one JSON read by Blender and `ThemePalette.ts`). Asset spec sheet. QA thresholds. **Engine proof:** the test arena in the real game, with the engine-side pieces built (rim-light filter, fog sheets, light shafts, post chain), screenshotted next to the lookdev frame. | Approve the in-game screenshot against the lookdev frame. |
-| **B2 Production** | ultracode, medium | Four batches, one per step: **B2a** characters, **B2b** environment kit and parallax, **B2c** effects and post (code), **B2d** UI. Each batch runs build → automatic QA → three-lens review → fix loop → one integrator → verify → CI. | Review each batch (screenshots, web build, APK). |
+| **B0 Pre-production** (done) | max | Studio kit, new hero and Crawler designs, the style test (one Kepler scene in looks A, B, C, built from engine-style layers), this plan, the workflow script draft. | Done: the owner picked **look B "Ember Dark"** (2026-11-28). |
+| **B1a Look lock** (done, waits for approval) | max | The style test redone with the owner's feedback (`docs/art/look-lock/`). `docs/ART_BIBLE.md` and an ADR replacing spec §9.1/§9.2. The `cosmic-drift-art` skill rewritten for look B. This plan updated with the feedback map (§9). | Approve look B v2 and **pick Kes's colour key**. |
+| **B1b Engine proof** | max or extra | The test arena in the real game in look B, side by side with the lookdev frame, plus a short video from the game. It brings the engine pieces: screen-space rim, fog sheets, shafts, motes, per-foot contact shadows, the post chain per quality tier, and the crystal flicker and flare system. It also brings the in-game palette and tokens (`ThemePalette.ts`, `tokens.css`, slot colours, CVD alternates and their test) and one shared style-token file read by Blender and the game. | Approve the in-game screenshot and video against the lookdev frame. **Then switch to ultracode.** |
+| **B2 Production** | ultracode, medium | Five batches, one per step: **B2a** characters, **B2b** environment kit, parallax and ambient life, **B2c** effects and post (code), **B2d** UI, **B2e** sound. Each batch runs build → automatic QA → three-lens review → fix loop → one integrator → verify → CI. | Review each batch (screenshots, web build, APK). |
 | **B3 Polish and release** | max | Performance on the Mid device (atlas sizes, memory, frame time), reduced motion and photosensitivity, colour-blind check, grayscale readability pass, device test, release 0.0.6. | Play the release. |
+
+**Effort levels:** "Extra" (one step below Max) suits most steps. Max is for look decisions, stubborn bugs and final reviews. Ultracode agents run at whatever level the session uses.
 
 Manual mode applies to every row: each step is green locally and in CI, docs are updated and pushed, then the step stops for the owner.
 
@@ -69,7 +72,12 @@ Live 3D volumetrics are not allowed. This keeps every frame a promise the engine
 | B2b | Set pieces | Floating islands (3), crystal decor (5), survey beacon, wreck debris. |
 | B2b | Parallax | Sky with the Heartstar (colour per act, §2.7), far, mid and near layers tiling horizontally, foreground props, fog sheets, mote sprites. Five layers at the §9.3 depth factors. |
 | B2c | Effects and post (code) | Rim-light filter, fog sheets, light shafts, contact shadows, thruster ribbon, dash streak, muzzle flash, hit sparks, shard burst; bloom, grade, vignette and grain per quality tier. Reduced-motion variants and photosensitivity limits for all of them. |
-| B2d | UI | Title screen (Blender backdrop and logo), HUD (thin segmented bars as in lookdev), menu skin via `tokens.css`, touch-controls skin, icon set (SVG), button feedback and UI sounds. |
+| B2b | Ground detail | Cracks, lichen, grit and loose stones on tops; a crumbling broken edge with rubble; hanging roots. All in the tiles and props, as in look B v2. |
+| B2b | Ambient life | Crystal mites (sprites plus crawl paths on faces and undersides), the Lantern wreck (mid layer, smoke, fire glow, stuttering lamps), the giant in the haze (far layer, rare and silent). Art Bible §8. |
+| B2c | Crystal system | Per-crystal flicker (own noise, never in step), rare random flares with sparks (also when Kes lands nearby), a cap of one flare on screen, reduced-motion variants. |
+| B2c | Shard pickup | The 3D spin slowed to one turn every 2 s; pickup burst; a light streak flies to the HUD counter; the counter pops. |
+| B2d | UI | Title screen (Blender backdrop and logo), HUD (thin segmented bars as in lookdev; the shard counter receives the pickup streak), menu skin via `tokens.css`, touch-controls skin, icon set (SVG), button feedback and UI sounds. |
+| B2e | Sound | Ambience bed (wind, distant hum, cave room tone) with a reverb send for echo. Mite clicks, drips, crystal chime and flare. A recorded jetpack loop (only synthesized today). A shard pickup chain with rising pitch. Footsteps per surface (gravel, metal grate). Existing recorded keys stay: footsteps, jump, land, shoot, dash, Crawler alert, hurt and death, shard pickup. |
 
 ## 5. Quality gates (every asset)
 
@@ -99,13 +107,13 @@ P0 and P1 issues loop back to a fixer, at most twice. Anything still open is rep
 
 ## 6. The ultracode workflow
 
-`.claude/workflows/art-ui-b-production.js` is a saved workflow. It's a draft until B1 locks the look. It runs one batch per call:
+`.claude/workflows/art-ui-b-production.js` is a saved workflow. Look B is locked; the job specs follow the Art Bible. It runs one batch per call, after B1b is approved:
 
 ```text
-ultracode medium, Art & UI B production batch B2a with look <picked>
+ultracode medium, Art & UI B production batch B2a
 ```
 
-Or run the saved workflow `art-ui-b-production` with args `{ "batch": "B2a", "look": "B" }`. Its stages:
+Or run the saved workflow `art-ui-b-production` with args `{ "batch": "B2a" }` (batches B2a to B2e). Its stages:
 
 1. **Build:** one agent per asset job. Each agent owns disjoint files and never edits shared files.
 2. **QA:** three review lenses in parallel.
@@ -130,8 +138,25 @@ The Lead reviews the result, commits, opens the PR and stops for the owner.
 | Phone performance | Pre-rendered sprites, atlas budgets, post effects gated by quality tier, and the Battery preset keeping 3 parallax layers (§9.3). |
 | Slow renders (4 cores) | Quick mode for iteration; full renders only for finals. |
 
-## 8. What the owner decides now
+## 8. What the owner decides now (B1a)
 
-1. **Pick a look: A Hush, B Ember Dark, or C Verdigris Dusk.** You can also mix them, for example "B's lighting with A's fog".
-2. Hero and Crawler designs: keep, or list changes. These are lookdev v3 and get refined in B1 and B2.
-3. Say "go B1" when ready.
+1. **Approve look B v2** (`docs/art/look-lock/board.jpg`), or list changes.
+2. **Pick Kes's colour key:** Rust (recommended), Mustard, or the B0 colours.
+3. Say **"go B1b"**: the real game in the new look, with a screenshot and a short video.
+
+## 9. Owner feedback map (2026-11-28, on the style test)
+
+| Request | Where | Status |
+| --- | --- | --- |
+| Look B | B1a | Locked (Art Bible v1). |
+| Grainy or soft image | B1a | Grain cut to very fine; play plane supersampled; PNG master. The game draws sharp at the display's refresh rate. |
+| Kes "pasted on", white or blue outline, colour off-theme | B1a | Warm human colour keys; the outline removed; rim only toward the star; feet planted (the back foot used to float about 4 cm); per-foot shadows. |
+| Floor needs cracks; sharp edge | B1a (look), B2b (tiles) | Cracks, lichen, grit, stones, crumbling edge with rubble, roots. |
+| "What's the ship?" (two cylinders) | B1a (look), B2b (asset) | It's the *Lantern*, Kes's crashed ship (story prologue). Rebuilt to read as a ship, with fire and smoke. |
+| Crystals glow and flicker at random times, sometimes burst | B1a (still), B1b (engine), B2c (system) | Each crystal glows at its own level; the catwalk crystal shown mid-flare. |
+| Shard spin, pickup flying to the counter, crisp sound | B2a, B2c, B2d, B2e | It is a real 3D spin already (24 frames); it gets slower, with the flight to the counter and a chain sound. |
+| Many smooth animation frames | B2a | Frame targets in Art Bible §9 (for example run 16, idle 16, death 12). |
+| Sounds: footsteps, jump, fly, shoot, kill, pickup, shard burst | B2e | Footsteps, jump, land, shoot, dash, Crawler death and shard pickup exist (recorded). Jetpack is synthesized only. The crystal burst sound is new. |
+| Tiny bugs with crawl sounds and echo | B1a (still), B2b, B2e | Crystal mites on the cliff face; clicks with echo. |
+| A huge shape moving far away in the fog | B1a (still), B2b | The giant in the haze near the star: silent, rare, never an entity. |
+| The failed release | Checked | Release #8 refused to re-release 0.0.5 at its first step; nothing was built or tagged, and nothing needs fixing. The next APK needs a version bump (0.0.6). |

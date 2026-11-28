@@ -18,29 +18,64 @@ import bpy
 
 from studio import figure as F, mats, shapes as S
 
-SUIT = '#2A2E33'
-PLATE = '#B7B2A6'
-PLATE_WEAR = '#D9D4C7'
-DARK = '#2C3035'
+# Colour schemes (B1a colour keys). Kes is human and a stranger on this planet, so her suit is a warm,
+# natural colour that stands apart from the cool teal world without glowing or outlining her. The danger
+# colour stays reserved for threats: suits are matte, desaturated and never emissive red.
+SCHEMES = {
+    'rust': {  # recommended: burnt-orange flight suit, graphite armour (complements the teal world)
+        'suit': '#9A5430', 'plate': '#454A50', 'wear': '#7C838B', 'dark': '#23262A', 'accent': '#D9D2C3',
+    },
+    'mustard': {  # mustard-ochre suit, graphite armour (the brightest key; strongest contrast with teal)
+        'suit': '#A2842F', 'plate': '#3E4146', 'wear': '#7A7F86', 'dark': '#24262A', 'accent': '#D9D2C3',
+    },
+    'bone': {  # the B0 lookdev colours (graphite suit, bone plates): kept for comparison only
+        'suit': '#2A2E33', 'plate': '#B7B2A6', 'wear': '#D9D4C7', 'dark': '#2C3035', 'accent': '#B8612E',
+    },
+}
 METAL = '#6B7078'
-ACCENT = '#B8612E'
 GLASS = '#0A0E10'
 
 
-def materials(look):
+def materials(look, scheme='rust'):
     visor, visor_k = look['visor']
+    c = SCHEMES[scheme]
+    tag = f'kes_{scheme}'
     return {
-        'suit': mats.surface('kes_suit', SUIT, rough=0.74, variation=0.07, ao=0.35, sheen=0.3, scale=16),
-        'plate': mats.surface('kes_plate', PLATE, rough=0.36, coat=0.3, variation=0.06, wear=PLATE_WEAR, ao=0.5,
-                              scale=9),
-        'dark': mats.surface('kes_dark', DARK, rough=0.5, metal=0.25, variation=0.08, wear='#4A5058', ao=0.45,
-                             scale=10),
-        'metal': mats.surface('kes_metal', METAL, rough=0.3, metal=0.85, variation=0.06, scale=12),
-        'accent': mats.surface('kes_accent', ACCENT, rough=0.42, coat=0.25, variation=0.05, ao=0.3, scale=9),
-        'glass': mats.glass('kes_visor', GLASS),
-        'glow': mats.emissive('kes_glow', visor, visor_k),
-        'port': mats.emissive('kes_port', visor, visor_k * 0.45),
+        'suit': mats.surface(f'{tag}_suit', c['suit'], rough=0.78, variation=0.08, ao=0.4, sheen=0.3, scale=16),
+        'plate': mats.surface(f'{tag}_plate', c['plate'], rough=0.4, coat=0.25, metal=0.15, variation=0.07,
+                              wear=c['wear'], ao=0.5, scale=9),
+        'dark': mats.surface(f'{tag}_dark', c['dark'], rough=0.5, metal=0.25, variation=0.08, wear='#4A5058',
+                             ao=0.45, scale=10),
+        'metal': mats.surface(f'{tag}_metal', METAL, rough=0.3, metal=0.85, variation=0.06, scale=12),
+        'accent': mats.surface(f'{tag}_accent', c['accent'], rough=0.42, coat=0.25, variation=0.05, ao=0.3,
+                               scale=9),
+        'glass': mats.glass(f'{tag}_visor', GLASS),
+        'glow': mats.emissive(f'{tag}_glow', visor, visor_k),
+        'port': mats.emissive(f'{tag}_port', visor, visor_k * 0.45),
     }
+
+
+SUFFIXES = ('suit', 'plate', 'dark', 'metal', 'accent', 'visor', 'glow', 'port')
+
+
+def recolor(look, scheme):
+    """Swaps every Kes material for the scheme's, matched by role (the name after the scheme tag). A
+    scheme's materials are made once and reused, so switching back and forth never piles up copies
+    (Blender would rename a second 'kes_rust_suit' to 'kes_rust_suit.001')."""
+    names = {suffix: f'kes_{scheme}_{suffix}' for suffix in SUFFIXES}
+    if not all(n in bpy.data.materials for n in names.values()):
+        materials(look, scheme)
+    new = {suffix: bpy.data.materials[n] for suffix, n in names.items()}
+    for obj in bpy.data.objects:
+        if obj.type != 'MESH':
+            continue
+        for slot in obj.material_slots:
+            mat = slot.material
+            if mat is None or not mat.name.startswith('kes_'):
+                continue
+            role = mat.name.split('_')[-1].split('.')[0]
+            if role in new:
+                slot.material = new[role]
 
 
 def skeleton():
@@ -84,9 +119,9 @@ def skeleton():
     return n, e
 
 
-def build(look, layer):
+def build(look, layer, scheme='rust'):
     """Builds Kes at rest; returns the joint dict."""
-    m = materials(look)
+    m = materials(look, scheme)
     J = {}
 
     def joint(name, loc, parent):
@@ -177,7 +212,7 @@ def build(look, layer):
                 thickness=0.024)
         S.box('boot_' + side, (0.27, 0.118, 0.13), (0.05, y, 0.068), m['dark'], layer, an, bevel=0.035, subdiv=2)
         S.box('toe_' + side, (0.09, 0.112, 0.07), (0.15, y, 0.074), P, layer, an, bevel=0.025, subdiv=2)
-        S.box('sole_' + side, (0.29, 0.122, 0.028), (0.05, y, 0.014), m['suit'], layer, an, bevel=0.008)
+        S.box('sole_' + side, (0.29, 0.122, 0.028), (0.05, y, 0.014), m['dark'], layer, an, bevel=0.008)
 
     # Jetpack
     S.box('pack', (0.12, 0.27, 0.34), (-0.2, 0, 1.3), m['dark'], layer, chest, bevel=0.035, subdiv=2)
@@ -210,23 +245,81 @@ POSES = {
     },
 }
 
+# A planted stance: front foot forward, back leg nearly straight, both soles flat (see `plant`).
+POSES['ready'] = {
+    'yaw': -26, 'spine': (0, 7), 'chest': (0, 3), 'neck': (0, -8),
+    'sh_r': (0, 84), 'el_r': (0, 6), 'wr_r': (0, -4),
+    'sh_l': (-26, 62), 'el_l': (0, 52), 'wr_l': (0, 0),
+    'hip_r': (0, 22), 'kn_r': (0, -34),
+    'hip_l': (0, -16), 'kn_l': (0, -10),
+    'plant': True,
+}
+
 UPRIGHT = ('spine', 'chest', 'neck')
+
+
+def _set(J, jname, lat, swing):
+    y_rot = math.radians(swing) if jname in UPRIGHT else fwd(swing)
+    J[jname].rotation_euler = (math.radians(lat), y_rot, 0.0)
+
+
+def _ankle_z(J, side):
+    bpy.context.view_layer.update()
+    return J['an_' + side].matrix_world.translation.z
+
+
+def plant(J, p):
+    """Puts both feet on the ground with flat soles: the leg whose ankle hangs higher is straightened
+    (knee solved by bisection) until both ankles are level, then each ankle cancels its leg's swing so
+    the sole is parallel to the ground. Without this a stride pose floats the back foot (about 4 cm in
+    the B0 'aim' pose) and the sprite looks pasted on."""
+    swing = {k: p.get(k, (0, 0))[1] for k in ('hip_r', 'kn_r', 'hip_l', 'kn_l')}
+    for side in ('r', 'l'):
+        _set(J, 'an_' + side, 0, 0)
+    high = 'r' if _ankle_z(J, 'r') > _ankle_z(J, 'l') else 'l'
+    low = 'l' if high == 'r' else 'r'
+    target = _ankle_z(J, low)
+    lo, hi = swing['kn_' + high], 0.0  # knee bend (negative) .. straight
+    for _ in range(40):
+        mid = (lo + hi) / 2
+        _set(J, 'kn_' + high, 0, mid)
+        if _ankle_z(J, high) > target:
+            lo = mid  # still too high: straighten more
+        else:
+            hi = mid
+    swing['kn_' + high] = (lo + hi) / 2
+    _set(J, 'kn_' + high, 0, swing['kn_' + high])
+    for side in ('r', 'l'):
+        _set(J, 'an_' + side, 0, -(swing['hip_' + side] + swing['kn_' + side]))
 
 
 def pose(J, name, yaw=None):
     """Applies a pose and grounds the soles. Per joint: (lateral X degrees, forward degrees); limbs swing
-    forward, upright joints (spine, chest, neck) lean forward, for positive values."""
+    forward, upright joints (spine, chest, neck) lean forward, for positive values. Poses marked `plant`
+    get both feet flat on the ground (see `plant`)."""
     p = POSES[name]
     for jname, obj in J.items():
         if jname == 'root':
             continue
         lat, swing = p.get(jname, (0, 0))
-        y_rot = math.radians(swing) if jname in UPRIGHT else fwd(swing)
-        obj.rotation_euler = (math.radians(lat), y_rot, 0.0)
+        _set(J, jname, lat, swing)
     J['root'].rotation_euler = (0.0, 0.0, math.radians(p['yaw'] if yaw is None else yaw))
     J['root'].location = (0, 0, 0.98)
+    if p.get('plant'):
+        plant(J, p)
     bpy.context.view_layer.update()
     low = min((o.matrix_world @ v.co).z for o in bpy.data.objects
               if o.name.startswith('sole_') for v in o.data.vertices)
     J['root'].location = (0, 0, 0.98 - low)
     bpy.context.view_layer.update()
+
+
+def sole_centres(J):
+    """World centres of both soles (for per-foot contact shadows in comp)."""
+    bpy.context.view_layer.update()
+    out = []
+    for side in ('r', 'l'):
+        obj = bpy.data.objects['sole_' + side]
+        pts = [obj.matrix_world @ v.co for v in obj.data.vertices]
+        out.append(sum(pts, pts[0] * 0) / len(pts))
+    return out

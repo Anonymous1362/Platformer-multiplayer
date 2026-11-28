@@ -3,7 +3,7 @@ export const meta = {
   description:
     'Art & UI B production batch: build assets with the studio kit, QA through three review lenses, fix, integrate once, verify adversarially',
   whenToUse:
-    'After B1 locks the look. One batch per run: args { batch: "B2a" | "B2b" | "B2c" | "B2d", look: "A" | "B" | "C" }. See docs/ART_UI_B_PLAN.md.',
+    'After B1b (engine proof) is approved. One batch per run: args { batch: "B2a" | "B2b" | "B2c" | "B2d" | "B2e" } (look B is locked). See docs/ART_UI_B_PLAN.md.',
   phases: [
     { title: 'Build', detail: 'one agent per asset job; disjoint files' },
     { title: 'QA', detail: 'bible, readability, and technical lenses per asset' },
@@ -13,12 +13,13 @@ export const meta = {
   ],
 };
 
-// Draft until B1: job specs are final once docs/ART_BIBLE.md and the shared style tokens exist.
+// Look B is locked (docs/ART_BIBLE.md). Job specs follow the Art Bible and docs/ART_UI_B_PLAN.md §4 and §9;
+// finalize slot colours and shared style tokens in B1b before running B2.
 
 const RULES = [
   'You are on the Cosmic Drift production crew (Art & UI B). Read docs/ART_UI_B_PLAN.md and docs/ART_BIBLE.md first.',
   'Build only with the studio kit in tools/blender/studio (stage, figure, shapes, mats, comp, looks); never add a new pipeline.',
-  'Match the locked lookdev frame docs/art/style-test/look-<LOOK>-*.jpg and the hero/Crawler templates in tools/blender/lookdev.',
+  'Match the locked lookdev frame docs/art/look-lock/look-<LOOK>-v2.png and the templates in tools/blender/lookdev (kes.py, custodian.py, kepler.py, look_lock.py).',
   'Write ONLY the files listed under "owns". Never edit shared files (public/assets/ASSET_MANIFEST.json, src/render/world/SpriteSheets.ts, src/render/world/TextureKeys.ts, src/theme/ThemePalette.ts, docs/CREDITS.md); describe the changes they need in "integration" instead.',
   'Everything deterministic: seeded randomness only; a second bake must give identical pixels.',
   'Render with python3 -I; quick mode while iterating, full quality for the final output.',
@@ -46,7 +47,7 @@ const BATCHES = {
         'public/assets/global/prop_checkpoint*.png',
         'public/assets/global/prop_exit*.png',
       ],
-      spec: 'Star Shard spinner (24 frames, 32 u), checkpoint beacon (idle 8, activate 8), exit gate (idle 8).',
+      spec: 'Star Shard spinner (24 frames, 32 u, played at 12 fps: one turn every 2 s), checkpoint beacon (idle 8, activate 8), exit gate (idle 8).',
     },
   ],
   B2b: [
@@ -58,7 +59,17 @@ const BATCHES = {
     {
       id: 'setpieces',
       owns: ['tools/blender/assets/kepler_props.py', 'public/assets/kepler/prop_*.png'],
-      spec: 'Floating islands (3), crystal decor (5), survey beacon, wreck debris. Decor sits behind the walk line.',
+      spec: 'Floating islands (3), crystal decor (5), survey beacon, ground detail (cracks, lichen, grit, loose stones, crumbling edge, rubble, hanging roots). Decor sits behind the walk line.',
+    },
+    {
+      id: 'ambient',
+      owns: [
+        'tools/blender/assets/kepler_life.py',
+        'public/assets/kepler/life_*.png',
+        'src/render/world/Ambient*.ts',
+        'tests/render/ambient*.test.ts',
+      ],
+      spec: 'Ambient life per Art Bible 8: crystal mites (crawl sheet, short irregular bursts on faces and undersides, scatter near Kes, no collision), the Lantern wreck in the mid layer (smoke stream, irregular fire glow, stuttering lamps), the giant in the far haze (rare, silent, never an entity). Reduced motion: still or absent.',
     },
     {
       id: 'parallax',
@@ -76,6 +87,16 @@ const BATCHES = {
       id: 'atmosphere',
       owns: ['src/render/world/Atmosphere*.ts', 'tests/render/atmosphere*.test.ts'],
       spec: 'Fog sheets between parallax layers, additive light shafts, motes, contact shadows; visual only, no simulation reads.',
+    },
+    {
+      id: 'crystals',
+      owns: ['src/render/world/Crystal*.ts', 'tests/render/crystal*.test.ts'],
+      spec: 'Crystal system per Art Bible 8: per-crystal flicker on its own noise (3-9 s, never in step), rare random flares (x2.4, 1.5 s decay, 6-12 sparks; also when Kes lands nearby; one flare on screen at most), reduced-motion variant.',
+    },
+    {
+      id: 'shardflight',
+      owns: ['src/render/fx/ShardFlight*.ts', 'tests/render/shardflight*.test.ts'],
+      spec: 'Shard pickup: burst, a light streak flies to the HUD shard counter (0.45 s ease-in), the counter pops; render-only, reduced-motion variant (instant count with a soft flash).',
     },
     {
       id: 'combatfx',
@@ -98,6 +119,22 @@ const BATCHES = {
       id: 'menus',
       owns: ['src/ui/tokens.css', 'src/ui/components/**', 'public/assets/ui/icons/**'],
       spec: 'Menu skin, button feedback, icon set (SVG), UI sounds hooks; axe stays clean; motion tokens kept.',
+    },
+  ],
+  B2e: [
+    {
+      id: 'ambience',
+      owns: ['src/audio/Ambience*.ts', 'tests/audio/ambience*.test.ts', 'public/assets/audio/amb_*'],
+      spec: 'Ambience bed per level mood (wind, distant hum, cave room tone) with a reverb send for echo; mite clicks, drips, crystal chime and flare; CC0 sources with LICENSES.csv rows, normalized to -16 LUFS.',
+    },
+    {
+      id: 'sfx',
+      owns: [
+        'public/assets/audio/sfx_jetpack_loop_*',
+        'public/assets/audio/sfx_footstep_*',
+        'public/assets/audio/sfx_shard_*',
+      ],
+      spec: 'Recorded jetpack loop (only synthesized today), footsteps per surface (gravel, metal grate), shard pickup chain with rising pitch; keep existing keys and the synth fallback.',
     },
   ],
 };
@@ -153,8 +190,7 @@ const LENSES = [
 ];
 
 const batch = (args && args.batch) || 'B2a';
-const look = args && args.look;
-if (!look) throw new Error('Pass args.look: the look the owner picked in B0.');
+const look = (args && args.look) || 'B';
 const jobs = BATCHES[batch];
 if (!jobs) throw new Error(`Unknown batch ${batch}`);
 log(`Batch ${batch}, look ${look}: ${jobs.length} jobs`);

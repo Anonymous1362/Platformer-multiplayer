@@ -1,6 +1,30 @@
 # Handoff
 
-State: Pass 2A and all of Pass 2B are merged (#4–#8). **Art & UI B is in progress** (owner-requested, out of order; plan: docs/ART_UI_B_PLAN.md). **B0 pre-production is done** (CI green, run 46137320914; PR #9 open) and waits for the owner to pick a look (A Hush, B Ember Dark, C Verdigris Dusk, or a named mix). Next: B1 look lock (max), then B2a–d production (ultracode, medium), B3 polish and 0.0.6. Then 2C (saves). Manual mode. Owner phone checks still open: docs/DEVICES.md and the 2A "no long tasks on a Mid device" check.
+State: Pass 2A and all of Pass 2B are merged (#4–#8). **Art & UI B is in progress** (plan: docs/ART_UI_B_PLAN.md; PR #9 open with B0 and B1a). B0 is done: the owner picked **look B "Ember Dark"**. **B1a (look lock) is done and waits for the owner**: approve look B v2 (docs/art/look-lock/board.jpg), pick Kes's colour key (rust recommended, mustard, or the B0 colours), then "go B1b". Next: B1b engine proof (the test arena in the real game in look B, plus a short video; in-game palette and CVD test), then B2a–e production (ultracode, medium), B3 polish and 0.0.6. Then 2C (saves). Manual mode. Owner phone checks still open: docs/DEVICES.md and the 2A "no long tasks on a Mid device" check. The owner's Release #8 failed only because 0.0.5 was already released (nothing was built or tagged); the next release needs a version bump.
+
+What B1a added (no shipped art or game code changed):
+
+- docs/ART_BIBLE.md (look B locked; replaces spec §9.1–§9.2 by ADR). `.claude/skills/cosmic-drift-art/SKILL.md` rewritten for look B.
+- Kit:
+  - `shapes.crystal_cluster` sets a per-object `glow` (crc32 of the name).
+  - `mats.crystal(per_object=True)` reads it.
+  - `mats.rock(crack=True, lichen=hex)`; `mats.hull` (Voronoi plate tones, scorch).
+  - `comp.rim_light_dir` (rim only on the edge facing the light; replaces the all-round `rim_light`).
+  - `comp.smoke_plume`, `comp.shift`.
+  - `looks.py`: B locked (`LOOKS['B']`), flip-safe sprite rig, `rim_engine`, finer grain, `lichen`.
+- `kes.py`: `SCHEMES` (rust, mustard, bone), `recolor(look, scheme)` (reuses materials per scheme), `plant` (both soles flat; bisection on the higher leg's knee), pose `ready`, `sole_centres`.
+- `kepler.py`:
+  - ground: `gravel`, `rubble`, `roots`;
+  - `mite`/`mites_on` (ray-cast onto the cliff face);
+  - a new `lantern_wreck` (cockpit canopy, dorsal spine with the lantern beacon, wing, engine pods, fin, torn plates, ribs, cables, debris, fire light);
+  - `watcher` (the giant, its own `giant` layer).
+  - `WRECK`, `WRECK_BREAK`, `WATCHER` and `FLARE` constants.
+- `tools/blender/lookdev/look_lock.py`:
+  - renders look B v2 (play plane supersampled ×2, giant layer, three hero colour keys, close-ups incl. the wreck);
+  - composes like the engine: per-foot contact shadows, sprites fogged like the play plane, rim toward the star, crystal flare with sparks, wreck smoke;
+  - writes `look-B-v2.png`/`.jpg`, grayscale, `board.jpg`, `metrics.json`;
+  - `--quick` for half size.
+- The workflow `.claude/workflows/art-ui-b-production.js`: look B by default; new jobs ambient, crystals, shardflight; a B2e sound batch (ambience, sfx).
 
 What B0 added (no shipped art or game code changed):
 

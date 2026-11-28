@@ -157,6 +157,52 @@ def rim_light(sprite, color, amount=0.6, width=2.0):
     return out
 
 
+def shift(a, dx, dy):
+    """Shifts a 2D array by whole pixels (dx right, dy down), filling with zeros."""
+    out = np.zeros_like(a)
+    h, w = a.shape[:2]
+    xs0, xs1 = max(0, -dx), min(w, w - dx)
+    ys0, ys1 = max(0, -dy), min(h, h - dy)
+    if xs0 < xs1 and ys0 < ys1:
+        out[ys0 + dy:ys1 + dy, xs0 + dx:xs1 + dx] = a[ys0:ys1, xs0:xs1]
+    return out
+
+
+def rim_light_dir(sprite, toward_light, color, amount=0.5, width=2.0):
+    """Directional rim (replaces the all-round outline): brightens only the inner edge on the side that
+    faces the light. `toward_light` is a screen direction (x right, y down) from the sprite to the light.
+    The engine does the same with one extra alpha tap per pixel, so it stays correct when a sprite is
+    mirrored with flipX (the direction is in screen space, not baked)."""
+    a = sprite[..., 3]
+    d = np.asarray(toward_light, np.float32)
+    d = d / max(1e-6, float(np.hypot(*d)))
+    dx, dy = int(round(d[0] * width)), int(round(d[1] * width))
+    # A pixel is lit when its neighbour toward the light is empty: that edge faces the light.
+    toward = shift(a, -dx, -dy)
+    edge = np.clip(a - toward, 0.0, 1.0)
+    edge = blur(edge, max(0.6, width * 0.35)) * a
+    out = sprite.copy()
+    out[..., :3] += edge[..., None] * hexrgb(color) * amount
+    return out
+
+
+def smoke_plume(h, w, x, y, height, width, color, alpha=0.3, drift=0.35, seed=3):
+    """A thin rising smoke column from (x, y) (pixels), widening and drifting right as it rises:
+    turbulent noise shaped by a cone, premultiplied RGBA. In the engine this is a slow particle stream."""
+    rng = np.random.default_rng(seed)
+    ys, xs = np.mgrid[0:h, 0:w].astype(np.float32)
+    t = np.clip((y - ys) / height, 0.0, 1.0)  # 0 at the source, 1 at the top
+    centre = x + drift * height * t ** 1.6
+    half = width * (0.15 + 0.85 * t)
+    across = np.abs(xs - centre) / np.maximum(half, 1.0)
+    noise = blur(rng.standard_normal((h // 4 + 1, w // 4 + 1)).astype(np.float32), 2.0)
+    noise = np.asarray(Image.fromarray(noise, 'F').resize((w, h), Image.BICUBIC))
+    noise = (noise - noise.min()) / max(1e-6, float(noise.max() - noise.min()))
+    shape = np.clip(1.0 - across, 0.0, 1.0) ** 1.5 * (ys <= y) * (1.0 - t) ** 0.8 * smoothstep(0.0, 0.08, t + 0.02)
+    m = np.clip(shape * (0.35 + 0.9 * noise), 0.0, 1.0) * alpha
+    return np.concatenate([hexrgb(color) * m[..., None], m[..., None]], axis=-1)
+
+
 def flip_x(img):
     return img[:, ::-1].copy()
 

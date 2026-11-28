@@ -2,6 +2,7 @@
 noise sample from `mathutils.noise` at seed-offset positions, so a re-bake gives the same mesh."""
 
 import math
+import zlib
 
 import bmesh
 import bpy
@@ -64,9 +65,16 @@ def add_crystal(bm, rng, base, height, radius, sides=6, tip=0.32, lean=(0.0, 0.0
     return apex
 
 
+def glow_of(name):
+    """A stable per-object glow factor in 0.35..1.45 from the name (crc32, not Python's salted hash), so
+    neighbouring crystals never glow in step (art bible: no synchronized effects)."""
+    return 0.35 + 1.1 * (zlib.crc32(name.encode()) % 1000) / 999.0
+
+
 def crystal_cluster(name, rng, base, count, height, radius, spread, lean_max, mat, layer, outward=1.0,
-                    down=False, tip=0.32):
-    """A cluster of crystals leaning away from the centre (or hanging down when `down`)."""
+                    down=False, tip=0.32, glow=None):
+    """A cluster of crystals leaning away from the centre (or hanging down when `down`). Sets the object
+    property `glow` (read by crystal materials made with `per_object=True`)."""
     bm = bmesh.new()
     for i in range(count):
         a = rng.uniform(0, math.tau)
@@ -79,7 +87,9 @@ def crystal_cluster(name, rng, base, count, height, radius, spread, lean_max, ma
         if down:
             lx, ly = lx + math.pi, ly
         add_crystal(bm, rng, b, h, r, lean=(lx, ly), tip=tip * rng.uniform(0.8, 1.3))
-    return obj_from_bmesh(name, bm, mat, layer)
+    obj = obj_from_bmesh(name, bm, mat, layer)
+    obj['glow'] = glow_of(name) if glow is None else glow
+    return obj
 
 
 def rock(name, rng, loc, size, mat, layer, roughness=0.32, subdiv=4, top=None, bottom_stretch=1.0,
