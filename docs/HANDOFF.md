@@ -1,6 +1,6 @@
 # Handoff
 
-State: Pass 2A is merged (#4). Pass 2B-1 (settings) is done locally and waits for CI on its pull request, then the owner's OK for 2B-2 (i18n). 2B is split into 2B-1 … 2B-5 (DECISIONS). Manual mode. Owner phone checks still open: docs/DEVICES.md and the 2A "no long tasks on a Mid device" check.
+State: Pass 2A (#4) and Pass 2B-1 (settings, #5, CI run 46056876731) are merged. Waiting for the owner's OK to start 2B-2 (i18n). 2B is split into 2B-1 … 2B-5 (DECISIONS). Manual mode. Owner phone checks still open: docs/DEVICES.md and the 2A "no long tasks on a Mid device" check.
 
 What 2B-1 added:
 

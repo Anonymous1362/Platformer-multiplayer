@@ -12,7 +12,8 @@
 | 1F | DONE (CI green, run 45994813905). Every automated Pass 1 checklist item passes; three items need the owner's phone (marked below). |
 | Art & sound A (owner-requested, between 1F and 2A) | DONE (CI green, run 46025975171). Blender-baked animated hero, Crawler walk cycle, shard spinner, slab panels, skyline; 18 recorded CC0 sounds plus footsteps. Version 0.0.4 with release notes. |
 | 2A | DONE (CI green, run 46045057262; merged as #4). Awaiting the owner's OK for 2B. Preact UI layer, tokens, components, motion, Title, Pause, photosensitivity notice, fade and iris transitions, dev gallery. |
-| 2B-1 | DONE locally (CI pending). Settings model (Zod, per-field fallback, per device), Settings screen with every §8.6 tab, live apply, simulation assists. |
+| 2B-1 | DONE (CI green, run 46056876731; merged as #5). Settings model (Zod, per-field fallback, per device), Settings screen with every §8.6 tab, live apply, simulation assists. |
+| Release 0.0.5 | Version bumped with release notes (Pass 2A and 2B-1). The owner runs Actions → Release after the bump is on `main`. |
 | 2B-2 … 2B-5 | Not started |
 
 ## Pass 2B-1 evidence (2026-11-27)
