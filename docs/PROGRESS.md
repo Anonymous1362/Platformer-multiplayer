@@ -14,7 +14,7 @@
 | 2A | DONE (CI green, run 46045057262; merged as #4). Awaiting the owner's OK for 2B. Preact UI layer, tokens, components, motion, Title, Pause, photosensitivity notice, fade and iris transitions, dev gallery. |
 | 2B-1 | DONE (CI green, run 46056876731; merged as #5). Settings model (Zod, per-field fallback, per device), Settings screen with every §8.6 tab, live apply, simulation assists. |
 | Release 0.0.5 | Version bumped with release notes (Pass 2A and 2B-1). The owner runs Actions → Release after the bump is on `main`. |
-| 2B-2 | DONE locally (CI pending). Locale files and translator (plurals, numbers), every player-facing string on a key, Language setting live, `en-XA` pseudo-locale overflow screenshots. |
+| 2B-2 | DONE (CI green, run 46118310127; merged as #7). Locale files and translator (plurals, numbers), every player-facing string on a key, Language setting live, `en-XA` pseudo-locale overflow screenshots. |
 | 2B-3 | DONE locally (CI pending). Colorblind palettes with the CVD test, sound captions, high-contrast HUD. |
 | 2B-4, 2B-5 | Not started |
 
