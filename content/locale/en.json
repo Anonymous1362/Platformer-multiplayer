@@ -148,11 +148,11 @@
   "settings.access.instant": "Instant",
   "settings.access.autoAdvance": "Auto-advance dialogue",
   "settings.access.captions": "Sound captions",
-  "settings.access.captionsLater": "Captions arrive in step 2B-3.",
+  "settings.access.captionsHint": "Short captions for important sounds, with an arrow when the sound is off screen.",
   "settings.access.highContrast": "High-contrast HUD",
-  "settings.access.highContrastLater": "Arrives in step 2B-3.",
+  "settings.access.highContrastHint": "Opaque HUD and menu panels with bright outlines.",
   "settings.access.colorblind": "Colorblind palette",
-  "settings.access.colorblindHint": "Palettes arrive in step 2B-3. Hazards always carry stripe patterns.",
+  "settings.access.colorblindHint": "Changes the accent, danger, shard, and core colors. In the level, effects change at the next start or restart. Shapes stay the main signal.",
   "settings.access.protanopia": "Protanopia",
   "settings.access.deuteranopia": "Deuteranopia",
   "settings.access.tritanopia": "Tritanopia",
@@ -204,5 +204,11 @@
   "touch.shoot": "FIRE",
   "touch.dash": "DASH",
   "touch.parry": "PARRY",
-  "touch.gadget": "GEAR"
+  "touch.gadget": "GEAR",
+  "caption.crawlerAlert": "[Crawler alerted]",
+  "caption.crawlerWindup": "[Crawler charging]",
+  "caption.vent": "[Blaster overheated]",
+  "caption.heartbeat": "[Heartbeat: low health]",
+  "caption.left": "◀ {text}",
+  "caption.right": "{text} ▶"
 }

@@ -2,6 +2,8 @@ import type Phaser from 'phaser';
 import type { SoundEngine } from '../audio/SoundEngine';
 import { busGains, fpsLimit, manualTier, stickTuning } from '../settings/Derived';
 import type { Settings } from '../settings/SettingsSchema';
+import { semanticColors } from '../theme/ThemePalette';
+import { glassAllowed } from '../ui/prefs';
 import type { SettingsStore } from '../settings/SettingsStore';
 import type { UiService } from '../ui/UiService';
 import type { GameInput } from './GameInput';
@@ -54,8 +56,15 @@ export function applySettings(store: SettingsStore, t: SettingsTargets): () => v
       t.badge()?.setVisible(s.graphics.showFps);
     }
     if (prev?.accessibility !== s.accessibility) {
-      t.ui.prefs.patch({ motionMode: s.accessibility.reduceMotion });
-      t.ui.setTextScale(s.accessibility.textSize / 100);
+      const a = s.accessibility;
+      // High-contrast HUD also makes menu panels opaque with brighter outlines (spec 8.2 glass fallback).
+      t.ui.prefs.patch({ motionMode: a.reduceMotion, highContrast: a.highContrastHud });
+      if (a.highContrastHud) t.ui.prefs.patch({ glass: false });
+      else t.ui.prefs.patch({ glass: glassAllowed(t.quality.tier, t.safeMode, false) });
+      t.ui.setTextScale(a.textSize / 100);
+      const colors = semanticColors(a.colorblind);
+      t.ui.setSemantic(colors);
+      t.input.touchView?.setColors(colors);
     }
   };
   apply();

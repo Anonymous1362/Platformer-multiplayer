@@ -3,7 +3,7 @@ import { GameConfig } from '../../core/GameConfig';
 import type { Level } from '../../core/level/LevelTypes';
 import { Random } from '../../core/Random';
 import type { PlayerState, SimulationEvent, WorldState } from '../../core/SimulationTypes';
-import { Palette, slotColor } from '../../theme/ThemePalette';
+import { DEFAULT_WORLD_COLORS, Palette, slotColor, type WorldColors } from '../../theme/ThemePalette';
 import { Depth } from '../world/Depth';
 import { HERO_ANIMS, sheetScale } from '../world/SpriteSheets';
 import type { CameraRig } from './CameraRig';
@@ -44,6 +44,7 @@ export class Effects implements EntityFx {
   private readonly reducedMotion: boolean;
   private readonly prefs: () => FxPrefs;
   private readonly savedLabel: () => string;
+  private readonly colors: WorldColors;
   private readonly snapshot: (id: number) => SpriteSnapshot | null;
   private readonly heroScale: number;
   private readonly rng = new Random(0x0c0ffee);
@@ -67,12 +68,15 @@ export class Effects implements EntityFx {
       readonly snapshot: (id: number) => SpriteSnapshot | null;
       /** Player effect settings, read live (spec 8.6 Gameplay). */
       readonly prefs?: () => FxPrefs;
+      /** Semantic colors (the colorblind palette), fixed for the level. */
+      readonly colors?: WorldColors;
       /** The checkpoint "Saved" label in the current language. */
       readonly savedLabel?: () => string;
     },
   ) {
     this.prefs = options.prefs ?? ((): FxPrefs => DEFAULT_FX_PREFS);
     this.savedLabel = options.savedLabel ?? ((): string => 'Saved');
+    this.colors = options.colors ?? DEFAULT_WORLD_COLORS;
     this.particles = options.particles;
     this.camera = options.camera;
     this.screen = options.screen;
@@ -177,7 +181,7 @@ export class Effects implements EntityFx {
         this.dashTick.set(p.id, world.tick);
         this.afterimage(p);
         this.burst(p.x, p.y - PLAYER_H / 2, 4, {
-          tint: Palette.electricCyan,
+          tint: this.colors.accent,
           speed: 160,
           lifeMs: 200,
           size: 0.18,
@@ -193,14 +197,14 @@ export class Effects implements EntityFx {
           scale0: 0.7,
           scale1: 1.1,
           alpha0: 0.95,
-          tint: Palette.electricCyan,
+          tint: this.colors.accent,
           additive: true,
         });
         this.recoilStart.set(e.playerId, this.now);
         break;
       case 'projectileHit':
         if (e.targetId === 0)
-          this.burst(e.x, e.y, 5, { tint: Palette.electricCyan, speed: 220, lifeMs: 220, size: 0.16 });
+          this.burst(e.x, e.y, 5, { tint: this.colors.accent, speed: 220, lifeMs: 220, size: 0.16 });
         break;
       case 'enemyHurt':
         this.burst(e.x, e.y, 6, { tint: 0xffffff, speed: 260, lifeMs: 240, size: 0.16 });
@@ -219,7 +223,7 @@ export class Effects implements EntityFx {
       case 'hazardHit': {
         const p = this.player(world, e.playerId);
         if (p) {
-          const tint = e.cause === 'lava' ? Palette.magmaAmber : Palette.neonCrimson;
+          const tint = e.cause === 'lava' ? Palette.magmaAmber : this.colors.danger;
           this.burst(p.x, p.y - PLAYER_H / 3, 6, { tint, speed: 240, lifeMs: 280, size: 0.2 });
           this.hitFlash(p.id);
         }
@@ -250,8 +254,8 @@ export class Effects implements EntityFx {
         this.defeat(e.enemyId, e.x, e.y);
         break;
       case 'shardCollected':
-        this.burst(e.x, e.y, 6, { tint: Palette.starlightGold, speed: 200, lifeMs: 260, size: 0.16 });
-        this.ring(e.x, e.y, Palette.starlightGold, 240, 0.15, 0.45);
+        this.burst(e.x, e.y, 6, { tint: this.colors.shard, speed: 200, lifeMs: 260, size: 0.16 });
+        this.ring(e.x, e.y, this.colors.shard, 240, 0.15, 0.45);
         break;
       case 'checkpointReached': {
         const cp = this.level.checkpoints[e.index];
@@ -266,12 +270,12 @@ export class Effects implements EntityFx {
           scale1: 1.4,
           stretchY: 2.2,
           alpha0: 0.75,
-          tint: Palette.electricCyan,
+          tint: this.colors.accent,
           additive: true,
           depth: Depth.Markers,
         });
-        this.ring(cp.x, cp.y - CHECKPOINT_H / 2, Palette.electricCyan, 600, 0.4, 1.6);
-        this.motes(cp.x, cp.y, 10, Palette.electricCyan);
+        this.ring(cp.x, cp.y - CHECKPOINT_H / 2, this.colors.accent, 600, 0.4, 1.6);
+        this.motes(cp.x, cp.y, 10, this.colors.accent);
         // A status label, not a damage number: the Damage numbers setting never hides it.
         this.floatText(this.savedLabel(), cp.x, cp.y - CHECKPOINT_H - 16, '#00F5D4');
         break;
@@ -301,12 +305,12 @@ export class Effects implements EntityFx {
         const exit = this.level.exits[0];
         if (!exit) break;
         this.burst(exit.x, exit.y - 64, 24, {
-          tint: Palette.starlightGold,
+          tint: this.colors.shard,
           speed: 360,
           lifeMs: 700,
           size: 0.22,
         });
-        this.ring(exit.x, exit.y - 64, Palette.nebulaViolet, 700, 0.5, 2.2);
+        this.ring(exit.x, exit.y - 64, this.colors.core, 700, 0.5, 2.2);
         break;
       }
       case 'droppedThrough':
@@ -425,13 +429,13 @@ export class Effects implements EntityFx {
         scale0: shot.scale ?? 1,
         scale1: (shot.scale ?? 1) * 0.6,
         alpha0: 0.9,
-        tint: Palette.starlightGold,
+        tint: this.colors.shard,
         additive: true,
         depth: Depth.Enemies,
       });
     }
-    this.motes(x, y + 10, 12, Palette.starlightGold);
-    this.burst(x, y, 10, { tint: Palette.nebulaViolet, speed: 280, lifeMs: 360, size: 0.2 });
+    this.motes(x, y + 10, 12, this.colors.shard);
+    this.burst(x, y, 10, { tint: this.colors.core, speed: 280, lifeMs: 360, size: 0.2 });
   }
 
   /** The white hit flash on a sprite (off when Screen flashes is Off). */

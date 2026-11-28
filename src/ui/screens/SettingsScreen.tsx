@@ -533,14 +533,14 @@ function AccessibilityTab(props: { readonly s: Settings; readonly store: Setting
           onChange={(v) => store.set('accessibility', 'autoAdvance', v)}
         />
       </Row>
-      <Row label={t('settings.access.captions')} hint={t('settings.access.captionsLater')}>
+      <Row label={t('settings.access.captions')} hint={t('settings.access.captionsHint')}>
         <Toggle
           label={t('settings.access.captions')}
           checked={a.captions}
           onChange={(v) => store.set('accessibility', 'captions', v)}
         />
       </Row>
-      <Row label={t('settings.access.highContrast')} hint={t('settings.access.highContrastLater')}>
+      <Row label={t('settings.access.highContrast')} hint={t('settings.access.highContrastHint')}>
         <Toggle
           label={t('settings.access.highContrast')}
           checked={a.highContrastHud}

@@ -1,5 +1,5 @@
 import type Phaser from 'phaser';
-import { Palette } from '../../theme/ThemePalette';
+import { DEFAULT_WORLD_COLORS, type WorldColors } from '../../theme/ThemePalette';
 import { Depth } from '../world/Depth';
 import { DEFAULT_FX_PREFS, flashScale, type FxPrefs } from './FxMath';
 
@@ -22,8 +22,15 @@ export class ScreenFx {
   private outlineKey = '';
 
   private readonly prefs: () => FxPrefs;
+  private readonly danger: number;
 
-  constructor(scene: Phaser.Scene, reducedMotion: boolean, prefs: () => FxPrefs = () => DEFAULT_FX_PREFS) {
+  constructor(
+    scene: Phaser.Scene,
+    reducedMotion: boolean,
+    prefs: () => FxPrefs = () => DEFAULT_FX_PREFS,
+    colors: WorldColors = DEFAULT_WORLD_COLORS,
+  ) {
+    this.danger = colors.danger;
     this.reducedMotion = reducedMotion;
     this.prefs = prefs;
     this.vignette = scene.add
@@ -31,7 +38,7 @@ export class ScreenFx {
       .setOrigin(0, 0)
       .setScrollFactor(0)
       .setDepth(Depth.Screen)
-      .setTint(Palette.neonCrimson)
+      .setTint(this.danger)
       .setVisible(false);
     this.outline = scene.add.graphics().setScrollFactor(0).setDepth(Depth.Screen).setVisible(false);
   }
@@ -67,7 +74,7 @@ export class ScreenFx {
       const t = OUTLINE_U / camera.zoom;
       this.outline
         .clear()
-        .lineStyle(t, Palette.neonCrimson, 0.9)
+        .lineStyle(t, this.danger, 0.9)
         .strokeRect(x0 + t / 2, y0 + t / 2, w - t, h - t);
     }
   }

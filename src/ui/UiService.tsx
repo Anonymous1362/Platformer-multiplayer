@@ -11,6 +11,7 @@ import { PauseScreen, PhotosensitivityNotice, TitleScreen, type PauseAction } fr
 import type { Translator } from '../i18n/I18n';
 import { createTranslator } from '../i18n/Locales';
 import type { SettingsStore } from '../settings/SettingsStore';
+import { DEFAULT_SEMANTIC, type SemanticColors } from '../theme/ThemePalette';
 import { Store, useStore } from './store';
 import { Transitions, type TransitionKind } from './Transitions';
 
@@ -121,6 +122,7 @@ export class UiService {
   private transitions: Transitions | null = null;
   private offs: (() => void)[] = [];
   private textScale = 1;
+  private semantic: SemanticColors = DEFAULT_SEMANTIC;
 
   constructor(options: UiServiceOptions) {
     this.driven = options.driven;
@@ -156,6 +158,7 @@ export class UiService {
     host.append(root);
     this.element = root;
     root.style.setProperty('--text-scale', String(this.textScale));
+    this.applySemantic();
     this.transitions = new Transitions(overlays);
     const apply = (state: UiPrefsState): void => {
       root.dataset['glass'] = state.glass ? 'on' : 'off';
@@ -183,6 +186,24 @@ export class UiService {
 
   get root(): HTMLElement | null {
     return this.element;
+  }
+
+  /** Colorblind palette (spec 8.6): swaps the semantic color tokens on the UI layer. */
+  setSemantic(colors: SemanticColors): void {
+    this.semantic = colors;
+    this.applySemantic();
+  }
+
+  private applySemantic(): void {
+    const root = this.element;
+    if (!root) return;
+    const c = this.semantic;
+    root.style.setProperty('--accent', c.accent);
+    root.style.setProperty('--focus', c.accent);
+    root.style.setProperty('--danger', c.danger);
+    root.style.setProperty('--currency-shard', c.currencyShard);
+    root.style.setProperty('--currency-core', c.currencyCore);
+    root.dataset['palette'] = c === DEFAULT_SEMANTIC ? 'default' : 'colorblind';
   }
 
   /** Text Size (spec 8.2, 8.6): scales every UI type size; the setting is 90–150%. */

@@ -15,7 +15,14 @@
 | 2B-1 | DONE (CI green, run 46056876731; merged as #5). Settings model (Zod, per-field fallback, per device), Settings screen with every §8.6 tab, live apply, simulation assists. |
 | Release 0.0.5 | Version bumped with release notes (Pass 2A and 2B-1). The owner runs Actions → Release after the bump is on `main`. |
 | 2B-2 | DONE locally (CI pending). Locale files and translator (plurals, numbers), every player-facing string on a key, Language setting live, `en-XA` pseudo-locale overflow screenshots. |
-| 2B-3 … 2B-5 | Not started |
+| 2B-3 | DONE locally (CI pending). Colorblind palettes with the CVD test, sound captions, high-contrast HUD. |
+| 2B-4, 2B-5 | Not started |
+
+## Pass 2B-3 evidence (2026-11-28)
+
+- `npm run verify`: passes (395 unit, input, property, and simulation tests, incl. 12 CVD tests: CIEDE2000 against 7 published reference pairs, Machado simulation sanity, every palette pair ≥ 30 under its deficiency, contrast ≥ 4.5:1, the default palette failing protanopia; 3 caption tests).
+- `npm run test:e2e` (Chrome, local): 72 of 72, incl. tests/e2e/accessibility.spec.ts: Protanopia swaps the UI tokens and the HUD shield color live and Off restores them; High-contrast HUD outlines the HUD, makes menus opaque, and axe still passes; walking right with the volume at 0 shows "[Crawler alerted]" in an `aria-live` region; turning captions off hides a caption that is showing.
+- Hardened along the way: the replay-export test now waits on simulation ticks instead of wall time (under heavy parallel load the loop runs fewer ticks per second).
 
 ## Pass 2B-2 evidence (2026-11-28)
 

@@ -3,7 +3,7 @@ import { GameConfig } from '../../core/GameConfig';
 import { groundDistance } from '../../core/Ground';
 import type { Level } from '../../core/level/LevelTypes';
 import type { WorldState } from '../../core/SimulationTypes';
-import { Palette, PlanetRim } from '../../theme/ThemePalette';
+import { Palette, PlanetRim, DEFAULT_WORLD_COLORS, type WorldColors } from '../../theme/ThemePalette';
 import type { EntityFx, SpriteSnapshot } from '../fx/EntityFx';
 import { Depth } from './Depth';
 import { PlayerSprite } from './PlayerSprite';
@@ -39,16 +39,24 @@ export class LevelView {
   private readonly alerts: Phaser.GameObjects.Graphics;
   private readonly players: PlayerSprite[] = [];
   private readonly reducedMotion: boolean;
+  private readonly colors: WorldColors;
   private readonly crawlerScale: number;
   private readonly shardScale: number;
   private markerKey = '';
   private shadowId = 0;
 
-  constructor(scene: Phaser.Scene, level: Level, world: WorldState, reducedMotion: boolean) {
+  constructor(
+    scene: Phaser.Scene,
+    level: Level,
+    world: WorldState,
+    reducedMotion: boolean,
+    colors: WorldColors = DEFAULT_WORLD_COLORS,
+  ) {
+    this.colors = colors;
     this.level = level;
     this.reducedMotion = reducedMotion;
     const rim = PlanetRim[level.planet];
-    this.terrain = new TerrainView(scene, level);
+    this.terrain = new TerrainView(scene, level, colors.danger);
     this.markers = scene.add.graphics().setDepth(Depth.Markers);
 
     level.platforms.forEach((def) => {
@@ -107,7 +115,7 @@ export class LevelView {
     const flagH = PK.checkpointU.height;
     this.level.checkpoints.forEach((cp, i) => {
       const on = world.run.checkpointsReached[i] === 1;
-      const lamp = on ? Palette.electricCyan : Palette.coolSteel;
+      const lamp = on ? this.colors.accent : Palette.coolSteel;
       g.fillStyle(Palette.slateHull, 1).fillRoundedRect(cp.x - 18, cp.y - 10, 36, 10, 4); // base
       g.fillStyle(Palette.titaniumGunmetal, 1).fillRoundedRect(cp.x - 6, cp.y - flagH, 12, flagH - 8, 5);
       g.fillStyle(Palette.coolSteel, 0.8).fillRect(cp.x - 6, cp.y - flagH + 6, 3, flagH - 20); // lit edge
@@ -118,7 +126,7 @@ export class LevelView {
     for (const exit of this.level.exits) {
       const w = PK.exitU.width;
       const h = PK.exitU.height;
-      g.fillStyle(Palette.nebulaViolet, done ? 0.35 : 0.18).fillRoundedRect(
+      g.fillStyle(this.colors.core, done ? 0.35 : 0.18).fillRoundedRect(
         exit.x - w / 2,
         exit.y - h,
         w,
@@ -126,7 +134,7 @@ export class LevelView {
         w / 2,
       );
       g.lineStyle(10, Palette.abyssalNavy, 0.9).strokeRoundedRect(exit.x - w / 2, exit.y - h, w, h, w / 2);
-      g.lineStyle(5, done ? Palette.starlightGold : Palette.nebulaViolet, 1);
+      g.lineStyle(5, done ? this.colors.shard : this.colors.core, 1);
       g.strokeRoundedRect(exit.x - w / 2, exit.y - h, w, h, w / 2);
     }
   }

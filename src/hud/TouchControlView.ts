@@ -1,6 +1,6 @@
 import type { TouchControls } from '../input/TouchControls';
 import { TOUCH_METRICS, type PlacedButton } from '../input/TouchLayout';
-import { UiTokens } from '../theme/ThemePalette';
+import { DEFAULT_SEMANTIC, UiTokens, type SemanticColors } from '../theme/ThemePalette';
 
 /** Label keys (spec 8.11); the pause button shows a symbol, not a word. */
 const LABEL_KEYS: Readonly<Record<Exclude<PlacedButton['role'], 'pause'>, string>> = {
@@ -48,6 +48,7 @@ export class TouchControlView {
   private layoutKey = '';
   private visible: boolean;
   private translate: (key: string) => string = (key) => key;
+  private colors: SemanticColors = DEFAULT_SEMANTIC;
 
   constructor(parent: HTMLElement, controls: TouchControls, visible: boolean) {
     this.controls = controls;
@@ -93,6 +94,12 @@ export class TouchControlView {
       const label = el.querySelector<HTMLElement>('[data-label]');
       if (label) label.textContent = labelFor(role, translate);
     }
+  }
+
+  /** Colorblind palette for the press glow and the rings (spec 8.6). */
+  setColors(colors: SemanticColors): void {
+    this.colors = colors;
+    this.ringKeys.clear(); // redraw the rings in the new colors
   }
 
   /** Button opacity from Settings (30–100%). */
@@ -184,12 +191,16 @@ export class TouchControlView {
       this.pressedState.set(role, pressed);
       el.style.transform = pressed ? 'scale(0.93)' : 'scale(1)';
       el.style.background = pressed ? 'rgba(0, 245, 212, 0.30)' : 'rgba(15, 23, 42, 0.42)';
-      el.style.boxShadow = pressed ? `0 0 18px ${UiTokens.accent}` : 'none';
+      el.style.boxShadow = pressed ? `0 0 18px ${this.colors.accent}` : 'none';
     }
     const { heatPct, venting, dashPct } = this.ringValues;
-    const heatColor = venting ? UiTokens.danger : heatPct >= 70 ? UiTokens.warning : UiTokens.currencyShard;
+    const heatColor = venting
+      ? this.colors.danger
+      : heatPct >= 70
+        ? UiTokens.warning
+        : this.colors.currencyShard;
     this.drawRing('shoot', venting ? Math.max(heatPct, 1) : heatPct, heatColor);
-    this.drawRing('dash', dashPct, UiTokens.accent);
+    this.drawRing('dash', dashPct, this.colors.accent);
     const layout = this.controls.currentLayout;
     const origin = view.stickOrigin ?? { x: layout.fixedStick.cx, y: layout.fixedStick.cy };
     const knob = view.stickKnob ?? origin;
