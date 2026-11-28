@@ -23,7 +23,7 @@
 ## Pass 2B-5 evidence (2026-11-28)
 
 - `npm run verify`: passes (418 tests, incl. 14 binding tests: defaults, conflict flags, duplicate clearing, reserved keys, family detection, keyboard and pad rebinding effects, Right Shift, capture takes only a new press and blocks game and menus, cancel, D-pad/stick left/right and bumper intents, store per device with per-action fallback).
-- `npm run test:e2e` (Chrome, local): 81 of 81, incl. tests/e2e/rebinding.spec.ts: rebind Jump to J in the UI (J jumps, Space no longer does, survives a reload); a conflict is flagged on both actions, Esc cancels a capture, Backspace clears, Reset to defaults restores, axe passes; with a mocked Xbox pad, rebind Jump to Y by pressing Y and Y then jumps; menus by pad: Start, D-pad, A, RB/LB switch tabs, D-pad right moves the volume slider, B closes Settings. The pseudo-locale audit now covers the rebinding screen and the layout editor.
+- `npm run test:e2e` (Chrome, local): 101 of 101 (the pseudo-locale audit now runs one test per screen and tab), incl. tests/e2e/rebinding.spec.ts: rebind Jump to J in the UI (J jumps, Space no longer does, survives a reload); a conflict is flagged on both actions, Esc cancels a capture, Backspace clears, Reset to defaults restores, axe passes; with a mocked Xbox pad, rebind Jump to Y by pressing Y and Y then jumps; menus by pad: Start, D-pad, A, RB/LB switch tabs, D-pad right moves the volume slider, B closes Settings. The pseudo-locale audit now covers the rebinding screen and the layout editor.
 
 ### 2B acceptance
 

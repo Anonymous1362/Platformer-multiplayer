@@ -98,6 +98,8 @@ for (const size of SIZES) {
   test.describe(`en-XA at ${size.name} size`, () => {
     // A touch device, so the on-screen controls (and their labels) are built too.
     test.use({ viewport: { width: size.width, height: size.height }, hasTouch: true });
+    // Full-page screenshots on CI's software renderer take seconds each; every test here takes a few.
+    test.describe.configure({ timeout: 90_000 });
 
     test('notice and title', async ({ page }, info) => {
       await page.goto('/?test=1&flow=1&lang=en-XA');
@@ -110,8 +112,8 @@ for (const size of SIZES) {
       await check(page, info, `${size.name}-title`);
     });
 
-    test('pause, quit confirmation, and every settings tab', async ({ page }, info) => {
-      test.setTimeout(120_000);
+    /** Boots the level in en-XA and opens the pause menu. */
+    async function pause(page: Page): Promise<void> {
       await page.goto('/?test=1&lang=en-XA');
       await page.waitForSelector('#game-root[data-ready="true"]');
       await expect
@@ -119,57 +121,76 @@ for (const size of SIZES) {
         .toBeGreaterThan(5);
       await page.keyboard.press('Escape');
       await page.waitForSelector('[data-role="pause-overlay"]');
+    }
+
+    /** Checks a scrolling panel at every 300 px, so rows below the fold are audited too. */
+    async function checkScrolled(
+      page: Page,
+      info: TestInfo,
+      panelSelector: string,
+      name: string,
+    ): Promise<void> {
+      const panel = page.locator(panelSelector);
+      const height = await panel.evaluate((el) => el.scrollHeight);
+      for (let y = 0; y <= height; y += 300) {
+        await panel.evaluate((el, top) => {
+          el.scrollTop = top;
+        }, y);
+        await check(page, info, `${name}-${String(y)}`);
+      }
+    }
+
+    test('pause and the quit confirmation', async ({ page }, info) => {
+      await pause(page);
       await check(page, info, `${size.name}-pause`);
       await page.locator('[data-role="pause-overlay"] [data-action="quit"]').click();
       await page.waitForSelector('[role="alertdialog"]');
       await check(page, info, `${size.name}-quit`);
-      await page.keyboard.press('Escape');
-      await page.locator('[data-role="pause-overlay"] [data-action="settings"]').click();
-      await page.waitForSelector('[data-screen="settings"]');
-      const tabs = page.locator('[data-screen="settings"] [role="tab"]');
-      const count = await tabs.count();
-      expect(count).toBe(8);
-      for (let i = 0; i < count; i += 1) {
-        await tabs.nth(i).click();
-        await expect(tabs.nth(i)).toHaveAttribute('aria-selected', 'true');
-        // Every row of the tab, not only the part in view.
-        const panel = page.locator('.cd-settings-panel');
-        const height = await panel.evaluate((el) => el.scrollHeight);
-        for (let y = 0; y <= height; y += 300) {
-          await panel.evaluate((el, top) => {
-            el.scrollTop = top;
-          }, y);
-          await check(page, info, `${size.name}-settings-${String(i)}-${String(y)}`);
-        }
-      }
     });
 
-    test('rebinding screen and the layout editor', async ({ page }, info) => {
-      test.setTimeout(120_000);
-      await page.goto('/?test=1&lang=en-XA');
-      await page.waitForSelector('#game-root[data-ready="true"]');
-      await expect
-        .poll(() => page.evaluate(() => window.__CD_TEST__?.sim()?.tick ?? 0), { timeout: 10_000 })
-        .toBeGreaterThan(5);
-      await page.keyboard.press('Escape');
+    // One test per Settings tab, so each has its own time budget on slow CI machines.
+    for (let tabIndex = 0; tabIndex < 8; tabIndex += 1) {
+      test(`settings tab ${String(tabIndex + 1)} of 8`, async ({ page }, info) => {
+        await pause(page);
+        await page.locator('[data-role="pause-overlay"] [data-action="settings"]').click();
+        await page.waitForSelector('[data-screen="settings"]');
+        const tabs = page.locator('[data-screen="settings"] [role="tab"]');
+        expect(await tabs.count()).toBe(8);
+        await tabs.nth(tabIndex).click();
+        await expect(tabs.nth(tabIndex)).toHaveAttribute('aria-selected', 'true');
+        await checkScrolled(
+          page,
+          info,
+          '[data-screen="settings"] .cd-settings-panel',
+          `${size.name}-settings-${String(tabIndex)}`,
+        );
+      });
+    }
+
+    for (const [bindTab, label] of [
+      [0, 'keyboard'],
+      [1, 'controller'],
+    ] as const) {
+      test(`rebinding screen: ${label}`, async ({ page }, info) => {
+        await pause(page);
+        await page.locator('[data-role="pause-overlay"] [data-action="settings"]').click();
+        await page.locator('[data-screen="settings"] [role="tab"]').nth(2).click(); // Controls
+        await page.locator('[data-action="rebind"]').click();
+        await page.waitForSelector('[data-screen="bindings"]');
+        await page.locator('[data-screen="bindings"] [role="tab"]').nth(bindTab).click();
+        await checkScrolled(
+          page,
+          info,
+          '[data-screen="bindings"] .cd-settings-panel',
+          `${size.name}-bindings-${label}`,
+        );
+      });
+    }
+
+    test('layout editor', async ({ page }, info) => {
+      await pause(page);
       await page.locator('[data-role="pause-overlay"] [data-action="settings"]').click();
-      const tabs = page.locator('[data-screen="settings"] [role="tab"]');
-      await tabs.nth(2).click(); // Controls
-      await page.locator('[data-action="rebind"]').click();
-      await page.waitForSelector('[data-screen="bindings"]');
-      const bindTabs = page.locator('[data-screen="bindings"] [role="tab"]');
-      for (let i = 0; i < 2; i += 1) {
-        await bindTabs.nth(i).click();
-        const panel = page.locator('[data-screen="bindings"] .cd-settings-panel');
-        const height = await panel.evaluate((el) => el.scrollHeight);
-        for (let y = 0; y <= height; y += 300) {
-          await panel.evaluate((el, top) => {
-            el.scrollTop = top;
-          }, y);
-          await check(page, info, `${size.name}-bindings-${String(i)}-${String(y)}`);
-        }
-      }
-      await page.locator('[data-action="close-bindings"]').click();
+      await page.locator('[data-screen="settings"] [role="tab"]').nth(2).click();
       await page.locator('[data-action="edit-layout"]').click();
       await page.waitForSelector('[data-screen="layout-editor"]');
       await page.locator('[data-screen="layout-editor"] [data-control="jump"]').click();
