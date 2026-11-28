@@ -18,8 +18,8 @@ import bpy
 
 from studio import figure as F, mats, shapes as S
 
-# Colour schemes (B1a colour keys). Kes is human and a stranger on this planet, so her suit is a warm,
-# natural colour that stands apart from the cool teal world without glowing or outlining her. The danger
+# Colour schemes (B1a colour keys). Kes is human and a stranger on this planet, so his suit is a warm,
+# natural colour that stands apart from the cool teal world without glowing or outlining him. The danger
 # colour stays reserved for threats: suits are matte, desaturated and never emissive red.
 SCHEMES = {
     'rust': {  # recommended: burnt-orange flight suit, graphite armour (complements the teal world)

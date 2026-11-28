@@ -32,7 +32,7 @@ const BATCHES = {
     {
       id: 'kes',
       owns: ['tools/blender/assets/kes.py', 'public/assets/global/char_kes*.png'],
-      spec: 'Kes body sheet and slot-accent mask from the lookdev v3 model: idle 8, run 8, jump rise 2, apex 2, fall 2, land 3, wall slide 2, wall jump 3, jetpack 2, dash 3, hurt 2, death 8, revive 6. Cells 2x density, feet on the bottom row, flip-safe sprite rig.',
+      spec: 'Kes (a man; final colours from the craft pass) body sheet and slot-accent mask from the lookdev model: idle 8, run 8, jump rise 2, apex 2, fall 2, land 3, wall slide 2, wall jump 3, jetpack 2, dash 3, hurt 2, death 8, revive 6. Cells 2x density, feet on the bottom row, flip-safe sprite rig.',
     },
     {
       id: 'crawler',
@@ -118,7 +118,7 @@ const BATCHES = {
     {
       id: 'menus',
       owns: ['src/ui/tokens.css', 'src/ui/components/**', 'public/assets/ui/icons/**'],
-      spec: 'Menu skin, button feedback, icon set (SVG), UI sounds hooks; axe stays clean; motion tokens kept.',
+      spec: 'Menu skin, button feedback, icon set (SVG), UI sounds hooks; Settings shows the essentials first and the rest under More options (spec 0.8); touch layout with four right-side buttons (Jump/jetpack, Shoot, Dash, Action); axe stays clean; motion tokens kept.',
     },
   ],
   B2e: [

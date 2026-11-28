@@ -67,6 +67,22 @@ Continue only the milestone marked IN PROGRESS. Do not start a new milestone wit
 - **IDs:** lowercase `snake_case`, stable forever (Appendix B). Display names come from localization files, never from IDs.
 - **File names:** TypeScript modules use `PascalCase.ts` for classes and `camelCase.ts` for function modules; content files use `snake_case`.
 
+### 0.8 Owner amendments (2026-11-28) — these override any conflicting text in this file
+
+The owner decided the following after Pass 2B and the Art & UI B style test. Where older text below disagrees, this section wins; the main sections were also edited where noted. Details and dates are in `docs/DECISIONS.md`; the step order is in `docs/ROADMAP.md`.
+
+1. **v1.0 is single-player.** Multiplayer moves out of the store build into a separate **Friends Edition**: the same code with multiplayer switched on by a build flag (`edition: 'store' | 'friends'`), free, shared with the owner's friends as a sideload APK and a private web link (iPhone, Mac, Windows, Android). Nothing in the campaign changes: levels and bosses are built for one player; co-op only adds the rules already written (boss HP scaling, +1 enemy per extra player, Cryo Rescue Pods).
+2. **Friends Edition "lite" comes right after Chapter 1 (3E):** milestones 4A (connection), 4B (lobby), 4C (netcode), 4E (co-op on the Kepler missions, 2–4 players), 4F (hardening and security). 4D (party modes, arenas, up to 8 players) and Boss Rush online come later. In the store build the Relay screen, multiplayer achievements, and multiplayer Contract templates are absent.
+3. **Money: a free Chapter 1 demo plus one optional one-time unlock** for Chapters 2–5 and the post-game, in the same app and the same save (no restart). Google Play Billing on Android with "Restore purchase"; on itch.io the full game is a paid download with a save code to carry progress from the web demo. No ads, no other purchases, no loot boxes, no dark patterns. No account or login is required.
+4. **Kes is a man** (story, dialogue, model proportions). A female playable character may come later.
+5. **Puzzles are a core pillar, equal to combat** (P6, §5.8): every level mixes environmental puzzles with tense, short fights. A skip-bot in LevelLint proves that no puzzle can be bypassed with the jetpack, dash, or wall-jump.
+6. **Checkpoints are invisible** (Inside/Limbo style): silent triggers placed before each puzzle or danger, with a small save icon; the visible checkpoint beacon is dropped. Banking shards and autosave are unchanged (§4.3).
+7. **Touch layout:** four buttons on the right: Jump (hold in the air for the jetpack), Shoot, Dash, and a context **Action** button (interact or grab when something is near, otherwise parry); the gadget moves to a long-press of Action or a small secondary slot, finalized in 3A.
+8. **World moments, thoughts, and hints** (§7.7): short scripted in-engine moments (3–8 s camera takeovers, e.g. a giant's shadow crossing the fog, Kes looking around, a typed thought "…What was that?"), Kes's thought boxes, and ORRIN hints when the player is stuck (a "Hints" setting). Never during danger; each ends at a checkpoint.
+9. **Art:** look B "Ember Dark" (docs/ART_BIBLE.md). Kes's visor keeps a teal line that flickers at story moments and turns red only in scripted story scenes (red is otherwise reserved for threats).
+10. **Settings stay, but simpler to read:** the first Settings page shows the essentials (volumes, difficulty, graphics quality, controls layout, shake and flashes, language, hints); everything else, including all accessibility options, moves under "More options". Built in Art & UI B (B2d).
+11. **Tension and feel additions:** helmet breathing and heartbeat with music drop-out in close encounters, layered foley, a parry glint cue before enemy attacks, enemy shell debris on death, stalker and searchlight set pieces, camera threat framing and fall look-ahead. Each lands in the milestone named in `docs/ROADMAP.md`.
+
 ---
 
 # PART I — PRODUCT
@@ -86,8 +102,9 @@ Cosmic Drift is a premium 2.5D sci-fi action-platformer for phones, tablets, and
 | P1 | **Feel first** | Every input is acknowledged on the next rendered frame; movement is forgiving at the edges (coyote time, buffering, corner correction). | Input-to-photon check on device (§20.5); blind playtest rating ≥ 4/5 for "controls feel good". |
 | P2 | **Read at a glance** | On a 6-inch phone, every threat, platform, and pickup reads by silhouette and value contrast; color is never the only cue. | Grayscale screenshot review per level; colorblind-filter review (§8.12). |
 | P3 | **A world worth saving** | Every planet has a mechanical identity and a story purpose; characters have distinct voices. | Each level maps to a story beat (§3.2); dialogue review against §2.6. |
-| P4 | **Better together** | A friend can join your room in under 30 seconds; co-op and party modes share the campaign's feel. | Timed join test on two devices (§23, Pass 4 acceptance). |
-| P5 | **Respect the player** | Fair checkpoints, autosave, no data loss, no dark patterns, no ads or purchases in 1.0, full accessibility options. | Save fuzz tests (§20.2), accessibility checklist (§8.12). |
+| P4 | **Better together** (Friends Edition, §0.8) | A friend can join your room in under 30 seconds; co-op and party modes share the campaign's feel. | Timed join test on two devices (§23, Pass 4 acceptance). |
+| P5 | **Respect the player** | Fair checkpoints, autosave, no data loss, no dark patterns, no ads; the only purchase is one optional unlock after the free Chapter 1 (§0.8); full accessibility options. | Save fuzz tests (§20.2), accessibility checklist (§8.12). |
+| P6 | **Think, then move** | Every level asks the player to solve the world (push, power, light, hide, lure) as well as fight; no puzzle can be skipped by flying. | LevelLint skip-bot (§5.6, §5.8); playtesters rate "puzzles felt fair" ≥ 4/5. |
 
 ### 1.3 Platforms and technical targets
 
@@ -98,9 +115,9 @@ Cosmic Drift is a premium 2.5D sci-fi action-platformer for phones, tablets, and
 | Browsers | Current and previous major versions of Chrome, Edge, Firefox, and Safari. WebGL is required; without it, show a friendly "WebGL required" screen. |
 | Orientation | Landscape only. Supported aspect ratios 4:3 to 21:9; outside that range, pillarbox or letterbox with decorative bars. |
 | Frame rate (goals) | Simulation fixed at 60 Hz everywhere. Rendering at the display rate (60/90/120 Hz) when the device allows; Battery preset caps rendering at 30 fps. |
-| Players | 1 (campaign), 1–4 (online modes). The protocol reserves 8 slots for a later party mode. |
+| Players | 1 (store build). Friends Edition: 2–4 co-op, later up to 8 in party modes (§0.8). The protocol reserves 8 slots. |
 | Network | Single-player works fully offline. Online modes need internet for signaling and, on many mobile networks, a TURN relay (§16.8). |
-| Monetization (1.0) | None. No ads, no purchases, no loot boxes. Nothing in the architecture prevents adding them later. |
+| Monetization (1.0) | Free Chapter 1 demo plus one optional one-time unlock for the rest (§0.8). No ads, no other purchases, no loot boxes. |
 | Languages | English at launch; every string externalized (§8.11). |
 
 ### 1.4 Content manifest for 1.0
@@ -114,7 +131,7 @@ Cosmic Drift is a premium 2.5D sci-fi action-platformer for phones, tablets, and
 | Bosses | 5 (Hive Warden, Solar Leviathan, Cryos Overlord, Aether Archon, The Hollow Crown). |
 | Player kit | 5 weapons, 4 gadgets, 3 suit classes, 5 power-ups, 6 upgrade tracks, 4 mutators, 24 cosmetic items. |
 | Hub | The *Lantern* ship with 6 stations (§8.5). |
-| Multiplayer | 4 modes (Orbital Co-op, Shard Rush, King of the Beacon, Boss Rush Gauntlet); 5 arenas plus co-op campaign levels. |
+| Multiplayer | Not in the store build. Friends Edition (§0.8): Orbital Co-op first; Shard Rush, King of the Beacon, Boss Rush Gauntlet and 5 arenas later. |
 | Difficulty | Easy, Normal, Hard, and Drift+ (post-game), set per mode (§3.4, §6.6), plus independent Assist options. |
 | Achievements | 30 (local; platform services optional later). |
 
@@ -130,7 +147,7 @@ Award juries judge cohesion and craft: art direction, audio, narrative, game des
 
 ### 2.1 Logline and premise
 
-**Logline:** When a corporate experiment shatters the artificial star that links five worlds, a courier pilot and the strange new mind in her helmet race across the broken system to recover its fragments, and learn that the "monsters" guarding them are the last defenders of the people the star is made of.
+**Logline:** When a corporate experiment shatters the artificial star that links five worlds, a courier pilot and the strange new mind in his helmet race across the broken system to recover its fragments, and learn that the "monsters" guarding them are the last defenders of the people the star is made of.
 
 **Theme:** connection. The Lattice connected worlds; the Drift severed them; the player reconnects them, and multiplayer is framed as the same act ("Relay": linking Drifters across the Verge).
 
@@ -167,8 +184,8 @@ Award juries judge cohesion and craft: art direction, audio, narrative, game des
 
 | ID | Name | Role | Want / arc | Voice | Sample line |
 | --- | --- | --- | --- | --- | --- |
-| `kes` | **Kes Arden** | Protagonist; courier pilot of the *Lantern*. | Wants her crew home. Learns to rely on others: from "I fly alone, I get paid" to "No one drifts alone." | Dry, quick, deflects with humor, sincere under pressure. | "I deliver packages. I don't do prophecies." |
-| `orrin` | **ORRIN** | The AI in Kes's visor. Secretly an Aurai fragment that bonded with her suit during the crash. | Wants to understand what it is; chooses to return to the Heartstar. | Curious, literal, gentle, accidentally funny. | "I don't remember being born. I remember waking up because you were falling." |
+| `kes` | **Kes Arden** | Protagonist; courier pilot of the *Lantern*. Male. | Wants his crew home. Learns to rely on others: from "I fly alone, I get paid" to "No one drifts alone." | Dry, quick, deflects with humor, sincere under pressure. | "I deliver packages. I don't do prophecies." |
+| `orrin` | **ORRIN** | The AI in Kes's visor. Secretly an Aurai fragment that bonded with his suit during the crash. | Wants to understand what it is; chooses to return to the Heartstar. | Curious, literal, gentle, accidentally funny. | "I don't remember being born. I remember waking up because you were falling." |
 | `tavi` | **Tavi Sen** | Navigator, 22, youngest crew member; leg injured in the crash, runs the *Lantern* bridge. | Wants to be trusted with more than the radio. | Fast, upbeat, nervous jokes. | "Good news: I found you on the scanner. Bad news: so did eleven things with teeth." |
 | `bram` | **Bram Okoye** | Engineer. Runs the Workshop (upgrades). | Wants the ship whole again; treats it like a person. | Gruff warmth, superstitious about machines. | "She's not broken. She's sulking. Hand me the spanner and stop insulting her." |
 | `pike` | **Pike** | Quartermaster and gunsmith; ex-Meridian. Runs the Armory. | Wants to atone for the weapons he built. | Laconic; few words, all of them dry. | "Point the shiny end at the problem." |
@@ -182,11 +199,11 @@ Portraits: every speaker has five expressions: `neutral`, `happy`, `angry`, `wor
 
 ### 2.4 Plot by act
 
-**Prologue — Shardfall (Kepler-186f).** The *Lantern* is mid-jump through the Lattice when Meridian test-fires the Crown at Obsidian Core. The Heartstar fractures; shards rain across the Verge; gates collapse; the *Lantern* tears apart and the crew scatters. Kes crash-lands in Kepler's crystal forest. Her suit's dormant assistant boots up as ORRIN, with a personality nobody installed. (`cs_01_shardfall`, `cs_02_orrin_wakes`)
+**Prologue — Shardfall (Kepler-186f).** The *Lantern* is mid-jump through the Lattice when Meridian test-fires the Crown at Obsidian Core. The Heartstar fractures; shards rain across the Verge; gates collapse; the *Lantern* tears apart and the crew scatters. Kes crash-lands in Kepler's crystal forest. His suit's dormant assistant boots up as ORRIN, with a personality nobody installed. (`cs_01_shardfall`, `cs_02_orrin_wakes`)
 
-**Act I-a — The Garden (Kepler-186f).** Kes learns that Custodians swarm anyone carrying shards. Tavi, trapped in the surviving bridge section, guides her by radio. Kes finds the wreck, frees Bram from a Custodian cocoon, and destroys the Hive Warden nesting in the drive bay. Bram patches the *Lantern* into a short-range ship: no gates, but enough to hop between planets. Voss broadcasts across the Verge: surrender all shards to Meridian collection points. (`cs_03`, `cs_04`)
+**Act I-a — The Garden (Kepler-186f).** Kes learns that Custodians swarm anyone carrying shards. Tavi, trapped in the surviving bridge section, guides him by radio. Kes finds the wreck, frees Bram from a Custodian cocoon, and destroys the Hive Warden nesting in the drive bay. Bram patches the *Lantern* into a short-range ship: no gates, but enough to hop between planets. Voss broadcasts across the Verge: surrender all shards to Meridian collection points. (`cs_03`, `cs_04`)
 
-**Act I-b — The Forge (Vulcanis).** Meridian strip-mines shards from lava fields with Custodian-suppression pylons. Kes frees Pike from a work camp; he hands her the Grapple Hook he was forced to build. The Solar Leviathan has swallowed the first Keystone; Kes recovers it. A hologram of Voss appears: he holds Captain Reyes and offers a trade, the Keystones for her life. Kes refuses. (`cs_05`–`cs_07`)
+**Act I-b — The Forge (Vulcanis).** Meridian strip-mines shards from lava fields with Custodian-suppression pylons. Kes frees Pike from a work camp; he hands him the Grapple Hook he was forced to build. The Solar Leviathan has swallowed the first Keystone; Kes recovers it. A hologram of Voss appears: he holds Captain Reyes and offers a trade, the Keystones for her life. Kes refuses. (`cs_05`–`cs_07`)
 
 **Act II — The Archive (Cryos-9).** In a frozen Meridian research station, Kes rescues Dr. Halloran, whose data shows the Custodians are guardians, not invaders, and that Heartstar light carries structure "like memory". Commander Rusk ambushes Kes in the Cryos Overlord mech. Beaten, Rusk retreats with a warning: Voss did not break the star by accident; he is building a cage. (`cs_08`–`cs_10`)
 
@@ -196,7 +213,7 @@ Portraits: every speaker has five expressions: `neutral`, `happy`, `angry`, `wor
 
 **Finale.** Kes breaks the Hollow Crown. The Heartstar is collapsing; reigniting it means carrying the Keystones into the light. ORRIN can, because it is Aurai, and doing so means rejoining the Choir. ORRIN chooses to go: "Every gate that opens, that's me saying hello." The gates relight. Rusk arrests Voss: "Director. You're relieved." (`cs_16`, credits `cs_17`)
 
-**True ending (all 15 Echoes).** Back on the *Lantern*, the Echoes Kes carried resonate in her visor. ORRIN's pattern reassembles: "I followed the voices you kept. Turns out you kept enough of me." Unlocks the ORRIN visor cosmetic. (`cs_18_true_ending`)
+**True ending (all 15 Echoes).** Back on the *Lantern*, the Echoes Kes carried resonate in his visor. ORRIN's pattern reassembles: "I followed the voices you kept. Turns out you kept enough of me." Unlocks the ORRIN visor cosmetic. (`cs_18_true_ending`)
 
 ### 2.5 Endings
 
@@ -263,8 +280,8 @@ Length targets are for a first attempt on Normal. Every level has 3–6 checkpoi
 
 ### 3.3 Unlock flow
 
-1. New save starts at `cs_01` → `kepler_01`. Players may skip the tutorial from the title screen's "Skip tutorial" toggle; skipping marks `kepler_01` complete and unlocks the Relay.
-2. Relay (multiplayer) unlocks after `kepler_01` so friends can play together within about 10 minutes.
+1. New save starts at `cs_01` → `kepler_01`. Players may skip the tutorial from the title screen's "Skip tutorial" toggle; skipping marks `kepler_01` complete (and, in the Friends Edition, unlocks the Relay).
+2. Relay (multiplayer) unlocks after `kepler_01` so friends can play together within about 10 minutes (Friends Edition only, §0.8).
 3. Each mission unlocks the next. Completed missions stay replayable from the Star Map.
 4. Hub stations open as listed in §3.1. A station that is not open yet shows the silhouette of its owner and the line "Find them first."
 5. The Armory opens the moment Pike is rescued in `vulcanis_02`, with Tier 2 in stock. Tier 3 unlocks after `vulcanis_boss`, Tier 4 after `cryos_boss`, Tier 5 after `aether_boss`.
@@ -439,7 +456,7 @@ A tap jump (released immediately) peaks at 77 u (1.2 tiles) at 1.0× gravity and
 | Knockback | 280 u/s away from the source, vy −320 |
 | Hazard contact (spikes, lava, pit) | 25 damage, then a 0.5 s fade and respawn at the last safe ground position (solid ground, at least 1 s old, not within 2 tiles of a hazard) |
 | Death | 1.2 s death sequence, then respawn at the last checkpoint. Shards collected since that checkpoint are lost and respawn in the level; enemies in the current section reset. |
-| Checkpoint | Touching a checkpoint banks shards, restores full HP and shield, and autosaves (§15.4). |
+| Checkpoint | Invisible trigger (§0.8): passing it banks shards, restores full HP and shield, autosaves (§15.4), and shows a small save icon for 1.5 s. Placed before every puzzle, set piece, and danger. |
 | Co-op downed state | At 0 HP a player enters a Cryo Rescue Pod for 15 s; a teammate inside 96 u for a cumulative 2.0 s revives them at 50% HP. If the timer runs out, they respawn at the last checkpoint after 5 s. If every player is downed, the team respawns at the checkpoint. |
 
 ### 4.4 Enemies
@@ -540,7 +557,7 @@ A typical first run collects about 75–85% of level shards, so players can affo
 
 ### 4.10 Contracts and achievements
 
-**Contracts:** three active at a time, refreshed at local midnight from templates seeded by date and save ID (e.g., "Defeat 25 Crawlers", "Collect 600 shards", "Parry 15 bolts", "Finish a level without taking damage", "Win 2 Shard Rush matches"). Rewards 1–3 cores. One free reroll per day. Changing the device clock can reroll Contracts; that only affects the player's own single-player progress and is accepted.
+**Contracts:** three active at a time, refreshed at local midnight from templates seeded by date and save ID (e.g., "Defeat 25 Crawlers", "Collect 600 shards", "Parry 15 bolts", "Finish a level without taking damage", "Win 2 Shard Rush matches"; multiplayer templates exist only in the Friends Edition, §0.8). Rewards 1–3 cores. One free reroll per day. Changing the device clock can reroll Contracts; that only affects the player's own single-player progress and is accepted.
 
 **Achievements:** 32, listed in Appendix B (`hard_campaign`: finish the campaign on Hard or Drift+; `crew_first`: complete all five Crew Requests). Local first; Google Play Games and Game Center integration is optional post-launch.
 
@@ -624,6 +641,8 @@ Humans may author in Tiled; `tools/tiled-import` converts `.tmj` files into this
 - **Every dead end rewards** exploration.
 - **Respawn safety:** checkpoints and safe-ground points sit on solid ground away from hazards and enemy lines of fire.
 - **Set pieces** (lava chase, prison grid, Crown climb) get a checkpoint immediately before them and a short practice beat.
+- **Puzzles in every level** (§5.8): at least three puzzle beats per standard level, mixed with short fights; never two long fights in a row.
+- **No visible repetition:** at least four variants per tile type, decor placed by hand in clusters, and one unique set piece or world moment per level section.
 
 ### 5.6 LevelLint (CI tool)
 
@@ -639,11 +658,28 @@ Humans may author in Tiled; `tools/tiled-import` converts `.tmj` files into this
 
 Each level also ships a **golden ghost run**: recorded inputs that finish the level. CI replays it after any physics or level change (§20.3).
 
+### 5.8 Puzzles (pillar P6)
+
+Puzzles are physical and readable, never abstract riddles. The toolkit (built in 2F, extended per chapter):
+
+| Kind | Examples |
+| --- | --- |
+| Push and pull | Crates and wreck debris pushed into place to reach a ledge; weights held on pressure plates. |
+| Power | Levers, cables to reconnect, old Meridian machines to restart; shutters and lifts. |
+| Light | Aurai crystal beams redirected with mirrors or crystals to open doors (Aether-V gets the hardest). |
+| Stealth | Searchlights and sleeping Custodians; cover, timing, and noise (running wakes them). |
+| Lure and use | Lure a Crawler onto a plate; parry a bolt into a cracked wall; let an enemy break a barrier. |
+| Chase | A giant Custodian or collapsing ground behind the player; checkpoint before, practice beat first. |
+
+**No cheating past a puzzle:** jetpack fuel is short; puzzle rooms have ceilings and Aurai **dampening fields** (story: shard interference) that switch off the jetpack and dash; the LevelLint **skip-bot** (§5.6) searches jump, jetpack, dash, and wall-jump routes from each puzzle's entry and fails CI if the exit is reachable without solving it. Hints: after a player is stuck (no progress for 90 s and several failed attempts), ORRIN offers one line (setting "Hints", default on).
+
 ### 5.7 Multiplayer arenas
 
 Five arenas (`arena_kepler`, `arena_vulcanis`, `arena_cryos`, `arena_aether`, `arena_obsidian`), each at most 60 × 34 tiles, mirror- or rotation-symmetric for fairness, with 4 active spawn points (+4 reserved), beacon path nodes, shard spawn nodes, and power-up nodes. Planet hazards appear in a toned-down form. Co-op uses the campaign levels with enemy counts scaled by player count.
 
 ## 6. Multiplayer Design
+
+> **Friends Edition only (§0.8).** The store build of v1.0 has no multiplayer. Co-op comes in the Friends Edition "lite" after Chapter 1; party modes and arenas later.
 
 ### 6.1 Modes
 
@@ -840,6 +876,13 @@ Dialogue subtitles are always on in cutscenes. Optional sound captions (for exam
 - Line IDs never change once shipped (saves and the backlog reference them).
 
 ---
+
+### 7.7 World moments, thoughts, and hints (owner amendment, §0.8)
+
+- **World moments:** short in-engine beats (3–8 s) that make the world feel alive without being gameplay: the giant's shadow crossing the far fog, a distant rockfall, water rushing far below. On first sight the controls fade, letterbox bars slide in, the camera eases to frame the moment, Kes reacts (turns his head, steps back), a thought box types a short line ("…What was that?"), the camera eases back, control returns, and an invisible checkpoint saves. Never during danger; skippable on replays; reduced motion keeps the camera still.
+- **Thoughts:** Kes's inner lines in a borderless typing box near him (separate from radio barks and dialogue); at most one every 45 s unless scripted.
+- **Hints:** when the player is stuck at a puzzle (§5.8), ORRIN offers one short hint over radio; a second hint only after more time. Setting "Hints" (on by default). Hints never solve the puzzle outright.
+- **Tone:** intense and quiet, never comedic about danger; silence before impact; few words.
 
 ## 8. UX & UI
 
@@ -2059,7 +2102,7 @@ Accounts, cloud saves, leaderboards, public matchmaking, server-authoritative co
 
 ### 22.6 Order of work
 
-Pass 0 → 1A → 1B → 1C → 1D → 1E → 1F → 2A … 2F → 3A … 3E → 4A … 4F → 5A … 5E → 6A … 6D → 7A … 7F → (8, optional). Features from §25 are tagged with the milestone where they are introduced; **never implement a tagged feature earlier than its tag.**
+Pass 0 → 1A → 1B → 1C → 1D → 1E → 1F → 2A … 2F → 3A … 3E → Friends Edition lite (4A, 4B, 4C, 4E, 4F) → 5A … 5E → 6A … 6D → 7A … 7F → (4D and 8, optional). Owner-requested milestones such as Art & UI B sit where `docs/ROADMAP.md` places them (§0.8). Features from §25 are tagged with the milestone where they are introduced; **never implement a tagged feature earlier than its tag.**
 
 ---
 
@@ -2122,7 +2165,9 @@ Each row lists the scope (only this), the sections to read, and the acceptance c
 | **3D** | Workshop (6 upgrades, respec), Wardrobe (Kepler cosmetics), Contracts, achievements framework; Crew Request framework (§3.8): step types, request objects, tracking, HUD line, crew perks, rewards, and save fields, tested with a dev-only request | Economy tests match §4.8; purchase and respec animations meet §8.4; request state survives save, load, and migration; request rewards are granted exactly once |
 | **3E** | Chapter 1 polish: integrate available custom or AI art, Kepler music and SFX, haptics, device-matrix performance, accessibility pass, playtest with at least 3 people, fix every P0/P1 | **Shareable Chapter 1 build:** a deployed private web build and a signed debug APK the user can send to a friend |
 
-### Pass 4 — Multiplayer
+### Pass 4 — Multiplayer (Friends Edition; §0.8)
+
+Runs after 3E as the Friends Edition "lite": 4A, 4B, 4C, 4E (co-op on the Kepler missions), 4F. 4D (party modes and arenas) comes later. The store build ships without multiplayer.
 
 | Milestone | Scope | Done when |
 | --- | --- | --- |
@@ -2434,7 +2479,7 @@ ID string-literal unions (`MissionId`, `EnemyId`, and so on) are generated from 
 | Cosmetics — suits | `skin_courier` (default), `skin_garden`, `skin_forge`, `skin_archive`, `skin_choir`, `skin_heart`, `skin_meridian_defector`, `skin_drift_plus`, `skin_lantern_crew` (`rq_bram`) |
 | Cosmetics — trails | `trail_cyan` (default), `trail_kepler`, `trail_vulcanis`, `trail_cryos`, `trail_aether`, `trail_obsidian` (par sets), `trail_starfall`, `trail_relay`, `trail_custodian` (`rq_halloran`), `trail_resonance` (`rq_orrin`) |
 | Cosmetics — visors | `visor_standard` (default), `visor_amber`, `visor_frost`, `visor_prism`, `visor_void`, `visor_tavi` (`rq_tavi`), `visor_pike` (`rq_pike`), `visor_orrin` (true ending) |
-| Achievements (32) | `first_light`, `garden_saved`, `forge_cooled`, `archive_thawed`, `choir_heard`, `heart_restored`, `all_echoes`, `all_vaults`, `parry_100`, `perfect_parry_25`, `starfall_first_try`, `untouchable`, `par_master`, `drift_plus_clear`, `boss_rush_clear`, `boss_rush_flawless`, `shard_hoarder`, `fully_upgraded`, `armory_complete`, `gadgeteer`, `dressed_to_drift`, `relay_first_match`, `field_medic`, `shard_rush_win`, `beacon_keeper`, `coop_boss_down`, `slam_dunk`, `grapple_100`, `contractor_20`, `dash_1000`, `hard_campaign`, `crew_first` |
+| Achievements (32; `relay_first_match`, `field_medic`, `shard_rush_win`, `beacon_keeper`, `coop_boss_down` are Friends Edition only, §0.8) | `first_light`, `garden_saved`, `forge_cooled`, `archive_thawed`, `choir_heard`, `heart_restored`, `all_echoes`, `all_vaults`, `parry_100`, `perfect_parry_25`, `starfall_first_try`, `untouchable`, `par_master`, `drift_plus_clear`, `boss_rush_clear`, `boss_rush_flawless`, `shard_hoarder`, `fully_upgraded`, `armory_complete`, `gadgeteer`, `dressed_to_drift`, `relay_first_match`, `field_medic`, `shard_rush_win`, `beacon_keeper`, `coop_boss_down`, `slam_dunk`, `grapple_100`, `contractor_20`, `dash_1000`, `hard_campaign`, `crew_first` |
 | Music (20) | `mus_title`, `mus_hub`, `mus_lobby`, `mus_<planet>_explore`, `mus_<planet>_combat`, `mus_<planet>_boss` (×5), `mus_finale`, `mus_credits` |
 | Rule toggles | `friendlyBump`, `hazardSpeed`, `suddenDeath`, `lowGravityChaos`, `instagib`, `doubleShards` |
 
