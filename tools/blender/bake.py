@@ -17,6 +17,7 @@ OUT = os.path.join(ROOT, 'public', 'assets', 'global')
 
 def main(argv):
     import importlib
+    import bpy  # noqa: F401 -- since bpy 5.3, `bmesh` and `mathutils` only import after bpy
     names = argv or ['hero', 'crawler', 'shard', 'terrain', 'backdrop']
     summary = {}
     for name in names:

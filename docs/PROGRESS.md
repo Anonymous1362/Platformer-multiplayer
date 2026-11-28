@@ -15,10 +15,34 @@
 | 2B-1 | DONE (CI green, run 46056876731; merged as #5). Settings model (Zod, per-field fallback, per device), Settings screen with every §8.6 tab, live apply, simulation assists. |
 | Release 0.0.5 | Version bumped with release notes (Pass 2A and 2B-1). The owner runs Actions → Release after the bump is on `main`. |
 | 2B-2 | DONE (CI green, run 46118310127; merged as #7). Locale files and translator (plurals, numbers), every player-facing string on a key, Language setting live, `en-XA` pseudo-locale overflow screenshots. |
-| 2B-3 | DONE locally (CI pending). Colorblind palettes with the CVD test, sound captions, high-contrast HUD. |
-| 2B-4 | DONE locally (CI pending). Touch presets (Classic, Simple, Left-handed) and the layout editor; edits saved per device and orientation profile. |
-| 2B-5 | DONE locally (CI pending). Keyboard and controller rebinding with conflict flags and reset; full controller menu navigation. **2B complete** once merged. |
-| Art & UI B | Waiting for the owner's command (owner-requested, out of order). |
+| 2B-3 | DONE (CI green, run 46126279023; merged as #8). Colorblind palettes with the CVD test, sound captions, high-contrast HUD. |
+| 2B-4 | DONE (CI green, run 46126279023; merged as #8). Touch presets (Classic, Simple, Left-handed) and the layout editor; edits saved per device and orientation profile. |
+| 2B-5 | DONE (CI green, run 46126279023; merged as #8). Keyboard and controller rebinding with conflict flags and reset; full controller menu navigation. **Pass 2B complete.** |
+| Art & UI B | IN PROGRESS (owner-requested, out of order; plan in docs/ART_UI_B_PLAN.md). **B0 done** (CI green, run 46137320914; PR #9): the owner picked look B "Ember Dark". **B1a done (CI green, run 46150229638), waiting for the owner:** look B v2 with the owner's feedback (docs/art/look-lock/), Art Bible v1 (docs/ART_BIBLE.md), ADR, art skill rewritten. Owner: approve, pick Kes's colour key, say "go B1b" (engine proof). Then B2a–e (ultracode), B3 (polish, 0.0.6). |
+
+## Art & UI B · B1a evidence (2026-11-28)
+
+- `npm run verify`: passes locally (418 unit tests, 7 golden replays, levels lint, build). CI run 46150229638 green: verify, browser tests, dependency audit, Android build.
+- `npm run art:lookdev` (look lock): the full render takes about 12 min on 4 cores (exit 0). After the last fixes, the play, mid and wreck layers were re-rendered with `--cache DIR --only play,mid,wreck_big` (exit 0). Outputs are in docs/art/look-lock/.
+- Readability (brightness of the sprite vs its surroundings, rust key): hero 0.14 vs 0.12 (it also separates by hue, warm on cool); Crawler 0.10 vs 0.07.
+- No shipped art or game code changed in B1a.
+
+## Art & UI B · B0 evidence (2026-11-28)
+
+- `npm run verify`: passes locally (418 unit tests, 7 golden replays, levels lint, build). CI run 46137320914 green: verify, browser tests, dependency audit, Android build.
+- `npm run art:lookdev`: all three looks render at full quality in about 14 minutes on 4 CPU cores (exit 0). Outputs are in docs/art/style-test/: one frame per look, grayscale copies, `metrics.json`, `board.jpg`.
+- Readability (mean brightness of the sprite vs its surroundings, from `metrics.json`):
+
+  | Look | Hero | Crawler |
+  | --- | --- | --- |
+  | A Hush | 0.48 vs 0.41 | 0.31 vs 0.28 |
+  | B Ember Dark | 0.17 vs 0.12 | 0.11 vs 0.07 |
+  | C Verdigris Dusk | 0.29 vs 0.24 | 0.14 vs 0.12 |
+
+- `tools/blender/studio/qa.py` on today's shipped sheets:
+  - `enemy_crawler.png` passes.
+  - `char_hero.png` passes size, frames, feet line (grounded frames) and fringe, but fails clipping: dash frames 20–22 touch the cell border. B2a replaces this sheet.
+- No shipped art or game code changed in B0.
 
 ## Pass 2B-5 evidence (2026-11-28)
 

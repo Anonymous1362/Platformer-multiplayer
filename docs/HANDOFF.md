@@ -1,6 +1,57 @@
 # Handoff
 
-State: Pass 2A and 2B-1, 2B-2 are merged (#4–#7). 2B-3 + 2B-4 are in PR #8; 2B-5 (rebinding and controller menus) is done, which completes 2B. Next, on the owner's command: "Art & UI B" (owner-requested, out of order; ultracode workflows, workflow size medium). Then 2C (saves). Manual mode. Owner phone checks still open: docs/DEVICES.md and the 2A "no long tasks on a Mid device" check.
+State: Pass 2A and all of Pass 2B are merged (#4–#8). **Art & UI B is in progress** (plan: docs/ART_UI_B_PLAN.md; PR #9 open with B0 and B1a). B0 is done: the owner picked **look B "Ember Dark"**. **B1a (look lock) is done (CI green, run 46150229638) and waits for the owner**: approve look B v2 (docs/art/look-lock/board.jpg), pick Kes's colour key (rust recommended, mustard, or the B0 colours), then "go B1b". Next: B1b engine proof (the test arena in the real game in look B, plus a short video; in-game palette and CVD test), then B2a–e production (ultracode, medium), B3 polish and 0.0.6. Then 2C (saves). Manual mode. Owner phone checks still open: docs/DEVICES.md and the 2A "no long tasks on a Mid device" check. The owner's Release #8 failed only because 0.0.5 was already released (nothing was built or tagged); the next release needs a version bump.
+
+What B1a added (no shipped art or game code changed):
+
+- docs/ART_BIBLE.md (look B locked; replaces spec §9.1–§9.2 by ADR). `.claude/skills/cosmic-drift-art/SKILL.md` rewritten for look B.
+- Kit:
+  - `shapes.crystal_cluster` sets a per-object `glow` (crc32 of the name).
+  - `mats.crystal(per_object=True)` reads it.
+  - `mats.rock(crack=True, lichen=hex)` (large crack cells on walkable tops, 20% of that on faces, where strata and fine cracks carry the detail); `mats.hull` (Voronoi plate tones, scorch).
+  - `comp.rim_light_dir` (rim only on the edge facing the light; replaces the all-round `rim_light`).
+  - `comp.smoke_plume`, `comp.shift`.
+  - `looks.py`: B locked (`LOOKS['B']`), flip-safe sprite rig, `rim_engine`, finer grain, `lichen`.
+- `kes.py`: `SCHEMES` (rust, mustard, bone), `recolor(look, scheme)` (reuses materials per scheme), `plant` (both soles flat; bisection on the higher leg's knee), pose `ready`, `sole_centres`.
+- `kepler.py`:
+  - ground: `gravel`, `rubble`, `roots`;
+  - `mite`/`mites_on` (ray-cast onto the cliff face);
+  - a new `lantern_wreck` (cockpit canopy, dorsal spine with the lantern beacon, wing, engine pods, fin, torn plates, ribs, cables, debris, fire light);
+  - `watcher` (the giant, its own `giant` layer).
+  - `WRECK`, `WRECK_BREAK`, `WATCHER` and `FLARE` constants.
+- `tools/blender/lookdev/look_lock.py`:
+  - renders look B v2 (play plane supersampled ×2, giant layer, three hero colour keys, close-ups incl. the wreck);
+  - composes like the engine: per-foot contact shadows, sprites fogged like the play plane, rim toward the star, crystal flare with sparks, wreck smoke;
+  - writes `look-B-v2.png`/`.jpg`, grayscale, `board.jpg`, `metrics.json`;
+  - `--quick` for half size (about 1.5 min); a full render takes about 12 min on 4 cores.
+  - `--cache DIR` keeps the rendered layers; `--compose DIR` re-composes from them in seconds (fog, grade, placement tweaks); `--cache DIR --only play,mid` re-renders just those layers (the scene is deterministic, so the cached ones still line up).
+- The workflow `.claude/workflows/art-ui-b-production.js`: look B by default; new jobs ambient, crystals, shardflight; a B2e sound batch (ambience, sfx).
+
+What B0 added (no shipped art or game code changed):
+
+- `tools/blender/studio/`: `stage.py` (Cycles/AgX scene, scale rules: 1.8 m hero = 104 u, 1 u = 1 px at 1080p, sprites at 2x; `rig_world` and flip-safe `rig_sprite`; ortho/perspective cameras; `render_layer`; `to_px`), `figure.py` (`skin_body` with Hook-driven FK joints; `plate`/`ring` fitted at rest then frozen rigid), `shapes.py` (crystals, clusters, displaced rocks, `sweep` profiles, `loft`, rounded primitives; seeded), `mats.py` (rock, crystal, surface, glass, emissive), `comp.py` (premultiplied sRGB compositing: `over`, `add`, `fog` with sky colour maps for aerial perspective, `blur`, `resize`, `rim_light`, `bloom`, `grade`, `vignette`, `grain`, `gray`, text and boards), `looks.py` (three looks: palette, rigs, fog, grade, HUD).
+- `tools/blender/lookdev/`: `kes.py` (Kes v3: skin body, fitted plates, two-tone helmet with wrap visor and ORRIN line, twin-pod jetpack, blaster; poses `aim`, `idle`), `custodian.py` (Crawler v3: dark carapace, danger seams and eye, bladed legs; pose `alert`), `kepler.py` (cliff ledge sweep, one-way survey catwalk on an anti-gravity crystal, floating island, beacon, crystal forest, rock spires, mesas, Lantern wreck, foreground), `style_test.py` (renders each look's layers and composes the frame like the engine; writes frame, grayscale, value-contrast metrics, board), `char_sheet.py` (fast character close-ups).
+- `npm run art:lookdev` (full quality, about 14 min on 4 cores), `python3 -I tools/blender/lookdev/style_test.py --quick B` (half size, about 40 s per look; also copies each layer for inspection), or `--board` (rebuilds `board.jpg` from the saved frames, about 1 min).
+- Outputs: `docs/art/style-test/` (`look-A-hush.jpg`, `look-B-ember-dark.jpg`, `look-C-verdigris-dusk.jpg`, grayscale copies, `board.jpg`, `metrics.json`).
+- `.claude/workflows/art-ui-b-production.js`: saved ultracode workflow (draft until B1).
+- `tools/blender/studio/qa.py`: sheet checks (size and budget, frame count, feet line in grounded frames, clipping, alpha fringe, sha256). On the shipped `char_hero.png` it finds dash frames 20–22 clipped at the cell border (replaced by the B2a sheet).
+
+Gotchas learned in B1a:
+
+- `kes.recolor` must reuse a scheme's materials: Blender renames a second `kes_rust_suit` to `kes_rust_suit.001`, and the role lookup then silently misses (the close-ups came out in the last scheme).
+- Colour keys that only swap the suit barely differ at gameplay scale, because the armour plates dominate the silhouette; keys must differ in the dominant hue.
+- A far silhouette in front of an equally dark mesa vanishes; against the star's halo it pops, so its fog sets how secret it is (0.66 was a focal point, 0.88 is a ghost).
+
+Gotchas learned (Blender 5.3 `bpy` here):
+
+- `bmesh` and `mathutils` import only after `bpy`.
+- Bind Hook modifiers only after `view_layer.update()`, or the joints' world matrices are still identity.
+- A live shrink-wrap re-fits every pose and grabs whatever passes in front (an aimed arm over the chest stretched a plate 4.5 m); plates are fitted once at rest, then frozen.
+- Skin radii: vertical chains take (front-back, side), chains along x take (side, up-down).
+- Real 3D volumetric fog costs about 60 s per 1080p frame here and stays noisy; fog is composited per layer instead (also what the engine does).
+
+Next steps (B1, on the owner's pick): write docs/ART_BIBLE.md and the ADR replacing spec 9.1/9.2; move the picked look into shared style tokens (one JSON for Blender and `ThemePalette.ts`) and re-derive the CVD palettes with the test; asset spec sheet and QA script; build the engine-side pieces (rim-light filter, fog sheets, light shafts, post chain) and screenshot the test arena next to the lookdev frame; update the `cosmic-drift-art` skill to the new look; finalize the workflow's job specs.
+
 
 What 2B-5 added:
 
