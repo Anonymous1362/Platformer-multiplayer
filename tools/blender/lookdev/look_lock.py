@@ -2,6 +2,9 @@
 
     npm run art:lookdev                                         # full quality -> docs/art/look-lock/
     python3 -I tools/blender/lookdev/look_lock.py --quick       # half size, few samples (iteration)
+    python3 -I tools/blender/lookdev/look_lock.py --cache DIR   # also keep the rendered layers in DIR
+    python3 -I tools/blender/lookdev/look_lock.py --compose DIR # re-compose from DIR (seconds; for fog,
+                                                                # grade or placement tweaks, no Blender render)
 
 What changed from the B0 style test (owner feedback, 2026-11-28):
 - Kes wears a warm, human colour that stands apart from the teal world (scheme 'rust'; 'mustard' and the
@@ -46,6 +49,7 @@ OUT = os.path.join(ROOT, 'docs', 'art', 'look-lock')
 LOOK = 'B'
 SCHEMES = ('rust', 'mustard', 'bone')
 FLARE_AT = (5.5, 0.0, 1.0)
+GIANT_FOG = 0.88  # the giant is a ghost in the haze: found by players who look, never a focal point
 
 
 def hide_except(collection, prefix):
@@ -140,7 +144,7 @@ def background(paths, anchors, scale):
     frame = ST.sky(look, H, W, np.random.default_rng(5))
     gf = ST.ground_fog(H, W, f['ground_top'], f['ground'])
     air = K.blur(frame[..., :3], 40 * sc)
-    for name, amount, ground, tint in (('far', f['far'], 1.0, 0.25), ('giant', f['far'] - 0.06, 1.0, 0.2),
+    for name, amount, ground, tint in (('far', f['far'], 1.0, 0.25), ('giant', GIANT_FOG, 1.0, 0.2),
                                        ('mid', f['mid'], 0.9, 0.45), ('near', f['near'], 0.65, 0.6)):
         layer = K.load(paths[name])
         color = air * (1 - tint) + K.hexrgb(f['color']) * tint
@@ -324,13 +328,31 @@ def board(frame, gray, keys, metrics, paths, path):
     K.save(K.stack_vertical(blocks, gap=0, background='#0B0D0F'), path, quality=88)
 
 
+def arg(argv, name):
+    return argv[argv.index(name) + 1] if name in argv and argv.index(name) + 1 < len(argv) else None
+
+
 def main(argv):
     quick = '--quick' in argv
     scale, samples = (0.5, 16) if quick else (1.0, 48)
     out = OUT if not quick else os.path.join(tempfile.gettempdir(), 'cd-look-lock-quick')
     os.makedirs(out, exist_ok=True)
+    cache, compose_from = arg(argv, '--cache'), arg(argv, '--compose')
     with tempfile.TemporaryDirectory() as tmp:
-        paths, anchors = render(tmp, scale, samples)
+        if compose_from:
+            with open(os.path.join(compose_from, 'anchors.json')) as fh:
+                saved = json.load(fh)
+            paths = {k: os.path.join(compose_from, v) for k, v in saved['paths'].items()}
+            anchors, scale = saved['anchors'], saved['scale']
+        else:
+            work = cache or tmp
+            os.makedirs(work, exist_ok=True)
+            paths, anchors = render(work, scale, samples)
+            if cache:
+                with open(os.path.join(cache, 'anchors.json'), 'w') as fh:
+                    json.dump({'paths': {k: os.path.basename(v) for k, v in paths.items()}, 'scale': scale,
+                               'anchors': {k: [list(p) for p in v] if k == 'hero_soles' else list(v)
+                                           for k, v in anchors.items()}}, fh, indent=1)
         base = background(paths, anchors, scale)
         keys, report = {}, {}
         for scheme in SCHEMES:

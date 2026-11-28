@@ -56,7 +56,7 @@ In every key, the dark parts (boots, gloves, belt, pack) are about `#23262A`. Th
 - **Layer order, back to front, with fog amounts:**
   - sky and star;
   - far (0.72, plus ground fog);
-  - giant (0.66);
+  - giant (0.88: a ghost in the haze, never a focal point);
   - mid (0.50);
   - near (0.27);
   - play plane (0.03);

@@ -23,7 +23,8 @@ What B1a added (no shipped art or game code changed):
   - renders look B v2 (play plane supersampled ×2, giant layer, three hero colour keys, close-ups incl. the wreck);
   - composes like the engine: per-foot contact shadows, sprites fogged like the play plane, rim toward the star, crystal flare with sparks, wreck smoke;
   - writes `look-B-v2.png`/`.jpg`, grayscale, `board.jpg`, `metrics.json`;
-  - `--quick` for half size.
+  - `--quick` for half size (about 1.5 min); a full render takes about 12 min on 4 cores.
+  - `--cache DIR` keeps the rendered layers; `--compose DIR` re-composes from them in seconds (fog, grade, placement tweaks).
 - The workflow `.claude/workflows/art-ui-b-production.js`: look B by default; new jobs ambient, crystals, shardflight; a B2e sound batch (ambience, sfx).
 
 What B0 added (no shipped art or game code changed):
@@ -34,6 +35,12 @@ What B0 added (no shipped art or game code changed):
 - Outputs: `docs/art/style-test/` (`look-A-hush.jpg`, `look-B-ember-dark.jpg`, `look-C-verdigris-dusk.jpg`, grayscale copies, `board.jpg`, `metrics.json`).
 - `.claude/workflows/art-ui-b-production.js`: saved ultracode workflow (draft until B1).
 - `tools/blender/studio/qa.py`: sheet checks (size and budget, frame count, feet line in grounded frames, clipping, alpha fringe, sha256). On the shipped `char_hero.png` it finds dash frames 20–22 clipped at the cell border (replaced by the B2a sheet).
+
+Gotchas learned in B1a:
+
+- `kes.recolor` must reuse a scheme's materials: Blender renames a second `kes_rust_suit` to `kes_rust_suit.001`, and the role lookup then silently misses (the close-ups came out in the last scheme).
+- Colour keys that only swap the suit barely differ at gameplay scale, because the armour plates dominate the silhouette; keys must differ in the dominant hue.
+- A far silhouette in front of an equally dark mesa vanishes; against the star's halo it pops, so its fog sets how secret it is (0.66 was a focal point, 0.88 is a ghost).
 
 Gotchas learned (Blender 5.3 `bpy` here):
 
