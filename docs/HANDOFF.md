@@ -1,6 +1,6 @@
 # Handoff
 
-State: Pass 2A and all of Pass 2B are merged (#4–#8). **Art & UI B is in progress** (owner-requested, out of order; plan: docs/ART_UI_B_PLAN.md). **B0 pre-production is done** and waits for the owner to pick a look (A Hush, B Ember Dark, C Verdigris Dusk, or a named mix). Next: B1 look lock (max), then B2a–d production (ultracode, medium), B3 polish and 0.0.6. Then 2C (saves). Manual mode. Owner phone checks still open: docs/DEVICES.md and the 2A "no long tasks on a Mid device" check.
+State: Pass 2A and all of Pass 2B are merged (#4–#8). **Art & UI B is in progress** (owner-requested, out of order; plan: docs/ART_UI_B_PLAN.md). **B0 pre-production is done** (CI green, run 46137320914; PR #9 open) and waits for the owner to pick a look (A Hush, B Ember Dark, C Verdigris Dusk, or a named mix). Next: B1 look lock (max), then B2a–d production (ultracode, medium), B3 polish and 0.0.6. Then 2C (saves). Manual mode. Owner phone checks still open: docs/DEVICES.md and the 2A "no long tasks on a Mid device" check.
 
 What B0 added (no shipped art or game code changed):
 

@@ -18,7 +18,24 @@
 | 2B-3 | DONE (CI green, run 46126279023; merged as #8). Colorblind palettes with the CVD test, sound captions, high-contrast HUD. |
 | 2B-4 | DONE (CI green, run 46126279023; merged as #8). Touch presets (Classic, Simple, Left-handed) and the layout editor; edits saved per device and orientation profile. |
 | 2B-5 | DONE (CI green, run 46126279023; merged as #8). Keyboard and controller rebinding with conflict flags and reset; full controller menu navigation. **Pass 2B complete.** |
-| Art & UI B | IN PROGRESS (owner-requested, out of order; plan in docs/ART_UI_B_PLAN.md). **B0 pre-production done:** studio kit, new Kes and Crawler designs, style test of three looks (docs/art/style-test/), production plan, ultracode workflow draft. Waiting for the owner to pick a look; then B1 (look lock), B2a–d (production), B3 (polish, 0.0.6). |
+| Art & UI B | IN PROGRESS (owner-requested, out of order; plan in docs/ART_UI_B_PLAN.md). **B0 pre-production done** (CI green, run 46137320914; PR #9): studio kit, new Kes and Crawler designs, style test of three looks (docs/art/style-test/), production plan, ultracode workflow draft. Waiting for the owner to pick a look; then B1 (look lock), B2a–d (production), B3 (polish, 0.0.6). |
+
+## Art & UI B · B0 evidence (2026-11-28)
+
+- `npm run verify`: passes locally (418 unit tests, 7 golden replays, levels lint, build). CI run 46137320914 green: verify, browser tests, dependency audit, Android build.
+- `npm run art:lookdev`: all three looks render at full quality in about 14 minutes on 4 CPU cores (exit 0). Outputs are in docs/art/style-test/: one frame per look, grayscale copies, `metrics.json`, `board.jpg`.
+- Readability (mean brightness of the sprite vs its surroundings, from `metrics.json`):
+
+  | Look | Hero | Crawler |
+  | --- | --- | --- |
+  | A Hush | 0.48 vs 0.41 | 0.31 vs 0.28 |
+  | B Ember Dark | 0.17 vs 0.12 | 0.11 vs 0.07 |
+  | C Verdigris Dusk | 0.29 vs 0.24 | 0.14 vs 0.12 |
+
+- `tools/blender/studio/qa.py` on today's shipped sheets:
+  - `enemy_crawler.png` passes.
+  - `char_hero.png` passes size, frames, feet line (grounded frames) and fringe, but fails clipping: dash frames 20–22 touch the cell border. B2a replaces this sheet.
+- No shipped art or game code changed in B0.
 
 ## Pass 2B-5 evidence (2026-11-28)
 
