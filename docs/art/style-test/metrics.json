@@ -1,0 +1,35 @@
+{
+  "A": {
+    "name": "Hush",
+    "hero_luma_vs_surround": [
+      0.47615179419517517,
+      0.4083814024925232
+    ],
+    "crawler_luma_vs_surround": [
+      0.3071287274360657,
+      0.2757169008255005
+    ]
+  },
+  "B": {
+    "name": "Ember Dark",
+    "hero_luma_vs_surround": [
+      0.16666395962238312,
+      0.12386534363031387
+    ],
+    "crawler_luma_vs_surround": [
+      0.11215172708034515,
+      0.06971041113138199
+    ]
+  },
+  "C": {
+    "name": "Verdigris Dusk",
+    "hero_luma_vs_surround": [
+      0.28742262721061707,
+      0.23865388333797455
+    ],
+    "crawler_luma_vs_surround": [
+      0.13881714642047882,
+      0.11728470772504807
+    ]
+  }
+}

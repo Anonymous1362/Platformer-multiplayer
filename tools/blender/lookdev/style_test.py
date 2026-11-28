@@ -2,6 +2,7 @@
 
     npm run art:lookdev                 # all looks, full quality -> docs/art/style-test/
     python3 -I tools/blender/lookdev/style_test.py --quick A   # half size, few samples, one look
+    python3 -I tools/blender/lookdev/style_test.py --board     # rebuild the board from saved frames
 
 Every frame is assembled from the same layer types the game draws (spec 9.3): a painted sky, three
 fogged scenery layers, the gameplay layer, sprites (hero, Crawler mirrored with flipX, a Star Shard),
@@ -385,7 +386,38 @@ def board(results, path):
     K.save(K.stack_vertical(blocks), path, quality=88)
 
 
+def board_only(ids):
+    """Rebuilds board.jpg from the saved frames, grayscale copies and metrics, re-rendering only the
+    close-ups (for text or layout changes to the board)."""
+    with open(os.path.join(OUT, 'metrics.json')) as fh:
+        report = json.load(fh)
+    results = {}
+    with tempfile.TemporaryDirectory() as tmp:
+        for lid in ids:
+            look = LOOKS[lid]
+            stage.new_scene(look, 40)
+            kes.pose(kes.build(look, 'hero'), 'aim')
+            custodian.pose(custodian.build(look, 'crawler'), 'alert')
+            big = sprite_cam('hero_big', (0, 0, 0.95), (560, 720), 6)
+            cbig = sprite_cam('crawler_big', (0.05, 0, 0.48), (640, 400), 4.2)
+            slug = f'look-{lid}-{look["name"].lower().replace(" ", "-")}'
+            results[lid] = {
+                'frame': K.load(os.path.join(OUT, slug + '.jpg')),
+                'clean': K.load(os.path.join(OUT, slug + '-gray.jpg')),
+                'metrics': {'hero': report[lid]['hero_luma_vs_surround'],
+                            'crawler': report[lid]['crawler_luma_vs_surround']},
+                'hero_big': K.load(stage.render_layer('hero', big, os.path.join(tmp, f'{lid}_hb.png'), 'rig_sprite')),
+                'crawler_big': K.load(stage.render_layer('crawler', cbig, os.path.join(tmp, f'{lid}_cb.png'),
+                                                         'rig_sprite')),
+            }
+    board(results, os.path.join(OUT, 'board.jpg'))
+    print(os.path.join(OUT, 'board.jpg'))
+
+
 def main(argv):
+    if '--board' in argv:
+        board_only([a for a in argv if a in LOOKS] or list(LOOKS))
+        return
     quick = '--quick' in argv
     ids = [a for a in argv if a in LOOKS] or list(LOOKS)
     scale, samples = (0.5, 16) if quick else (1.0, 40)

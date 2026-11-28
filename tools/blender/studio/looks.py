@@ -17,8 +17,9 @@ straight behind), so a sprite mirrored with flipX still matches the scene.
 LOOKS = {
     'A': {
         'name': 'Hush',
-        'pitch': 'Quiet and fog-bound. Near-monochrome grey-green world, soft cold light, the hero a dark '
-                 'figure against bright mist. Loneliness and scale first; colour only where it matters.',
+        'pitch': 'Quiet and fog-bound. Near-monochrome grey-green world, soft cold light, dark ground against '
+                 'bright mist; figures read by silhouette and rim light. Loneliness and scale first; colour '
+                 'only where it matters.',
         'mood_refs': 'Inside (fog, value silhouettes, restraint)',
         'sky': [(0.0, '#3A4446'), (0.42, '#6F7E7D'), (0.6, '#A3B0AC'), (0.75, '#B3BEBA'), (1.0, '#9BA7A3')],
         'star': {'pos': (0.21, 0.22), 'radius': 22, 'core': '#F3F2EA', 'glow': '#E5E7DD', 'glow_strength': 0.5,
