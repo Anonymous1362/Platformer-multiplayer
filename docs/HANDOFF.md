@@ -1,6 +1,12 @@
 # Handoff
 
-State: 2A, 2B-1, and release prep for 0.0.5 are merged (#4, #5, #6). Pass 2B-2 is merged (#7); 2B-3 (PR #8) and 2B-4 (touch presets and layout editor) are done; the owner asked to finish 2B (2B-4 layout editor, 2B-5 rebinding) and then start "Art & UI B" on command. Each step gets its own PR. The owner runs Actions → Release for 0.0.5 (and later versions). Manual mode. Owner phone checks still open: docs/DEVICES.md and the 2A "no long tasks on a Mid device" check.
+State: Pass 2A and 2B-1, 2B-2 are merged (#4–#7). 2B-3 + 2B-4 are in PR #8; 2B-5 (rebinding and controller menus) is done, which completes 2B. Next, on the owner's command: "Art & UI B" (owner-requested, out of order; ultracode workflows, workflow size medium). Then 2C (saves). Manual mode. Owner phone checks still open: docs/DEVICES.md and the 2A "no long tasks on a Mid device" check.
+
+What 2B-5 added:
+
+- `input/Bindings.ts` (actions, defaults, `padFamily`, `conflicts`, `bind`, `normalizeCode`, `isBindableCode`); `KeyboardMouseControls.setBindings` (one code may drive several actions while flagged); `GamepadControls.setBindings` (per family), `captureNext`, `connectedFamilies`, and new menu intents `left`, `right`, `prevTab`, `nextTab` (`MenuNav`), handled by `NavStack` (slider steps, radio and tab moves, bumper tab switching).
+- `settings/BindingsStore.ts` (`cd.bindings`); `main.ts` applies bindings live; the UI context's `bindings` host gives the screen the store, connected families, and pad capture.
+- `ui/screens/BindingsScreen.tsx` and `bindingLabels.ts` (key and button names, all through translation keys).
 
 What 2B-4 added:
 

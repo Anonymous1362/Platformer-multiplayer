@@ -3,7 +3,7 @@
  * edge-triggered intents that a menu drains once per frame. Escape and Start stay the pause toggle, so
  * they are not intents here. Touch and mouse use the menu's own buttons.
  */
-export type MenuIntent = 'up' | 'down' | 'confirm' | 'back';
+export type MenuIntent = 'up' | 'down' | 'left' | 'right' | 'prevTab' | 'nextTab' | 'confirm' | 'back';
 
 const MAX_QUEUED = 8;
 
@@ -20,7 +20,7 @@ export const MENU_KEYS: Readonly<Record<string, MenuIntent>> = {
 };
 
 /** Up and down follow OS key repeat while held; confirm and back fire once per press. */
-const REPEATING: ReadonlySet<MenuIntent> = new Set<MenuIntent>(['up', 'down']);
+const REPEATING: ReadonlySet<MenuIntent> = new Set<MenuIntent>(['up', 'down', 'left', 'right']);
 
 export function menuIntentForKey(code: string, repeat: boolean): MenuIntent | null {
   const intent = MENU_KEYS[code];

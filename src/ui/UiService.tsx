@@ -6,6 +6,7 @@ import { ToastHost, ToastQueue } from './components/Overlays';
 import {
   UiContext,
   silentFeedback,
+  type BindingsHost,
   type TouchEditorHost,
   type UiContextValue,
   type UiFeedback,
@@ -44,6 +45,7 @@ export interface UiServiceOptions {
   readonly settings?: SettingsStore;
   readonly i18n?: Store<Translator>;
   readonly touch?: TouchEditorHost;
+  readonly bindings?: BindingsHost;
   readonly about?: { readonly version: string; readonly build: string };
 }
 
@@ -125,6 +127,7 @@ export class UiService {
   readonly settings: SettingsStore | null;
   readonly i18n: Store<Translator>;
   readonly touch: TouchEditorHost | null;
+  readonly bindings: BindingsHost | null;
   readonly about: { readonly version: string; readonly build: string };
   private element: HTMLElement | null = null;
   private transitions: Transitions | null = null;
@@ -139,6 +142,7 @@ export class UiService {
     this.settings = options.settings ?? null;
     this.i18n = options.i18n ?? new Store<Translator>(createTranslator('en'));
     this.touch = options.touch ?? null;
+    this.bindings = options.bindings ?? null;
     this.about = options.about ?? { version: '0.0.0', build: 'dev' };
   }
 
@@ -152,6 +156,7 @@ export class UiService {
       about: this.about,
       i18n: this.i18n,
       touch: this.touch,
+      bindings: this.bindings,
     };
   }
 

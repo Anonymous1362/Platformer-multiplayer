@@ -41,6 +41,8 @@ export interface SettingsScreenProps {
   readonly initialTab?: Tab | undefined;
   /** Opens the touch layout editor (absent where there is no game to edit). */
   readonly onEditLayout?: (() => void) | undefined;
+  /** Opens the rebinding screen (absent where there is no game). */
+  readonly onRebind?: (() => void) | undefined;
 }
 
 function Row(props: {
@@ -272,6 +274,7 @@ function ControlsTab(props: {
   readonly s: Settings;
   readonly store: SettingsStore;
   readonly onEditLayout?: (() => void) | undefined;
+  readonly onRebind?: (() => void) | undefined;
 }): JSX.Element {
   const t = useT();
   const { s, store } = props;
@@ -407,8 +410,14 @@ function ControlsTab(props: {
           ])}
         />
       </Row>
-      <Row label={t('settings.controls.bindings')}>
-        <Button disabled disabledReason={t('settings.controls.rebindLater')}>
+      <Row label={t('settings.controls.bindings')} hint={t('settings.controls.rebindHint')}>
+        <Button
+          data-action="rebind"
+          disabled={!props.onRebind}
+          onClick={() => {
+            props.onRebind?.();
+          }}
+        >
           {t('settings.controls.rebind')}
         </Button>
       </Row>
@@ -689,7 +698,14 @@ export function SettingsScreen(props: SettingsScreenProps): JSX.Element {
       case 'graphics':
         return <GraphicsTab s={s} store={props.store} />;
       case 'controls':
-        return <ControlsTab s={s} store={props.store} onEditLayout={props.onEditLayout} />;
+        return (
+          <ControlsTab
+            s={s}
+            store={props.store}
+            onEditLayout={props.onEditLayout}
+            onRebind={props.onRebind}
+          />
+        );
       case 'gameplay':
         return <GameplayTab s={s} store={props.store} />;
       case 'accessibility':

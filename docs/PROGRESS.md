@@ -17,7 +17,21 @@
 | 2B-2 | DONE (CI green, run 46118310127; merged as #7). Locale files and translator (plurals, numbers), every player-facing string on a key, Language setting live, `en-XA` pseudo-locale overflow screenshots. |
 | 2B-3 | DONE locally (CI pending). Colorblind palettes with the CVD test, sound captions, high-contrast HUD. |
 | 2B-4 | DONE locally (CI pending). Touch presets (Classic, Simple, Left-handed) and the layout editor; edits saved per device and orientation profile. |
-| 2B-5 | Not started |
+| 2B-5 | DONE locally (CI pending). Keyboard and controller rebinding with conflict flags and reset; full controller menu navigation. **2B complete** once merged. |
+| Art & UI B | Waiting for the owner's command (owner-requested, out of order). |
+
+## Pass 2B-5 evidence (2026-11-28)
+
+- `npm run verify`: passes (418 tests, incl. 14 binding tests: defaults, conflict flags, duplicate clearing, reserved keys, family detection, keyboard and pad rebinding effects, Right Shift, capture takes only a new press and blocks game and menus, cancel, D-pad/stick left/right and bumper intents, store per device with per-action fallback).
+- `npm run test:e2e` (Chrome, local): 81 of 81, incl. tests/e2e/rebinding.spec.ts: rebind Jump to J in the UI (J jumps, Space no longer does, survives a reload); a conflict is flagged on both actions, Esc cancels a capture, Backspace clears, Reset to defaults restores, axe passes; with a mocked Xbox pad, rebind Jump to Y by pressing Y and Y then jumps; menus by pad: Start, D-pad, A, RB/LB switch tabs, D-pad right moves the volume slider, B closes Settings. The pseudo-locale audit now covers the rebinding screen and the layout editor.
+
+### 2B acceptance
+
+| Done when (spec 23) | Status | Evidence |
+| --- | --- | --- |
+| Every setting persists and applies | Pass for every system that exists; rows for later systems store the choice and say when it applies | settings.spec, accessibility.spec, layout-editor.spec, rebinding.spec |
+| Pseudo-locale screenshots show no overflow | Pass | pseudo-locale.spec (every screen, phone and desktop; CI artifact) |
+| Edited layouts survive restarts | Pass | layout-editor.spec (drag, save, reload) |
 
 ## Pass 2B-4 evidence (2026-11-28)
 

@@ -144,6 +144,38 @@ for (const size of SIZES) {
       }
     });
 
+    test('rebinding screen and the layout editor', async ({ page }, info) => {
+      test.setTimeout(120_000);
+      await page.goto('/?test=1&lang=en-XA');
+      await page.waitForSelector('#game-root[data-ready="true"]');
+      await expect
+        .poll(() => page.evaluate(() => window.__CD_TEST__?.sim()?.tick ?? 0), { timeout: 10_000 })
+        .toBeGreaterThan(5);
+      await page.keyboard.press('Escape');
+      await page.locator('[data-role="pause-overlay"] [data-action="settings"]').click();
+      const tabs = page.locator('[data-screen="settings"] [role="tab"]');
+      await tabs.nth(2).click(); // Controls
+      await page.locator('[data-action="rebind"]').click();
+      await page.waitForSelector('[data-screen="bindings"]');
+      const bindTabs = page.locator('[data-screen="bindings"] [role="tab"]');
+      for (let i = 0; i < 2; i += 1) {
+        await bindTabs.nth(i).click();
+        const panel = page.locator('[data-screen="bindings"] .cd-settings-panel');
+        const height = await panel.evaluate((el) => el.scrollHeight);
+        for (let y = 0; y <= height; y += 300) {
+          await panel.evaluate((el, top) => {
+            el.scrollTop = top;
+          }, y);
+          await check(page, info, `${size.name}-bindings-${String(i)}-${String(y)}`);
+        }
+      }
+      await page.locator('[data-action="close-bindings"]').click();
+      await page.locator('[data-action="edit-layout"]').click();
+      await page.waitForSelector('[data-screen="layout-editor"]');
+      await page.locator('[data-screen="layout-editor"] [data-control="jump"]').click();
+      await check(page, info, `${size.name}-layout-editor`);
+    });
+
     test('error panel and the touch controls', async ({ page }, info) => {
       await page.goto('/?test=1&lang=en-XA');
       await page.waitForSelector('#game-root[data-ready="true"]');

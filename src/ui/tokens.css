@@ -814,3 +814,24 @@
     font-size: var(--size-body);
   }
 }
+
+/* ---- Rebinding (spec 8.13) ---- */
+.cd-binding-slots {
+  flex-wrap: nowrap;
+  gap: var(--space-2);
+}
+.cd-binding-slot {
+  min-width: 112px;
+  padding: 0 var(--space-3);
+  font-size: var(--size-caption);
+}
+.cd-binding-slot[data-capturing='true'] {
+  border-color: var(--accent);
+  background: var(--bg-panel-opaque);
+}
+.cd-binding-conflict {
+  color: var(--warning);
+}
+.cd-binding-conflict::before {
+  content: '⚠ ';
+}

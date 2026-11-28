@@ -4,6 +4,7 @@ import { applySettings } from './app/SettingsApply';
 import { manualTier } from './settings/Derived';
 import type { TouchLayout } from './input/TouchLayout';
 import { SettingsStore } from './settings/SettingsStore';
+import { BindingsStore } from './settings/BindingsStore';
 import { TouchLayoutStore } from './settings/TouchLayoutStore';
 import type { Translator } from './i18n/I18n';
 import { createTranslator, resolveLocale } from './i18n/Locales';
@@ -144,6 +145,7 @@ function start(gameRoot: HTMLElement): void {
     log.warn('settings', `${issue.path} was invalid; using the default`);
   const i18n = createLanguage(settings);
   const layouts = new TouchLayoutStore(store);
+  const bindings = new BindingsStore(store);
   if (capabilities.webgl === 0) {
     gameRoot.style.display = 'none';
     showWebGLRequiredScreen(document.body, capabilities, 'WebGL unavailable', i18n.get());
@@ -200,6 +202,7 @@ function start(gameRoot: HTMLElement): void {
       settings,
       i18n,
       layouts,
+      bindings,
       flow: {
         skipToLevel: testMode && params.get('flow') !== '1',
         noticeSeen: () => store?.getItem(NOTICE_KEY) === '1',
@@ -296,6 +299,14 @@ function start(gameRoot: HTMLElement): void {
     safeMode: boot.safeMode,
   });
   installAudioLifecycle(window, services.audio, () => settings.get().audio.muteInBackground);
+  // Rebinding (spec 8.13) applies at once.
+  const applyBindings = (): void => {
+    const b = bindings.get();
+    input.keyboard.setBindings(b.keyboard);
+    input.gamepad.setBindings(b.pads);
+  };
+  applyBindings();
+  bindings.subscribe(applyBindings);
   const relabel = (): void => {
     const translator = i18n.get();
     input.setTranslate((key) => translator.t(key));
