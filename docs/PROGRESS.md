@@ -18,7 +18,7 @@
 | 2B-3 | DONE (CI green, run 46126279023; merged as #8). Colorblind palettes with the CVD test, sound captions, high-contrast HUD. |
 | 2B-4 | DONE (CI green, run 46126279023; merged as #8). Touch presets (Classic, Simple, Left-handed) and the layout editor; edits saved per device and orientation profile. |
 | 2B-5 | DONE (CI green, run 46126279023; merged as #8). Keyboard and controller rebinding with conflict flags and reset; full controller menu navigation. **Pass 2B complete.** |
-| Art & UI B | Waiting for the owner's command (owner-requested, out of order). |
+| Art & UI B | IN PROGRESS (owner-requested, out of order; plan in docs/ART_UI_B_PLAN.md). **B0 pre-production done:** studio kit, new Kes and Crawler designs, style test of three looks (docs/art/style-test/), production plan, ultracode workflow draft. Waiting for the owner to pick a look; then B1 (look lock), B2a–d (production), B3 (polish, 0.0.6). |
 
 ## Pass 2B-5 evidence (2026-11-28)
 
