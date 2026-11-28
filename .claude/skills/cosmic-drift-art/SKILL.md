@@ -18,7 +18,7 @@ The authority is **docs/ART_BIBLE.md** (look B "Ember Dark", locked 2026-11-28; 
 - Crystal glow `#3FE0C8`; human lamps `#FF9E3D`; star key `#FFD9A0`.
 - Friendly tech and ORRIN `#4FF0D8`; shards `#FFC24A`; cores `#A855F7`.
 - **Danger `#FF3B2E` is for threats only.**
-- Kes: rust suit `#9A5430` with graphite armour `#454A50` (recommended key; the owner picks).
+- Kes is a man. His suit returns to the B0 colours (graphite suit, bone armour), darker; the craft pass (docs/ROADMAP.md Step 2) sets the final values. His visor keeps a thin teal ORRIN line that flickers at story moments and is red only in scripted story scenes.
 - Until B1b moves `src/theme/ThemePalette.ts` and `tokens.css` to look B, game code still uses the old palette. Never hard-code colours in game code: use the theme modules.
 
 ## Rules that are easy to break
@@ -30,6 +30,8 @@ The authority is **docs/ART_BIBLE.md** (look B "Ember Dark", locked 2026-11-28; 
   - A soft contact pool plus a dark core under each foot.
   - Feet sink 1 px into the grit.
 - **Nothing in sync:** flicker, blinking and idles get per-instance random timing. The kit gives each crystal cluster its own `glow`.
+- **Foreground occluders are allowed:** big rocks and crystal shards in front of the walk line, dark and sparse, fading to about 50% when they overlap Kes or an enemy, never hiding a threat, pickup, landing spot or telegraph.
+- **No visible repetition:** at least four variants per tile type, hand-placed decor clusters, one unique set piece or world moment per level section.
 - **Ambient life stays off walkable tops and away from the player's path:** mites, roots, smoke, the far giant. It never uses the danger red and never collides. Under reduced motion it holds still or is absent.
 - **Readability:**
   - Kes reads warm on cool.
@@ -40,7 +42,7 @@ The authority is **docs/ART_BIBLE.md** (look B "Ember Dark", locked 2026-11-28; 
   - Every frame reads in grayscale.
 
 ## Where art comes from (best first)
-1. **Blender with the studio kit** (`tools/blender/studio/`: stage, figure, shapes, mats, comp, looks, qa). It is deterministic (seeded; `zlib.crc32`, never Python's `hash`).
+1. **Blender with the studio kit** (craft guidance in the `scenario-blender-*` skills; model from an owner reference with `blender-image-to-3d`) (`tools/blender/studio/`: stage, figure, shapes, mats, comp, looks, qa). It is deterministic (seeded; `zlib.crc32`, never Python's `hash`).
    - Characters: `figure.skin_body` plus plates fitted at rest.
    - Lookdev: `npm run art:lookdev`.
    - Bakes: `npm run art:bake`.

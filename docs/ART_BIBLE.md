@@ -12,7 +12,7 @@
 2. **Light tells the story.** Three kinds of light: one warm star key, cool teal crystal light, and small warm human lamps. Darkness has shape.
 3. **Readable first.** On a 6-inch phone the player sees Kes, threats, pickups and walkable tops at a glance.
 4. **Alive at the edges.** Small, irregular, never-synchronized life (flicker, mites, smoke, a distant giant), always off the walk line.
-5. **A warm heart in a cold world.** The world is cool; Kes, her ship's lamps and the Star Shards are warm.
+5. **A warm heart in a cold world.** The world is cool; Kes, his ship's lamps and the Star Shards are warm.
 
 ## 2. Palette
 
@@ -83,7 +83,7 @@ In every key, the dark parts (boots, gloves, belt, pack) are about `#23262A`. Th
 
 ## 6. Shapes and silhouettes
 
-- **Kes:** an upright human about 7 heads tall. Helmet with a crest and a narrow visor carrying ORRIN's light line, twin pack pods, a blaster. Her pose is always planted or in motion; never floating.
+- **Kes:** an upright man about 7 heads tall, with a clearly male build (broader shoulders, narrower hips, heavier arms and neck). Helmet with a crest and a narrow visor carrying ORRIN's light line, twin pack pods, a blaster. His pose is always planted or in motion; never floating. His visor carries a thin teal line (ORRIN) that flickers at story moments and turns red only in scripted story scenes.
 - **Custodians:** low, segmented, plated shells with one horizontal sensor slit. Danger light leaks from the seams. Always lower and wider than Kes.
 - **Meridian tech:** hard and angular: grates, struts, amber lamps.
 - **Aurai and crystal:** faceted clusters and hanging crystal roots.
@@ -96,9 +96,10 @@ In every key, the dark parts (boots, gloves, belt, pack) are about `#23262A`. Th
 2. Only threats use the danger red, and every enemy shows it (eye or seams).
 3. Pickups are gold, spinning, glowing and bobbing. Nothing else is gold.
 4. Walkable tops are lighter than faces. One-way platforms look different from solid ground.
-5. Decor never sits in front of the walk line. Ambient life never goes on walkable tops or near the player's path.
+5. **Foreground occluders are allowed** (owner, 2026-11-28): big rocks and crystal shards may stand in front of the walk line so Kes passes behind them. They stay dark and sparse, fade to about 50% when they overlap Kes or an enemy, and never hide a threat, a pickup, a landing spot, or a telegraph. Ambient life never goes on walkable tops or near the player's path.
 6. Telegraphs change shape and value, not just colour, and last at least 300 ms.
 7. Every frame still reads in grayscale (the board has the grayscale copy).
+8. **No visible repetition:** at least four variants per tile type, decor placed by hand in clusters, one unique set piece or world moment per level section.
 
 ## 8. Ambient life ("alive at the edges")
 
@@ -161,6 +162,7 @@ In every key, the dark parts (boots, gloves, belt, pack) are about `#23262A`. Th
 
 ## 12. Change log
 
+- **v1.1 (2026-11-28, Step 1):** Kes is a man; visor rule; foreground occluders allowed; no visible repetition. Kes's suit colours and the platform's finish are set by the craft pass (Step 2), replacing the B1a colour keys.
 - **v1 (2026-11-28, B1a):** locked from the style test (look B), with the owner's feedback:
   - warm suit and no outline;
   - planted feet;

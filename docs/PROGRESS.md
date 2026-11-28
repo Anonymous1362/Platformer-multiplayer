@@ -18,7 +18,14 @@
 | 2B-3 | DONE (CI green, run 46126279023; merged as #8). Colorblind palettes with the CVD test, sound captions, high-contrast HUD. |
 | 2B-4 | DONE (CI green, run 46126279023; merged as #8). Touch presets (Classic, Simple, Left-handed) and the layout editor; edits saved per device and orientation profile. |
 | 2B-5 | DONE (CI green, run 46126279023; merged as #8). Keyboard and controller rebinding with conflict flags and reset; full controller menu navigation. **Pass 2B complete.** |
-| Art & UI B | IN PROGRESS (owner-requested, out of order; plan in docs/ART_UI_B_PLAN.md). **B0 done** (CI green, run 46137320914; PR #9): the owner picked look B "Ember Dark". **B1a done (CI green, run 46150229638), waiting for the owner:** look B v2 with the owner's feedback (docs/art/look-lock/), Art Bible v1 (docs/ART_BIBLE.md), ADR, art skill rewritten. Owner: approve, pick Kes's colour key, say "go B1b" (engine proof). Then B2a–e (ultracode), B3 (polish, 0.0.6). |
+| Art & UI B | IN PROGRESS (owner-requested, out of order; plan in docs/ART_UI_B_PLAN.md). **B0 done** (CI green, run 46137320914; PR #9): the owner picked look B "Ember Dark". **B1a done (CI green, run 46150229638), waiting for the owner:** look B v2 with the owner's feedback (docs/art/look-lock/), Art Bible v1 (docs/ART_BIBLE.md), ADR, art skill rewritten. Owner: approve, pick Kes's colour key, say "go B1b" (engine proof). Then B2a–e (ultracode), B3 (polish, 0.0.6). **Step 1 (owner decisions + skills) done**, see docs/ROADMAP.md; next: the craft pass (Step 2), then B1b. |
+
+## Step 1 · owner decisions and skills (2026-11-28)
+
+- Spec §0.8 owner amendments plus in-place edits (pillars P4–P6, platforms, monetization, players, multiplayer manifest, unlock flow, checkpoints, §5.5, new §5.8 puzzles, §6 note, new §7.7 world moments, Contracts, achievements, pass order, Pass 4 header, Kes's pronouns).
+- docs/ROADMAP.md (step order and effort per step); Art Bible v1.1; ART_UI_B_PLAN (craft pass); `cosmic-drift-art` skill; workflow job specs.
+- 12 third-party skills installed after review (`.claude/skills/README.md`).
+- No game code changed.
 
 ## Art & UI B · B1a evidence (2026-11-28)
 
