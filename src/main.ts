@@ -2,7 +2,9 @@ import { Capacitor } from '@capacitor/core';
 import { installAudioLifecycle } from './app/AudioUnlock';
 import { applySettings } from './app/SettingsApply';
 import { manualTier } from './settings/Derived';
+import type { TouchLayout } from './input/TouchLayout';
 import { SettingsStore } from './settings/SettingsStore';
+import { TouchLayoutStore } from './settings/TouchLayoutStore';
 import type { Translator } from './i18n/I18n';
 import { createTranslator, resolveLocale } from './i18n/Locales';
 import { Store } from './ui/store';
@@ -55,6 +57,8 @@ declare global {
       };
       readonly settings: () => Settings;
       readonly fpsLimit: () => number;
+      /** The live touch layout (buttons with centers and radii). */
+      readonly touchLayout: () => TouchLayout;
       readonly counters: () => LeakSnapshot;
       readonly restartLevel: () => void;
       /** The current run as replay JSON. */
@@ -139,6 +143,7 @@ function start(gameRoot: HTMLElement): void {
   for (const issue of settings.loadIssues)
     log.warn('settings', `${issue.path} was invalid; using the default`);
   const i18n = createLanguage(settings);
+  const layouts = new TouchLayoutStore(store);
   if (capabilities.webgl === 0) {
     gameRoot.style.display = 'none';
     showWebGLRequiredScreen(document.body, capabilities, 'WebGL unavailable', i18n.get());
@@ -194,6 +199,7 @@ function start(gameRoot: HTMLElement): void {
       perf,
       settings,
       i18n,
+      layouts,
       flow: {
         skipToLevel: testMode && params.get('flow') !== '1',
         noticeSeen: () => store?.getItem(NOTICE_KEY) === '1',
@@ -283,6 +289,7 @@ function start(gameRoot: HTMLElement): void {
     input,
     quality,
     ui: services.ui,
+    layouts,
     game,
     // In debug builds the badge is always on.
     badge: () => (debug ? null : badge),
@@ -335,6 +342,7 @@ function start(gameRoot: HTMLElement): void {
       },
       settings: () => settings.get(),
       fpsLimit: () => game.loop.fpsLimit,
+      touchLayout: () => input.touch.currentLayout,
       counters,
       restartLevel: () => services.level.current?.restart(),
       replay: () => {

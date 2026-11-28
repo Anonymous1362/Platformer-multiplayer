@@ -1,7 +1,9 @@
 import type Phaser from 'phaser';
 import type { SoundEngine } from '../audio/SoundEngine';
 import { busGains, fpsLimit, manualTier, stickTuning } from '../settings/Derived';
+import { presetAutoFire } from '../input/TouchLayout';
 import type { Settings } from '../settings/SettingsSchema';
+import type { TouchLayoutStore } from '../settings/TouchLayoutStore';
 import { semanticColors } from '../theme/ThemePalette';
 import { glassAllowed } from '../ui/prefs';
 import type { SettingsStore } from '../settings/SettingsStore';
@@ -15,6 +17,7 @@ export interface SettingsTargets {
   readonly input: GameInput;
   readonly quality: QualityGovernor;
   readonly ui: UiService;
+  readonly layouts: TouchLayoutStore;
   readonly game: Phaser.Game;
   readonly badge: () => PerfBadge | null;
   /** Safe Mode keeps the Battery tier whatever the preset says. */
@@ -28,6 +31,19 @@ export interface SettingsTargets {
  */
 export function applySettings(store: SettingsStore, t: SettingsTargets): () => void {
   let last: Settings | null = null;
+  const applyTouch = (s: Settings): void => {
+    const preset = s.controls.layoutPreset;
+    t.input.setTouchPrefs({
+      preset,
+      floatingStick: s.controls.stickType === 'floating',
+      buttonScale: s.controls.buttonSize / 100,
+      opacity: s.controls.buttonOpacity,
+      custom: (profile) => t.layouts.get(profile, preset),
+    });
+  };
+  const offLayouts = t.layouts.subscribe(() => {
+    applyTouch(store.get());
+  });
   const apply = (): void => {
     const s = store.get();
     const prev = last;
@@ -39,14 +55,11 @@ export function applySettings(store: SettingsStore, t: SettingsTargets): () => v
       const tuning = stickTuning(s);
       t.input.touch.setTuning(tuning);
       t.input.gamepad.setTuning(tuning);
-      t.input.setTouchPrefs({
-        floatingStick: s.controls.stickType === 'floating',
-        buttonScale: s.controls.buttonSize / 100,
-        opacity: s.controls.buttonOpacity,
-      });
+      applyTouch(s);
       t.input.router.setOptions({
         shoot: s.controls.shoot,
-        autoFire: s.gameplay.autoFire,
+        // The Simple preset hides Shoot and fires on its own (spec 8.8).
+        autoFire: s.gameplay.autoFire || presetAutoFire(s.controls.layoutPreset),
         aim: s.controls.aimMode,
       });
     }
@@ -68,5 +81,9 @@ export function applySettings(store: SettingsStore, t: SettingsTargets): () => v
     }
   };
   apply();
-  return store.subscribe(apply);
+  const offSettings = store.subscribe(apply);
+  return () => {
+    offSettings();
+    offLayouts();
+  };
 }

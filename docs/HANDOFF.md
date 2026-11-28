@@ -1,6 +1,13 @@
 # Handoff
 
-State: 2A, 2B-1, and release prep for 0.0.5 are merged (#4, #5, #6). Pass 2B-2 (i18n, PR #7) and 2B-3 (colorblind palettes, captions, high-contrast HUD) are done; the owner asked to finish 2B (2B-4 layout editor, 2B-5 rebinding) and then start "Art & UI B" on command. Each step gets its own PR. The owner runs Actions → Release for 0.0.5 (and later versions). Manual mode. Owner phone checks still open: docs/DEVICES.md and the 2A "no long tasks on a Mid device" check.
+State: 2A, 2B-1, and release prep for 0.0.5 are merged (#4, #5, #6). Pass 2B-2 is merged (#7); 2B-3 (PR #8) and 2B-4 (touch presets and layout editor) are done; the owner asked to finish 2B (2B-4 layout editor, 2B-5 rebinding) and then start "Art & UI B" on command. Each step gets its own PR. The owner runs Actions → Release for 0.0.5 (and later versions). Manual mode. Owner phone checks still open: docs/DEVICES.md and the 2A "no long tasks on a Mid device" check.
+
+What 2B-4 added:
+
+- `input/TouchLayout.ts`: `buildLayout(width, height, { preset, floatingStick, buttonScale, custom })`, `presetButtons`, `presetAutoFire`, `overrideFromPoint`, `layoutProfile`; `classicLayout` is now a wrapper.
+- `settings/TouchLayoutStore.ts` (`cd.touchLayouts`); `GameInput.setTouchPrefs({ preset, ..., custom(profile) })`, `layoutProfile`, `canvasSize`; `SettingsApply` re-lays out on settings or saved-layout changes and forces auto-fire for Simple.
+- `ui/screens/LayoutEditor.tsx`, opened through `useSettingsPopup` (Settings ⇄ editor); the UI context's `touch` host gives it the layout store, canvas size, and profile.
+- Test hook `__CD_TEST__.touchLayout()`.
 
 What 2B-3 added:
 

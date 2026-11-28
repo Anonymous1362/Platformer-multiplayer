@@ -142,10 +142,13 @@ export class KeyboardMouseControls implements InputSource {
  * Window keyboard listeners and canvas mouse listeners. Modified keys (Ctrl, Cmd, Alt) are never
  * handled, so browser shortcuts such as Ctrl/Cmd + W, R, T, L, Q keep working (spec 8.13).
  */
-/** A focused input, text area, select, or editable element takes its own keys. */
+/**
+ * A focused input, text area, select, editable element, or anything marked `data-keys="own"` (the
+ * layout editor's movable controls) takes its own keys.
+ */
 export function isFormControl(target: EventTarget | null): boolean {
   if (typeof HTMLElement === 'undefined' || !(target instanceof HTMLElement)) return false;
-  return target.isContentEditable || target.matches('input, textarea, select');
+  return target.isContentEditable || target.matches('input, textarea, select, [data-keys="own"]');
 }
 
 export function attachKeyboardMouse(

@@ -3,7 +3,13 @@ import { render } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { MenuIntent } from '../input/MenuNav';
 import { ToastHost, ToastQueue } from './components/Overlays';
-import { UiContext, silentFeedback, type UiContextValue, type UiFeedback } from './context';
+import {
+  UiContext,
+  silentFeedback,
+  type TouchEditorHost,
+  type UiContextValue,
+  type UiFeedback,
+} from './context';
 import { motionTotalMs, MOTIONS, play } from './motion';
 import { NavStack } from './nav';
 import { UiPrefs, type UiPrefsState } from './prefs';
@@ -37,6 +43,7 @@ export interface UiServiceOptions {
   readonly driven: boolean;
   readonly settings?: SettingsStore;
   readonly i18n?: Store<Translator>;
+  readonly touch?: TouchEditorHost;
   readonly about?: { readonly version: string; readonly build: string };
 }
 
@@ -117,6 +124,7 @@ export class UiService {
   private readonly driven: boolean;
   readonly settings: SettingsStore | null;
   readonly i18n: Store<Translator>;
+  readonly touch: TouchEditorHost | null;
   readonly about: { readonly version: string; readonly build: string };
   private element: HTMLElement | null = null;
   private transitions: Transitions | null = null;
@@ -130,6 +138,7 @@ export class UiService {
     this.feedback = options.feedback ?? silentFeedback;
     this.settings = options.settings ?? null;
     this.i18n = options.i18n ?? new Store<Translator>(createTranslator('en'));
+    this.touch = options.touch ?? null;
     this.about = options.about ?? { version: '0.0.0', build: 'dev' };
   }
 
@@ -142,6 +151,7 @@ export class UiService {
       settings: this.settings,
       about: this.about,
       i18n: this.i18n,
+      touch: this.touch,
     };
   }
 

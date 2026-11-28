@@ -38,7 +38,9 @@ export interface SettingsScreenProps {
   readonly onClose: () => void;
   /** Where the pop-up rises from (the gear icon), in client pixels. */
   readonly origin?: { readonly x: number; readonly y: number } | undefined;
-  readonly initialTab?: Tab;
+  readonly initialTab?: Tab | undefined;
+  /** Opens the touch layout editor (absent where there is no game to edit). */
+  readonly onEditLayout?: (() => void) | undefined;
 }
 
 function Row(props: {
@@ -266,7 +268,11 @@ function GraphicsTab(props: { readonly s: Settings; readonly store: SettingsStor
   );
 }
 
-function ControlsTab(props: { readonly s: Settings; readonly store: SettingsStore }): JSX.Element {
+function ControlsTab(props: {
+  readonly s: Settings;
+  readonly store: SettingsStore;
+  readonly onEditLayout?: (() => void) | undefined;
+}): JSX.Element {
   const t = useT();
   const { s, store } = props;
   const c = s.controls;
@@ -284,8 +290,14 @@ function ControlsTab(props: { readonly s: Settings; readonly store: SettingsStor
           ])}
         />
       </Row>
-      <Row label={t('settings.controls.editLayout')}>
-        <Button disabled disabledReason={t('settings.controls.editLayoutLater')}>
+      <Row label={t('settings.controls.editLayout')} hint={t('settings.controls.editLayoutHint')}>
+        <Button
+          data-action="edit-layout"
+          disabled={!props.onEditLayout}
+          onClick={() => {
+            props.onEditLayout?.();
+          }}
+        >
           {t('settings.controls.editLayout')}
         </Button>
       </Row>
@@ -677,7 +689,7 @@ export function SettingsScreen(props: SettingsScreenProps): JSX.Element {
       case 'graphics':
         return <GraphicsTab s={s} store={props.store} />;
       case 'controls':
-        return <ControlsTab s={s} store={props.store} />;
+        return <ControlsTab s={s} store={props.store} onEditLayout={props.onEditLayout} />;
       case 'gameplay':
         return <GameplayTab s={s} store={props.store} />;
       case 'accessibility':

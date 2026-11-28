@@ -3,8 +3,31 @@ import { installInputCleanup, InputRouter } from '../input/InputRouter';
 import { attachKeyboardMouse, KeyboardMouseControls } from '../input/KeyboardMouseControls';
 import { attachTouchListeners, TouchControls } from '../input/TouchControls';
 import type { MenuIntent } from '../input/MenuNav';
-import { classicLayout } from '../input/TouchLayout';
+import {
+  buildLayout,
+  classicLayout,
+  layoutProfile,
+  type CustomLayout,
+  type LayoutPreset,
+} from '../input/TouchLayout';
 import { TouchControlView } from '../hud/TouchControlView';
+
+/** Touch layout preferences from Settings plus the saved edits for a layout profile. */
+export interface TouchPrefs {
+  readonly preset: LayoutPreset;
+  readonly floatingStick: boolean;
+  readonly buttonScale: number;
+  readonly opacity: number;
+  readonly custom: (profile: string) => CustomLayout | null;
+}
+
+const DEFAULT_TOUCH_PREFS: TouchPrefs = {
+  preset: 'classic',
+  floatingStick: true,
+  buttonScale: 1,
+  opacity: 70,
+  custom: () => null,
+};
 
 /**
  * The composition-root side of input: builds the adapters and the router, attaches the DOM listeners
@@ -21,7 +44,7 @@ export class GameInput {
   private readonly interruptListeners = new Set<(reason: string) => void>();
   private readonly detach: (() => void)[] = [];
   private size = { width: 0, height: 0 };
-  private touchPrefs = { floatingStick: true, buttonScale: 1, opacity: 70 };
+  private touchPrefs: TouchPrefs = DEFAULT_TOUCH_PREFS;
   private translate: (key: string) => string = (key) => key;
 
   constructor(win: Window, touchDevice: boolean) {
@@ -61,22 +84,35 @@ export class GameInput {
     this.view?.setTranslate(translate);
   }
 
-  /** Stick type, button size, and opacity from Settings; applied at once. */
-  setTouchPrefs(prefs: {
-    readonly floatingStick: boolean;
-    readonly buttonScale: number;
-    readonly opacity: number;
-  }): void {
-    this.touchPrefs = { ...prefs };
+  /** Preset, stick type, button size, opacity, and saved edits from Settings; applied at once. */
+  setTouchPrefs(prefs: TouchPrefs): void {
+    this.touchPrefs = prefs;
     this.relayout();
     this.view?.setOpacity(prefs.opacity);
+  }
+
+  /** The layout profile (orientation and shape) of the current canvas size. */
+  get layoutProfile(): string {
+    return layoutProfile(this.size.width, this.size.height);
+  }
+
+  /** The current canvas size in CSS px (the layout editor draws over it). */
+  get canvasSize(): { readonly width: number; readonly height: number } {
+    return this.size;
   }
 
   private relayout(): void {
     const { width, height } = this.size;
     const p = this.touchPrefs;
-    if (width > 0 && height > 0)
-      this.touch.setLayout(classicLayout(width, height, p.floatingStick, p.buttonScale));
+    if (width <= 0 || height <= 0) return;
+    this.touch.setLayout(
+      buildLayout(width, height, {
+        preset: p.preset,
+        floatingStick: p.floatingStick,
+        buttonScale: p.buttonScale,
+        custom: p.custom(layoutProfile(width, height)),
+      }),
+    );
   }
 
   /** Once per rendered frame: poll the Gamepad API and refresh the touch view. */

@@ -11,6 +11,7 @@ import { TitleScene } from '../scenes/TitleScene';
 import { UiPrefs, glassAllowed } from '../ui/prefs';
 import type { Translator } from '../i18n/I18n';
 import type { SettingsStore } from '../settings/SettingsStore';
+import type { TouchLayoutStore } from '../settings/TouchLayoutStore';
 import type { Store } from '../ui/store';
 import { UiService } from '../ui/UiService';
 import '../ui/fonts';
@@ -33,6 +34,7 @@ export interface GameOptions {
   readonly flow: GameServices['flow'];
   readonly settings: SettingsStore;
   readonly i18n: Store<Translator>;
+  readonly layouts: TouchLayoutStore;
 }
 
 export interface CreatedGame {
@@ -95,6 +97,11 @@ export function createGame(root: HTMLElement, options: GameOptions): CreatedGame
     prefs,
     settings: options.settings,
     i18n: options.i18n,
+    touch: {
+      layouts: options.layouts,
+      size: () => input.canvasSize,
+      profile: () => input.layoutProfile,
+    },
     about: { version: options.flow.version, build: `${options.flow.version} (${import.meta.env.MODE})` },
     feedback: {
       sound: (kind) => {

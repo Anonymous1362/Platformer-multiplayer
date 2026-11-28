@@ -5,6 +5,7 @@ import { ConfirmDialog } from '../components/Overlays';
 import { useReducedMotion, useT, useUi } from '../context';
 import { useEntrance, useNavScope, type ElementRef } from '../hooks';
 import { logoShardOffset, play } from '../motion';
+import { LayoutEditor } from './LayoutEditor';
 import { SettingsScreen } from './SettingsScreen';
 
 export type PauseAction = 'resume' | 'restart' | 'perf' | 'quit';
@@ -14,22 +15,43 @@ function useSettingsPopup(): {
   readonly open: (from: EventTarget | null) => void;
   readonly view: JSX.Element | null;
 } {
-  const { settings, about } = useUi();
+  const { settings, about, touch } = useUi();
   const [origin, setOrigin] = useState<{ x: number; y: number } | null>(null);
   const [isOpen, setOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
+  // After the editor closes, Settings reopens on the Controls tab it came from.
+  const [backToControls, setBackToControls] = useState(false);
   const open = (from: EventTarget | null): void => {
     const rect = from instanceof Element ? from.getBoundingClientRect() : null;
     setOrigin(rect ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 } : null);
     setOpen(true);
   };
   const view =
-    isOpen && settings ? (
+    isOpen && settings && editing && touch ? (
+      <LayoutEditor
+        store={settings}
+        host={touch}
+        onClose={() => {
+          setEditing(false);
+        }}
+      />
+    ) : isOpen && settings ? (
       <SettingsScreen
         store={settings}
         about={about}
         origin={origin ?? undefined}
+        initialTab={backToControls ? 'controls' : undefined}
+        onEditLayout={
+          touch
+            ? () => {
+                setEditing(true);
+                setBackToControls(true);
+              }
+            : undefined
+        }
         onClose={() => {
           setOpen(false);
+          setBackToControls(false);
         }}
       />
     ) : null;

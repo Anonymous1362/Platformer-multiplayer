@@ -16,7 +16,14 @@
 | Release 0.0.5 | Version bumped with release notes (Pass 2A and 2B-1). The owner runs Actions → Release after the bump is on `main`. |
 | 2B-2 | DONE (CI green, run 46118310127; merged as #7). Locale files and translator (plurals, numbers), every player-facing string on a key, Language setting live, `en-XA` pseudo-locale overflow screenshots. |
 | 2B-3 | DONE locally (CI pending). Colorblind palettes with the CVD test, sound captions, high-contrast HUD. |
-| 2B-4, 2B-5 | Not started |
+| 2B-4 | DONE locally (CI pending). Touch presets (Classic, Simple, Left-handed) and the layout editor; edits saved per device and orientation profile. |
+| 2B-5 | Not started |
+
+## Pass 2B-4 evidence (2026-11-28)
+
+- `npm run verify`: passes (404 tests, incl. 9 layout tests: Classic equals the 1D layout, Simple hides Fire and auto-fires, Left-handed mirrors buttons and stick with Pause staying top-right, edits land where dropped and keep their corner distance on other sizes, clamping, profiles, saved layouts survive a new store and reset per preset, bad entries dropped).
+- `npm run test:e2e` (Chrome, local): 75 of 75, incl. tests/e2e/layout-editor.spec.ts at 844 × 390 with touch: "edited layouts survive restarts" (drag Jump, Save, reload, still moved; Reset to preset restores it); resize to 150% and arrow-key nudges are saved; Esc cancels without saving and the game stays paused; axe passes on the editor; Left-handed and Simple apply at once.
+- Found from screenshots and fixed: the toolbar hid the top controls, and the pause menu showed through.
 
 ## Pass 2B-3 evidence (2026-11-28)
 
